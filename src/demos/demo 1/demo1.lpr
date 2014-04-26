@@ -1,12 +1,12 @@
 program demo1;
-  {$mode delphi}
+  //{$mode delphi}
   {$apptype console}
 
 uses
-  tinyglr, glrMath, ogl;
-
+  tinyglr, glrMath, ogl, sys_win;
 
 begin
+  Application.Title:='My Application';
   Write('aa');
   readln();
 end.

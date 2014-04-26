@@ -43,12 +43,12 @@ type
 {$REGION ' Single Vectors '}
   TdfVec2f = record
     x, y: Single;
-    class operator Equal(const v1, v2: TdfVec2f): Boolean;
-    class operator Add(const v1, v2: TdfVec2f): TdfVec2f;
-    class operator Subtract(const v1, v2: TdfVec2f): TdfVec2f;
-    class operator Multiply(const v1, v2: TdfVec2f): TdfVec2f;
-    class operator Multiply(const v: TdfVec2f; a: Single): TdfVec2f;
-    class operator Multiply(const a: Single; const v: TdfVec2f): TdfVec2f;
+    class operator Equal (const v1, v2: TdfVec2f): Boolean;
+    class operator Add (const v1, v2: TdfVec2f): TdfVec2f;
+    class operator Subtract (const v1, v2: TdfVec2f): TdfVec2f;
+    class operator Multiply (const v1, v2: TdfVec2f): TdfVec2f;
+    class operator Multiply (const v: TdfVec2f; a: Single): TdfVec2f;
+    class operator Multiply (const a: Single; const v: TdfVec2f): TdfVec2f;
     function Dot(const v: TdfVec2f): Single;
     function Reflect(const n: TdfVec2f): TdfVec2f;
     function Refract(const n: TdfVec2f; Factor: Single): TdfVec2f;

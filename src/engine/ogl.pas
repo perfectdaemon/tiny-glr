@@ -3,7 +3,9 @@ unit ogl;
 interface
 
 uses
+  {$IFDEF WINDOWS}
   Windows,
+  {$ENDIF}
   glrMath;
 
 type
@@ -114,14 +116,16 @@ type
 
   PGLConst = ^TGLConst;
 
-  TglrGL = object
+  TglrGL = record
   private
     Lib : LongWord;
   public
+    {$IFDEF WINDOWS}
     GetProc        : function (ProcName: PAnsiChar): Pointer; stdcall;
     SwapInterval   : function (Interval: LongInt): LongInt; stdcall;
-    ChoosePixelFormat: function(DC: HDC; const piAttribIList: PInteger; const pfAttribFList: PSingle;
-   nMaxFormats: Cardinal; piFormats: PInteger; nNumFormats: PCardinal) : LongBool; stdcall;
+    ChoosePixelFormat: function(DC: LongWord; const piAttribIList: PInteger; const pfAttribFList: PSingle;
+      nMaxFormats: Cardinal; piFormats: PInteger; nNumFormats: PCardinal) : LongBool; stdcall;
+    {$ENDIF}
     GetIntegerv    : procedure (pname: TGLConst; params: Pointer); stdcall;
     GetFloatv      : procedure (pname: TGLConst; params: Pointer); stdcall;
     GetString      : function (name: TGLConst): PAnsiChar; stdcall;
@@ -273,9 +277,11 @@ type
   TProcArray = array [-1..0] of Pointer;
 const
   ProcName : array [0..(SizeOf(TglrGL) - SizeOf(Lib)) div 4 - 1] of PAnsiChar = (
+    {$IFDEF WINDOWS}
     'wglGetProcAddress',
     'wglSwapIntervalEXT',
     'wglChoosePixelFormatARB',
+    {$ENDIF}
     'glGetIntegerv',
     'glGetFloatv',
     'glGetString',
@@ -409,11 +415,16 @@ var
   i    : LongInt;
   Proc : ^TProcArray;
 begin
+  {$IFDEF WINDOWS}
   Lib := LoadLibraryA(opengl32);
+  {$ELSE}
+  {$ENDIF}
   if Lib <> 0 then
   begin
     Proc := @Self;
+    {$IFDEF WINDOWS}
     Proc^[0] := GetProcAddress(Lib, ProcName[0]); // gl.GetProc
+    {$ENDIF}
     for i := 1 to High(ProcName) do
     begin
       Proc^[i] := GetProc(ProcName[i]);
@@ -424,7 +435,7 @@ begin
   Set8087CW($133F); //Предотвращает EInvalidOp при 1/0, 0/0, -1/0
 end;
 
-function TglrGL.IsExtensionSupported(const Extension: String): Boolean;
+function TglrGL.IsExtensionSupported(const Extension: AnsiString): Boolean;
 var
   extensions: PAnsiChar;
 begin
@@ -434,7 +445,9 @@ end;
 
 procedure TglrGL.Free;
 begin
+  {$IFDEF WINDOWS}
   FreeLibrary(Lib);
+  {$ENDIF}
 end;
 
 
