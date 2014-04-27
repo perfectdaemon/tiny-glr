@@ -135,7 +135,7 @@ type
     GenTextures    : procedure (n: LongInt; textures: Pointer); stdcall;
     DeleteTextures : procedure (n: LongInt; textures: Pointer); stdcall;
     BindTexture    : procedure (target: TGLConst; texture: LongWord); stdcall;
-    TexParameteri  : procedure (target, pname, param: TGLConst); stdcall;
+    TexParameteri  : procedure (target, pname: TGLConst; param: LongInt); stdcall;
     TexParameterf  : procedure (target, pname: TGLConst; param: Single);
     TexImage2D     : procedure (target: TGLConst; level: LongInt; internalformat: TGLConst; width, height, border: LongInt; format, _type: TGLConst; data: Pointer); stdcall;
     TexSubImage2D  : procedure (target: TGLConst; level, x, y, width, height: LongInt; format, _type: TGLConst; data: Pointer); stdcall;
@@ -455,6 +455,5 @@ initialization
 
 
 finalization
-  gl.Free;
 
 end.

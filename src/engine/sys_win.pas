@@ -1,10 +1,9 @@
 unit sys_win;
 
-//{$mode delphi}
-
 interface
 
 uses
+  Windows,
   tinyglr;
 
 type

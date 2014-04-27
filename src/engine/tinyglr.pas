@@ -1,6 +1,11 @@
-unit tinyglr;
+{
+  TODO:
+    - Окно
+    - Начинка рендера
+    - Логгер ?
+}
 
-//{$mode delphi}
+unit tinyglr;
 
 interface
 
@@ -37,12 +42,12 @@ type
 
   {$REGION 'Render'}
 
-  TglrTextureId = type longword;
-  TglrShaderId = type longword;
-  TglrIndexBufferId = type longword;
-  TglrVertexBufferId = type longword;
-  TglrFrameBufferId = type longword;
-  TglrIndex = type word;
+  TglrTextureId = type LongWord;
+  TglrShaderId = type LongWord;
+  TglrIndexBufferId = type LongWord;
+  TglrVertexBufferId = type LongWord;
+  TglrFrameBufferId = type LongWord;
+  TglrIndex = type Word;
 
   TglrTextureFormat = (tfFuck);
   TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2{, ...}, vfLIMIT);
@@ -60,34 +65,64 @@ type
 
   { TglrTexture }
 
+  TglrTexWrap = (wClamp, wRepeat, wClampToEdge, wClampToBorder, wMirrorRepeat);
+  TglrTexCombineMode = (cmDecal, cmModulate, cmBlend, cmReplace, cmAdd);
+
   TglrTexture = class
+  protected
+    Target: TGLConst;
+    WrapS, WrapT, WrapR: TglrTexWrap;
+    CombineMode: TglrTexCombineMode;
+  public
     Id: TglrTextureId;
-    procedure Bind();
-    constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
-    constructor Create(aStream: TglrStream); virtual; overload;
+
+    X, Y, RegionWidth, RegionHeight,
+    Width, Height: Integer;
+
+    procedure SetWrapS(aWrap: TglrTexWrap);
+    procedure SetWrapT(aWrap: TglrTexWrap);
+    procedure SetWrapR(aWrap: TglrTexWrap);
+
+    procedure SetCombineMode(aCombineMode: TglrTexCombineMode);
+
+    //constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
+    constructor CreateFromFileStream(aStream: TglrStream; aExt: AnsiString); virtual;
+    //constructor CreateEmpty2D(aWidth, aHeight, aFormat: TGLConst);
+    //todo 1d, 3d
     destructor Destroy(); override;
   end;
 
+
+  { TglrVertexBuffer }
 
   TglrVertexBuffer = class
     Id: TglrVertexBufferId;
     procedure Bind();
+    class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrVertexFormat); virtual;
     destructor Destroy(); override;
   end;
 
+  { TglrIndexBuffer }
+
   TglrIndexBuffer = class
     Id: TglrIndexBufferId;
     procedure Bind();
-    constructor Create(aData: Pointer; aCount: Integer; aFaormat: TglrIndexFormat); virtual;
+    class procedure Unbind();
+    constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrIndexFormat); virtual;
     destructor Destroy(); override;
   end;
+
+  { TglrFrameBuffer }
 
   TglrFrameBuffer = class
     Id: TglrFrameBufferId;
     procedure Bind();
-    constructor Create(); virtual; //todo params
+    class procedure Unbind();
+    constructor Create(); virtual;
     destructor Destroy(); override;
+
+    //procedure AttachTexture(aTextureId: TglrTextureId);
   end;
 
 
@@ -97,12 +132,14 @@ type
   TglrFuncComparison = (fcNever, fcLess, fcEqual, fcLessOrEqual,
     fcGreater, fcNotEqual, fcGreaterOrEqual, fcAlways);
 
+  { GLRender }
+
   GLRender = class
   private
   protected
     class var fBlendingMode: TglrBlendingMode;
     class var fCullMode: TglrCullMode;
-    class var fDepthWrite, depthTest: boolean;
+    class var fDepthWrite, depthTest: Boolean;
     class var fShader: TglrShaderId;
     class var fTexture: TglrTextureId;
     class var fVB: TglrVertexBufferId;
@@ -114,19 +151,20 @@ type
 
     class procedure SetCullMode(aCullMode: TglrCullMode);
     class procedure SetBlendingMode(aBlendingMode: TglrBlendingMode);
-    class procedure SetLighting(aEnabled: boolean);
-    class procedure SetDepthWrite(aEnabled: boolean);
-    class procedure SetDepthTest(aEnabled: boolean);
+    class procedure SetLighting(aEnabled: Boolean);
+    class procedure SetDepthWrite(aEnabled: Boolean);
+    class procedure SetDepthTest(aEnabled: Boolean);
     class procedure SetDepthFunc(aComparison: TglrFuncComparison);
-    class procedure SetAlphaTest(aComparison: TglrFuncComparison; aValue: single);
+    class procedure SetAlphaTest(aComparison: TglrFuncComparison; aValue: Single);
 
     class procedure SetShader(aShader: TglrShaderId);
-    class procedure SetTexture(aTexture: TglrTextureId);
+    class procedure SetTexture(aTexture: TglrTextureId; aSampler: Integer);
 
     //todo:
-    class procedure DrawTriangles();
-    class procedure DrawPoints();
-    class procedure DrawPointSprites();
+    class procedure DrawTriangles(vBuffer: TglrVertexBuffer; iBuffer: TglrIndexBuffer;
+      aStart, aVertCount: Integer);
+    class procedure DrawPoints(vBuffer: TglrVertexBuffer; aStart, aVertCount: Integer);
+//    class procedure DrawPointSprites();
 
   end;
 
@@ -140,13 +178,323 @@ type
   end;
 
   {$ENDREGION}
+
+  {$REGION 'Core and Game'}
+
+  TglrInputType = ( itTouchDown, itTouchUp, itTouchMove, itKeyDown, itKeyUp, itWheel );
+
+  TglrTouch = record
+    IsDown: Boolean;
+    Start, Pos: TdfVec2f;
+  end;
+
+  TglrKey = (
+  {$IFDEF WINDOWS}
+    kNoInput = $00,
+
+		kLeftButton = $01,
+		kRightButton, kCancel, kMiddleButton, kXButton1, kXButton2,
+
+		kBack = $08, kTab,
+
+		kClear = $0C, kReturn,
+
+		kShift = $10, kCtrl, kAlt, kPause, kCapsLock,
+
+		kEscape = $1B,
+
+		kSpace = $20, kPageUp, kPageDown,
+		kEnd, kHome, kLeft, kUp, kRight, kDown,
+
+		kPrintScreen = $2C, kInsert, kDelete,
+
+		k0 = $30, k1, k2, k3, k4, k5, k6, k7, k8, k9,
+		kA = $41, kB, kC, kD, kE, kF, kG, kH, kI, kJ, kK, kL, kM, kN, kO, kP, kQ, kR, kS, kT, kU, kV, kW, kX, kY, kZ,
+
+		kLeftWin = $5B, kRightWin,
+
+		kNumPad0 = $60, kNumPad1, kNumPad2, kNumPad3, kNumPad4, kNumPad5, kNumPad6, kNumPad7, kNumPad8, kNumPad9,
+		kNumPadMul, kNumPadAdd, kNumPadSeparator, kNumPadSub, kNumPadDecimal, kNumPadDiv,
+
+		kF1, kF2, kF3, kF4, kF5, kF6, kF7, kF8, kF9, kF10, kF11, kF12, kF13, kF14, kF15, kF16, kF17, kF18, kF19, kF20, kF21, kF22, kF23, kF24,
+
+		kNumLock = $90, kScrollLock
+  {$ENDIF}
+  );
+
+  { TglrInput }
+
+  TglrInput = class
+    Touch: array[0..9] of TglrTouch;
+		KeyDown: array[0..255] of Boolean;
+
+		procedure Process(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
+  end;
+
+  TglrGame = class abstract
+  public
+    procedure OnStart(); virtual; abstract;
+    procedure OnFinish(); virtual; abstract;
+
+    procedure OnUpdate(const dt: Double); virtual; abstract;
+    procedure OnRender(); virtual; abstract;
+
+    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer); virtual; abstract;
+  end;
+
+  Glr = class
+  protected
+    class var fGame: TglrGame;
+
+    class procedure Resize(aNewWidth, aNewHeight: Integer);
+    class procedure InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
+  public
+    class procedure Init(aGame: TglrGame);
+
+    class procedure Start();
+    class procedure Pause();
+    class procedure Resume();
+    class procedure Stop();
+
+    class procedure DeInit();
+  end;
+
+  {$ENDREGION}
+
 implementation
 
+uses
+{$IFDEF WINDOWS}
+  sys_win,
+{$ENDIF}
+  resload;
+
 const
-  VB_STRIDE: array[0..TglrVertexFormat.vfLIMIT - 1] of Integer =
+  VF_STRIDE: array[0..TglrVertexFormat.vfLIMIT - 1] of Integer =
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2));
   IF_STRIDE: array[0..ifLimit - 1] of Integer =
     (SizeOf(Byte), SizeOf(ShortInt), SizeOf(Integer));
+
+{ Glr }
+
+class procedure Glr.Resize(aNewWidth, aNewHeight: Integer);
+begin
+
+end;
+
+class procedure Glr.InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y,
+  aOtherParam: Integer);
+begin
+
+end;
+
+class procedure Glr.Init(aGame: TglrGame);
+begin
+
+end;
+
+class procedure Glr.Start;
+begin
+
+end;
+
+class procedure Glr.Pause;
+begin
+
+end;
+
+class procedure Glr.Resume;
+begin
+
+end;
+
+class procedure Glr.Stop;
+begin
+
+end;
+
+class procedure Glr.DeInit;
+begin
+
+end;
+
+{ TglrInput }
+
+procedure TglrInput.Process(aType: TglrInputType; aKey: TglrKey; X, Y,
+  aOtherParam: Integer);
+var
+  t: ^TglrTouch;
+  k: ^Boolean;
+begin
+  t := @Touch[Ord(aKey)];
+  k := @KeyDown[Ord(aKey)];
+  case aType of
+    itTouchDown:
+      with t^ do
+      begin
+        IsDown := True;
+        Start := dfVec2f(X, Y);
+        Pos := Start;
+      end;
+    itTouchUp:
+      t^.IsDown := False;
+    itTouchMove:
+      t^.Pos := dfVec2f(X, Y);
+    itKeyDown:
+      k^ := True;
+    itKeyUp:
+      k^ := False;
+    itWheel:
+      ;
+  end;
+end;
+
+{ GLRender }
+
+class procedure GLRender.Init;
+begin
+  gl.Init();
+end;
+
+class procedure GLRender.DeInit;
+begin
+  gl.Free();
+end;
+
+class procedure GLRender.SetCullMode(aCullMode: TglrCullMode);
+begin
+
+end;
+
+class procedure GLRender.SetBlendingMode(aBlendingMode: TglrBlendingMode);
+begin
+
+end;
+
+class procedure GLRender.SetLighting(aEnabled: Boolean);
+begin
+
+end;
+
+class procedure GLRender.SetDepthWrite(aEnabled: Boolean);
+begin
+
+end;
+
+class procedure GLRender.SetDepthTest(aEnabled: Boolean);
+begin
+
+end;
+
+class procedure GLRender.SetDepthFunc(aComparison: TglrFuncComparison);
+begin
+
+end;
+
+class procedure GLRender.SetAlphaTest(aComparison: TglrFuncComparison;
+  aValue: Single);
+begin
+
+end;
+
+class procedure GLRender.SetShader(aShader: TglrShaderId);
+begin
+
+end;
+
+class procedure GLRender.SetTexture(aTexture: TglrTextureId; aSampler: Integer);
+begin
+
+end;
+
+class procedure GLRender.DrawTriangles(vBuffer: TglrVertexBuffer;
+  iBuffer: TglrIndexBuffer; aStart, aVertCount: Integer);
+begin
+
+end;
+
+class procedure GLRender.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
+  aVertCount: Integer);
+begin
+
+end;
+
+{ TglrFrameBuffer }
+
+procedure TglrFrameBuffer.Bind;
+begin
+  gl.BindBuffer(GL_FRAMEBUFFER, Self.Id);
+end;
+
+class procedure TglrFrameBuffer.Unbind;
+begin
+  gl.BindBuffer(GL_FRAMEBUFFER, 0);
+end;
+
+constructor TglrFrameBuffer.Create;
+begin
+  gl.GenFramebuffers(1, @Self.Id);
+end;
+
+destructor TglrFrameBuffer.Destroy;
+begin
+  gl.DeleteFramebuffers(1, @Self.Id);
+  inherited Destroy;
+end;
+
+{ TglrIndexBuffer }
+
+procedure TglrIndexBuffer.Bind;
+begin
+  gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, Self.Id);
+end;
+
+class procedure TglrIndexBuffer.Unbind;
+begin
+  gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+end;
+
+constructor TglrIndexBuffer.Create(aData: Pointer; aCount: Integer;
+  aFormat: TglrIndexFormat);
+begin
+  gl.GenBuffers(1, @Self.Id);
+  Self.Bind();
+  gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[Ord(aFormat)] * aCount, aData, GL_STATIC_DRAW);
+  Self.Unbind();
+end;
+
+destructor TglrIndexBuffer.Destroy;
+begin
+  gl.DeleteBuffers(1, @Self.Id);
+  inherited Destroy;
+end;
+
+{ TglrVertexBuffer }
+
+procedure TglrVertexBuffer.Bind;
+begin
+  gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
+end;
+
+class procedure TglrVertexBuffer.Unbind;
+begin
+  gl.BindBuffer(GL_ARRAY_BUFFER, 0);
+end;
+
+constructor TglrVertexBuffer.Create(aData: Pointer; aCount: Integer;
+  aFormat: TglrVertexFormat);
+begin
+  gl.GenBuffers(1, @Self.Id);
+  Self.Bind();
+  gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[Ord(aFormat)] * aCount, aData, GL_STATIC_DRAW);
+  Self.Unbind();
+end;
+
+destructor TglrVertexBuffer.Destroy;
+begin
+  gl.DeleteBuffers(1, @Self.Id);
+  inherited Destroy;
+end;
 
 { TglrStream }
 class function TglrStream.Init(Memory: Pointer; MemSize: LongInt): TglrStream;
@@ -288,23 +636,81 @@ end;
 
 { TglrTexture }
 
-procedure TglrTexture.Bind();
+const
+  aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
+    (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
+  aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
+    (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
+
+procedure TglrTexture.SetWrapS(aWrap: TglrTexWrap);
 begin
-//  gl.BindTexture();
+  gl.BindTexture(Target, Self.Id);
+  gl.TexParameteri(Target, GL_TEXTURE_WRAP_S, Ord(aWraps[aWrap]));
+  gl.BindTexture(Target, 0);
 end;
 
-constructor TglrTexture.Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat);
+procedure TglrTexture.SetWrapT(aWrap: TglrTexWrap);
 begin
-
+  gl.BindTexture(Target, Self.Id);
+  gl.TexParameteri(Target, GL_TEXTURE_WRAP_T, Ord(aWraps[aWrap]));
+  gl.BindTexture(Target, 0);
 end;
 
-constructor TglrTexture.Create(aStream: TglrStream);
+procedure TglrTexture.SetWrapR(aWrap: TglrTexWrap);
 begin
+  gl.BindTexture(Target, Self.Id);
+  gl.TexParameteri(Target, GL_TEXTURE_WRAP_R, Ord(aWraps[aWrap]));
+  gl.BindTexture(Target, 0);
+end;
 
+procedure TglrTexture.SetCombineMode(aCombineMode: TglrTexCombineMode);
+begin
+  gl.BindTexture(Target, Self.Id);
+  gl.TexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, aTextureMode[aCombineMode]);
+  gl.BindTexture(Target, 0);
+end;
+
+constructor TglrTexture.CreateFromFileStream(aStream: TglrStream;
+  aExt: AnsiString);
+var
+  data: Pointer;
+  iFormat, cFormat, dType: TGLConst;
+  pSize, anisotropy: Integer;
+
+begin
+  gl.GenTextures(1, @Self.Id);
+  Target := GL_TEXTURE_2D;
+  gl.BindTexture(Target, Self.Id);
+
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Ord(GL_LINEAR));
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Ord(GL_LINEAR));
+
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, Ord(GL_REPEAT));
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, Ord(GL_REPEAT));
+
+	gl.GetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, @anisotropy);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
+
+  //todo: combine mode ?
+
+  New(data);
+  data := LoadTexture(aStream, aExt, iFormat, cFormat, dType, pSize, Self.Width, Self.Height); //TexLoad.LoadTexture(aFileName, Format, W, H);
+  //FTex.FullSize := SizeOfP(Data);
+  X := 0;
+  Y := 0;
+  RegionWidth := Width;
+  RegionHeight := Height;
+  gl.TexImage2D(GL_TEXTURE_2D, 0, iFormat, Width, Height, 0, cFormat, dType, data);
+
+  gl.BindTexture(GL_TEXTURE_2D, 0);
+//  logWriteMessage('Загрузка текстуры завершена. ID = ' + IntToStr(FTex.Id) +
+//    ' Размер текстуры: ' + IntToStr(FTex.Width) + 'x' + IntToStr(FTex.Height) + '; ' + IntToStr(FTex.FullSize) + ' байт');
+  Dispose(data);
 end;
 
 destructor TglrTexture.Destroy();
 begin
+  gl.DeleteTextures(1, @Self.Id);
   inherited Destroy;
 end;
 
