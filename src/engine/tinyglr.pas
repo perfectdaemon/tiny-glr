@@ -173,8 +173,10 @@ type
   {$REGION 'Window'}
   TglrAppView = class abstract
   public
-    constructor Create(); virtual; abstract;
+    procedure Init(aData: Pointer); virtual; abstract;
     destructor Destroy(); override; abstract;
+
+    procedure Start(); virtual; abstract;
   end;
 
   {$ENDREGION}
@@ -236,25 +238,44 @@ type
     procedure OnStart(); virtual; abstract;
     procedure OnFinish(); virtual; abstract;
 
+    procedure OnPause(); virtual; abstract;
+    procedure OnResume(); virtual; abstract;
+
     procedure OnUpdate(const dt: Double); virtual; abstract;
     procedure OnRender(); virtual; abstract;
 
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer); virtual; abstract;
   end;
 
-  Glr = class
+  { Core }
+
+  TglrInitParams = record
+  {$IFDEF WINDOWS}
+    X, Y, Width, Height: Integer;
+    Caption: UnicodeString;
+  {$ENDIF}
+  end;
+
+  PglrInitParams = ^TglrInitParams;
+
+  Core = class
   protected
     class var fGame: TglrGame;
+    class var fAppView: TglrAppView;
+  public
+    class var Input: TglrInput;
+    class procedure Init(aGame: TglrGame; aInitParams: TglrInitParams);
 
     class procedure Resize(aNewWidth, aNewHeight: Integer);
     class procedure InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
-  public
-    class procedure Init(aGame: TglrGame);
 
     class procedure Start();
     class procedure Pause();
     class procedure Resume();
     class procedure Stop();
+
+    class procedure Update(const dt: Double);
+    class procedure Render();
 
     class procedure DeInit();
   end;
@@ -275,47 +296,70 @@ const
   IF_STRIDE: array[0..ifLimit - 1] of Integer =
     (SizeOf(Byte), SizeOf(ShortInt), SizeOf(Integer));
 
-{ Glr }
+{ Core }
 
-class procedure Glr.Resize(aNewWidth, aNewHeight: Integer);
+class procedure Core.Resize(aNewWidth, aNewHeight: Integer);
 begin
 
 end;
 
-class procedure Glr.InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y,
+class procedure Core.InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y,
   aOtherParam: Integer);
 begin
-
+  Input.Process(aType, aKey, X, Y, aOtherParam);
+  fGame.OnInput(aType, aKey, X, Y, aOtherParam);
 end;
 
-class procedure Glr.Init(aGame: TglrGame);
+class procedure Core.Init(aGame: TglrGame; aInitParams: TglrInitParams);
 begin
+  fGame := aGame;
+  {$IFDEF WINDOWS}
+  fAppView := TglrWindow.Create();
+  {$ENDIF}
 
+  fAppView.Init(@aInitParams);
+  GLRender.Init();
+  Input := TglrInput.Create();
 end;
 
-class procedure Glr.Start;
+class procedure Core.Start;
 begin
-
+  fGame.OnStart();
+  fAppView.Start();
 end;
 
-class procedure Glr.Pause;
+class procedure Core.Pause;
 begin
-
+  fGame.OnPause();
 end;
 
-class procedure Glr.Resume;
+class procedure Core.Resume;
 begin
-
+  fGame.OnResume();
 end;
 
-class procedure Glr.Stop;
+class procedure Core.Stop;
 begin
-
+  fGame.OnFinish();
 end;
 
-class procedure Glr.DeInit;
+class procedure Core.Update(const dt: Double);
 begin
+  fGame.OnUpdate(dt);
+end;
 
+class procedure Core.Render;
+begin
+  fGame.OnRender();
+  gl.ClearColor(0.5, 0.5, 0.5, 1.0);
+  gl.Clear(GL_COLOR_BUFFER_BIT);
+end;
+
+class procedure Core.DeInit;
+begin
+  fAppView.Free();
+  GLRender.DeInit();
+  Input.Free();
 end;
 
 { TglrInput }
