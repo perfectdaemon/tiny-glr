@@ -27,18 +27,21 @@ type
     function WndProc(hWnd: HWND; message: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
   public
     fShouldQuit: Boolean;
-    procedure Init(aData: Pointer); override;
+    constructor Create(aData: Pointer); override;
     destructor Destroy(); override;
 
-    procedure Start(); override;
+    procedure Loop(); override;
   end;
 
   PglrWindow = ^TglrWindow;
 
 implementation
 
+uses
+  ogl;
+
 var
-  wnd: TglrWindow;
+  wnd: TglrWindow; //temp variable for WndProc
 
 { TglrWindow }
 
@@ -109,20 +112,21 @@ begin
   end;
 end;
 
-procedure TglrWindow.Init(aData: Pointer);
+constructor TglrWindow.Create(aData: Pointer);
 var
   p: PglrInitParams;
   r: RECT;
   pfd: PIXELFORMATDESCRIPTOR;
 begin
+  inherited;
   p := PglrInitParams(aData);
   with fClass do
   begin
     style := CS_VREDRAW or CS_HREDRAW or CS_OWNDC;
-    //hInstance := 0;
-    //hIcon := LoadIcon(0, IDI_WINLOGO);
-    //hCursor := LoadCursor(0, IDC_ARROW);
-    //hbrBackground := GetStockObject (White_Brush);
+    hInstance := 0;
+    hIcon := LoadIcon(0, IDI_WINLOGO);
+    hCursor := LoadCursor(0, IDC_ARROW);
+    hbrBackground := GetStockObject (White_Brush);
     lpfnWndProc := @WndProcFirst;
     lpszClassName := PWideChar('TglrWindow');
   end;
@@ -146,12 +150,12 @@ begin
 	pfd.cDepthBits := 24;
 	pfd.cStencilBits := 8;
 
-	QueryPerformanceFrequency(@freq);
-	QueryPerformanceCounter(@startTime);
-
 	SetPixelFormat(fDC, ChoosePixelFormat(fDC, pfd), @pfd);
 	fRC := wglCreateContext(fDC);
 	wglMakeCurrent(fDC, fRC);
+
+  QueryPerformanceFrequency(@freq);
+  QueryPerformanceCounter(@startTime);
 
   fShouldQuit := False;
 end;
@@ -165,7 +169,7 @@ begin
 	DestroyWindow(fHandle);
 end;
 
-procedure TglrWindow.Start;
+procedure TglrWindow.Loop();
 begin
 	repeat
     if (PeekMessageW(msg, fHandle, 0, 0, PM_REMOVE)) then

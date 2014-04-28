@@ -131,6 +131,7 @@ type
   TglrCullMode = (cmNone, cmBack, cmFront);
   TglrFuncComparison = (fcNever, fcLess, fcEqual, fcLessOrEqual,
     fcGreater, fcNotEqual, fcGreaterOrEqual, fcAlways);
+  TglrClearMask = (cmAll, cmColor, cmDepth);
 
   { GLRender }
 
@@ -139,15 +140,21 @@ type
   protected
     class var fBlendingMode: TglrBlendingMode;
     class var fCullMode: TglrCullMode;
-    class var fDepthWrite, depthTest: Boolean;
+    class var fDepthWrite, fDepthTest: Boolean;
     class var fShader: TglrShaderId;
     class var fTexture: TglrTextureId;
     class var fVB: TglrVertexBufferId;
     class var fIB: TglrIndexBufferId;
     class var fFB: TglrFrameBufferId;
+    class var fStatTextureBind: Integer;
   public
     class procedure Init();
     class procedure DeInit();
+
+  	class procedure Resize(aWidth, aHeight: Integer);
+    class procedure ResetStates();
+    class procedure Clear(aClearMask: TglrClearMask);
+    class procedure SetClearColor(R, G, B: Single);
 
     class procedure SetCullMode(aCullMode: TglrCullMode);
     class procedure SetBlendingMode(aBlendingMode: TglrBlendingMode);
@@ -166,6 +173,8 @@ type
     class procedure DrawPoints(vBuffer: TglrVertexBuffer; aStart, aVertCount: Integer);
 //    class procedure DrawPointSprites();
 
+    //stat
+    class function GetStatTextureBinds(): Integer;
   end;
 
 {$ENDREGION}
@@ -173,10 +182,10 @@ type
   {$REGION 'Window'}
   TglrAppView = class abstract
   public
-    procedure Init(aData: Pointer); virtual; abstract;
+    constructor Create(aData: Pointer); virtual; abstract;
     destructor Destroy(); override; abstract;
 
-    procedure Start(); virtual; abstract;
+    procedure Loop(); virtual; abstract;
   end;
 
   {$ENDREGION}
@@ -224,6 +233,8 @@ type
   {$ENDIF}
   );
 
+
+
   { TglrInput }
 
   TglrInput = class
@@ -231,6 +242,8 @@ type
 		KeyDown: array[0..255] of Boolean;
 
 		procedure Process(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
+    function GetKeyName(aKey: TglrKey): AnsiString;
+    function GetInputTypeName(aType: TglrInputType): AnsiString;
   end;
 
   TglrGame = class abstract
@@ -240,6 +253,7 @@ type
 
     procedure OnPause(); virtual; abstract;
     procedure OnResume(); virtual; abstract;
+    procedure OnResize(aNewWidth, aNewHeight: Integer); virtual; abstract;
 
     procedure OnUpdate(const dt: Double); virtual; abstract;
     procedure OnRender(); virtual; abstract;
@@ -250,9 +264,10 @@ type
   { Core }
 
   TglrInitParams = record
-  {$IFDEF WINDOWS}
     X, Y, Width, Height: Integer;
     Caption: UnicodeString;
+    vSync: Boolean;
+  {$IFDEF WINDOWS}
   {$ENDIF}
   end;
 
@@ -269,10 +284,9 @@ type
     class procedure Resize(aNewWidth, aNewHeight: Integer);
     class procedure InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
 
-    class procedure Start();
+    class procedure Loop();
     class procedure Pause();
     class procedure Resume();
-    class procedure Stop();
 
     class procedure Update(const dt: Double);
     class procedure Render();
@@ -300,7 +314,8 @@ const
 
 class procedure Core.Resize(aNewWidth, aNewHeight: Integer);
 begin
-
+  GLRender.Resize(aNewWidth, aNewHeight);
+  fGame.OnResize(aNewWidth, aNewHeight);
 end;
 
 class procedure Core.InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -313,19 +328,21 @@ end;
 class procedure Core.Init(aGame: TglrGame; aInitParams: TglrInitParams);
 begin
   fGame := aGame;
-  {$IFDEF WINDOWS}
-  fAppView := TglrWindow.Create();
-  {$ENDIF}
-
-  fAppView.Init(@aInitParams);
-  GLRender.Init();
   Input := TglrInput.Create();
+
+  fAppView :=
+  {$IFDEF WINDOWS}TglrWindow{$ENDIF}
+    .Create(@aInitParams);
+  GLRender.Init();
+  GLRender.SetClearColor(0.2, 0.21, 0.25);
+  gl.SwapInterval(Ord(aInitParams.vSync));
 end;
 
-class procedure Core.Start;
+class procedure Core.Loop;
 begin
   fGame.OnStart();
-  fAppView.Start();
+  fAppView.Loop(); //main loop is here
+  fGame.OnFinish();
 end;
 
 class procedure Core.Pause;
@@ -338,11 +355,6 @@ begin
   fGame.OnResume();
 end;
 
-class procedure Core.Stop;
-begin
-  fGame.OnFinish();
-end;
-
 class procedure Core.Update(const dt: Double);
 begin
   fGame.OnUpdate(dt);
@@ -350,9 +362,9 @@ end;
 
 class procedure Core.Render;
 begin
+  GLRender.Clear(cmAll);
+  GLRender.fStatTextureBind := 0;
   fGame.OnRender();
-  gl.ClearColor(0.5, 0.5, 0.5, 1.0);
-  gl.Clear(GL_COLOR_BUFFER_BIT);
 end;
 
 class procedure Core.DeInit;
@@ -393,6 +405,26 @@ begin
   end;
 end;
 
+function TglrInput.GetKeyName(aKey: TglrKey): AnsiString;
+var
+  l: Integer;
+begin
+  WriteStr(Result, aKey);
+  l := Length(Result) - 1;
+  Move(Result[2], Result[1], l);
+  SetLength(Result, l);
+end;
+
+function TglrInput.GetInputTypeName(aType: TglrInputType): AnsiString;
+var
+  l: Integer;
+begin
+  WriteStr(Result, aType);
+  l := Length(Result) - 2;
+  Move(Result[3], Result[1], l);
+  SetLength(Result, l);
+end;
+
 { GLRender }
 
 class procedure GLRender.Init;
@@ -403,6 +435,33 @@ end;
 class procedure GLRender.DeInit;
 begin
   gl.Free();
+end;
+
+class procedure GLRender.Resize(aWidth, aHeight: Integer);
+begin
+
+end;
+
+class procedure GLRender.ResetStates;
+begin
+
+end;
+
+class procedure GLRender.Clear(aClearMask: TglrClearMask);
+begin
+  case aClearMask of
+    cmAll:
+      gl.Clear(TGLConst(Ord(GL_COLOR_BUFFER_BIT) or Ord(GL_DEPTH_BUFFER_BIT)));
+    cmColor:
+      gl.Clear(GL_COLOR_BUFFER_BIT);
+    cmDepth:
+      gl.Clear(GL_DEPTH_BUFFER_BIT);
+  end;
+end;
+
+class procedure GLRender.SetClearColor(R, G, B: Single);
+begin
+  gl.ClearColor(R, G, B, 1.0);
 end;
 
 class procedure GLRender.SetCullMode(aCullMode: TglrCullMode);
@@ -463,16 +522,21 @@ begin
 
 end;
 
-{ TglrFrameBuffer }
-
-procedure TglrFrameBuffer.Bind;
+class function GLRender.GetStatTextureBinds(): Integer;
 begin
-  gl.BindBuffer(GL_FRAMEBUFFER, Self.Id);
+  Result := fStatTextureBind;
 end;
 
-class procedure TglrFrameBuffer.Unbind;
+{ TglrFrameBuffer }
+
+procedure TglrFrameBuffer.Bind();
 begin
-  gl.BindBuffer(GL_FRAMEBUFFER, 0);
+  gl.BindFramebuffer(GL_FRAMEBUFFER, Self.Id);
+end;
+
+class procedure TglrFrameBuffer.Unbind();
+begin
+  gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
 end;
 
 constructor TglrFrameBuffer.Create;
