@@ -32,13 +32,25 @@ type
 
     procedure Loop(); override;
   end;
-
   PglrWindow = ^TglrWindow;
+
+  function FileExists(const FileName: String): Boolean;
 
 implementation
 
 uses
   ogl;
+
+function FileExists(const FileName: String): Boolean;
+var
+  Attr: Dword;
+begin
+  Attr := GetFileAttributesA(PChar(FileName));
+  if (Attr <> $ffffffff) then
+    Result := (Attr and FILE_ATTRIBUTE_DIRECTORY) = 0
+  else
+    Result := False;
+end;
 
 var
   wnd: TglrWindow; //temp variable for WndProc

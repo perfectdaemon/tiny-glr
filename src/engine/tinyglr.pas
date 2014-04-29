@@ -16,7 +16,7 @@ type
   {$REGION 'Utils'}
   TglrStream = class
     class function Init(Memory: Pointer; MemSize: LongInt): TglrStream; overload;
-    class function Init(const FileName: string; RW: Boolean = False): TglrStream; overload;
+    class function Init(const FileName: AnsiString; RW: Boolean = False): TglrStream; overload;
     destructor Destroy; override;
   private
     SType  : (stMemory, stFile);
@@ -38,6 +38,50 @@ type
     property Size: LongInt read FSize;
     property Pos: LongInt read FPos write SetPos;
   end;
+
+  TglrListCompareFunc = function (Item1, Item2: Pointer): LongInt;
+  TglrList = class
+    procedure Init(Capacity: LongInt = 1);
+    procedure Free(FreeClass: Boolean = False);
+  private
+    FItems    : array of Pointer;
+    FCount    : LongInt;
+    FCapacity : LongInt;
+    procedure BoundsCheck(Index: LongInt);
+    function GetItem(Index: LongInt): Pointer; inline;
+    procedure SetItem(Index: LongInt; Value: Pointer); inline;
+  public
+    function IndexOf(Item: Pointer): LongInt;
+    function Add(Item: Pointer): LongInt;
+    procedure Delete(Index: LongInt; FreeClass: Boolean = False);
+    procedure Insert(Index: LongInt; Item: Pointer);
+    procedure Sort(CompareFunc: TglrListCompareFunc);
+    property Count: LongInt read FCount;
+    property Items[Index: LongInt]: Pointer read GetItem write SetItem; default;
+  end;
+
+  { FileSystem }
+
+  FileSystem = class
+  protected
+  public
+    class function GetResource(aFileName: AnsiString): TglrStream;
+  end;
+
+  { Convert }
+
+  Convert = class
+  public
+    class function ToStringA(aVal: Integer): AnsiString; overload;
+    class function ToStringA(aVal: Single): AnsiString; overload;
+    class function ToStringW(aVal: Integer): UnicodeString; overload;
+    class function ToStringW(aVal: Single): UnicodeString; overload;
+    class function ToInt(aStr: AnsiString): Integer; overload;
+    class function ToInt(aStr: WideString): Integer; overload;
+    class function ToFloat(aStr: AnsiString): Single; overload;
+    class function ToFloat(aStr: WideString): Single; overload;
+  end;
+
   {$ENDREGION}
 
   {$REGION 'Render'}
@@ -167,6 +211,7 @@ type
     class procedure SetDepthTest(aEnabled: Boolean);
     class procedure SetDepthFunc(aComparison: TglrFuncComparison);
     class procedure SetAlphaTest(aComparison: TglrFuncComparison; aValue: Single);
+    class procedure SetVerticalSync(aEnabled: Boolean);
 
     class procedure SetShader(aShader: TglrShaderId);
     class procedure SetTexture(aTexture: TglrTextureId; aSampler: Integer);
@@ -184,7 +229,7 @@ type
 
 {$ENDREGION}
 
-  {$REGION 'Window'}
+  {$REGION 'App view'}
   TglrAppView = class abstract
   public
     constructor Create(aData: Pointer); virtual; abstract;
@@ -195,7 +240,7 @@ type
 
   {$ENDREGION}
 
-  {$REGION 'Core and Game'}
+  {$REGION 'Input'}
 
   TglrInputType = ( itTouchDown, itTouchUp, itTouchMove, itKeyDown, itKeyUp, itWheel );
 
@@ -240,8 +285,6 @@ type
   {$ENDIF}
   );
 
-
-
   { TglrInput }
 
   TglrInput = class
@@ -253,6 +296,10 @@ type
     function GetKeyName(aKey: TglrKey): AnsiString;
     function GetInputTypeName(aType: TglrInputType): AnsiString;
   end;
+
+  {$ENDREGION}
+
+  {$REGION 'Game'}
 
   TglrGame = class abstract
   public
@@ -269,7 +316,9 @@ type
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer); virtual; abstract;
   end;
 
-  { Core }
+  {$ENDREGION}
+
+  {$REGION 'Core'}
 
   TglrInitParams = record
     X, Y, Width, Height: Integer;
@@ -305,6 +354,42 @@ type
 
   {$ENDREGION}
 
+  {$REGION 'Scene'}
+
+  { TglrNode }
+
+  TglrNode = class
+  private
+    function GetAbsMatrix: TdfMat4f;
+  protected
+    fParent: TglrNode;
+    fAbsMatrix: TdfMat4f;
+
+    function GetChildIndex(aChild: TglrNode): Integer;
+    procedure SetParent(AValue: TglrNode);
+    procedure UpdateDirUpRight(aNewDir, aNewUp, aNewRight: TdfVec3f); virtual;
+    procedure UpdateAbsoluteMatrix(); virtual;
+    procedure RenderChilds(); virtual;
+  public
+    Visible: Boolean;
+    Direction, Right, Up, Position: TdfVec3f;
+    Matrix: TdfMat4f;
+    Childs: TglrList;
+
+    constructor Create; virtual;
+    destructor Destroy; override;
+
+    property AbsoluteMatrix: TdfMat4f read GetAbsMatrix write fAbsMatrix;
+    property Parent: TglrNode read fParent write SetParent;
+
+    procedure Render(); virtual;
+  end;
+
+  TglrScene = class
+
+  end;
+
+  {$ENDREGION}
 implementation
 
 uses
@@ -321,6 +406,119 @@ const
 
   comparison: array[Low(TglrFuncComparison)..High(TglrFuncComparison)] of TGLConst =
     (GL_NEVER, GL_LESS, GL_EQUAL, GL_LEQUAL, GL_GREATER, GL_NOTEQUAL, GL_GEQUAL, GL_ALWAYS);
+
+  aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
+    (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
+  aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
+    (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
+
+{ Convert }
+
+class function Convert.ToStringA(aVal: Integer): AnsiString;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class function Convert.ToStringA(aVal: Single): AnsiString;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class function Convert.ToStringW(aVal: Integer): UnicodeString;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class function Convert.ToStringW(aVal: Single): UnicodeString;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class function Convert.ToInt(aStr: AnsiString): Integer;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class function Convert.ToInt(aStr: WideString): Integer;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class function Convert.ToFloat(aStr: AnsiString): Single;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class function Convert.ToFloat(aStr: WideString): Single;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+{ TglrNode }
+
+procedure TglrNode.SetParent(AValue: TglrNode);
+begin
+  if (fParent = AValue) then
+    Exit();
+  fParent := AValue;
+  GetAbsMatrix();
+end;
+
+function TglrNode.GetAbsMatrix: TdfMat4f;
+begin
+  if Assigned(fParent) then
+    fAbsMatrix := fParent.AbsoluteMatrix * Matrix
+  else
+    fAbsMatrix := Matrix;
+  Exit(fAbsMatrix);
+end;
+
+function TglrNode.GetChildIndex(aChild: TglrNode): Integer;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+procedure TglrNode.UpdateDirUpRight(aNewDir, aNewUp, aNewRight: TdfVec3f);
+begin
+  Assert(False, 'Not implemented');
+end;
+
+procedure TglrNode.UpdateAbsoluteMatrix;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+procedure TglrNode.RenderChilds;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+constructor TglrNode.Create;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+destructor TglrNode.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TglrNode.Render;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+{ FileSystem }
+
+class function FileSystem.GetResource(aFileName: AnsiString): TglrStream;
+begin
+  {$IFDEF WINDOWS}
+  if (FileExists(aFileName)) then
+  begin
+    Result := TglrStream.Init(aFileName);
+  end;
+  {$ENDIF}
+end;
 
 { Core }
 
@@ -347,22 +545,22 @@ begin
     .Create(@aInitParams);
   GLRender.Init();
   GLRender.SetClearColor(0.2, 0.21, 0.25);
-  gl.SwapInterval(Ord(aInitParams.vSync));
+  GLRender.SetViewPort(0, 0, aInitParams.Width, aInitParams.Height);
 end;
 
-class procedure Core.Loop;
+class procedure Core.Loop();
 begin
   fGame.OnStart();
   fAppView.Loop(); //main loop is here
   fGame.OnFinish();
 end;
 
-class procedure Core.Pause;
+class procedure Core.Pause();
 begin
   fGame.OnPause();
 end;
 
-class procedure Core.Resume;
+class procedure Core.Resume();
 begin
   fGame.OnResume();
 end;
@@ -372,14 +570,15 @@ begin
   fGame.OnUpdate(dt);
 end;
 
-class procedure Core.Render;
+class procedure Core.Render();
 begin
   GLRender.Clear(cmAll);
+  GLRender.ResetStates();
   GLRender.fStatTextureBind := 0;
   fGame.OnRender();
 end;
 
-class procedure Core.DeInit;
+class procedure Core.DeInit();
 begin
   fAppView.Free();
   GLRender.DeInit();
@@ -458,7 +657,14 @@ end;
 
 class procedure GLRender.ResetStates;
 begin
+  SetCullMode(cmBack);
+  SetBlendingMode(bmAlpha);
+  SetDepthFunc(fcLessOrEqual);
+  SetDepthWrite(True);
+  SetDepthTest(True);
+  SetAlphaTest(fcGreaterOrEqual, 0.0);
 
+  gl.Enable(GL_COLOR_MATERIAL);
 end;
 
 class procedure GLRender.Clear(aClearMask: TglrClearMask);
@@ -572,26 +778,31 @@ begin
   fAlphaTest := aValue;
 end;
 
+class procedure GLRender.SetVerticalSync(aEnabled: Boolean);
+begin
+  gl.SwapInterval(LongInt(aEnabled));
+end;
+
 class procedure GLRender.SetShader(aShader: TglrShaderId);
 begin
-
+  Assert(False, 'Not implemented');
 end;
 
 class procedure GLRender.SetTexture(aTexture: TglrTextureId; aSampler: Integer);
 begin
-
+  Assert(False, 'Not implemented');
 end;
 
 class procedure GLRender.DrawTriangles(vBuffer: TglrVertexBuffer;
   iBuffer: TglrIndexBuffer; aStart, aVertCount: Integer);
 begin
-
+  Assert(False, 'Not implemented');
 end;
 
 class procedure GLRender.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
   aVertCount: Integer);
 begin
-
+  Assert(False, 'Not implemented');
 end;
 
 { TglrFrameBuffer }
@@ -685,7 +896,7 @@ begin
   end;
 end;
 
-class function TglrStream.Init(const FileName: String; RW: Boolean): TglrStream;
+class function TglrStream.Init(const FileName: AnsiString; RW: Boolean): TglrStream;
 var
   io: Integer;
 begin
@@ -811,12 +1022,6 @@ end;
 
 { TglrTexture }
 
-const
-  aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
-    (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
-  aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
-    (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
-
 procedure TglrTexture.SetWrapS(aWrap: TglrTexWrap);
 begin
   gl.BindTexture(Target, Self.Id);
@@ -887,6 +1092,118 @@ destructor TglrTexture.Destroy();
 begin
   gl.DeleteTextures(1, @Self.Id);
   inherited Destroy;
+end;
+
+procedure TglrList.Init(Capacity: LongInt);
+begin
+  FItems := nil;
+  FCount := 0;
+  FCapacity := Capacity;
+end;
+
+procedure TglrList.Free(FreeClass: Boolean);
+var
+  i : LongInt;
+begin
+  if FreeClass then
+    for i := 0 to Count - 1 do
+      TObject(FItems[i]).Free;
+  FItems := nil;
+  FCount := 0;
+end;
+
+procedure TglrList.BoundsCheck(Index: LongInt);
+begin
+  Assert((Index > 0) or (Index <= FCount), 'List index out of bounds (' + Convert.ToStringA(Index) + ')');
+end;
+
+function TglrList.GetItem(Index: LongInt): Pointer;
+begin
+  BoundsCheck(Index);
+  Result := FItems[Index];
+end;
+
+procedure TglrList.SetItem(Index: LongInt; Value: Pointer);
+begin
+  BoundsCheck(Index);
+  FItems[Index] := Value;
+end;
+
+function TglrList.IndexOf(Item: Pointer): LongInt;
+var
+  i : LongInt;
+begin
+  for i := 0 to FCount - 1 do
+    if FItems[i] = Item then
+    begin
+      Result := i;
+      Exit;
+    end;
+  Result := -1;
+end;
+
+function TglrList.Add(Item: Pointer): LongInt;
+begin
+  if FCount mod FCapacity = 0 then
+    SetLength(FItems, Length(FItems) + FCapacity);
+  FItems[FCount] := Item;
+  Result := FCount;
+  Inc(FCount);
+end;
+
+procedure TglrList.Delete(Index: LongInt; FreeClass: Boolean);
+begin
+  BoundsCheck(Index);
+  if FreeClass then
+    TObject(FItems[Index]).Free;
+  Move(FItems[Index + 1], FItems[Index], (FCount - Index - 1) * SizeOf(FItems[0]));
+  Dec(FCount);
+  if Length(FItems) - FCount + 1 > FCapacity then
+    SetLength(FItems, Length(FItems) - FCapacity);
+end;
+
+procedure TglrList.Insert(Index: LongInt; Item: Pointer);
+begin
+  BoundsCheck(Index);
+  Add(nil);
+  Move(FItems[Index], FItems[Index + 1], (FCount - Index - 1) * SizeOf(FItems[0]));
+  FItems[Index] := Item;
+end;
+
+procedure TglrList.Sort(CompareFunc: TglrListCompareFunc);
+
+  procedure SortFragment(L, R: LongInt);
+  var
+    i, j : Integer;
+    P, T : Pointer;
+  begin
+    repeat
+      i := L;
+      j := R;
+      P := FItems[(L + R) div 2];
+      repeat
+        while CompareFunc(FItems[i], P) < 0 do
+          Inc(i);
+        while CompareFunc(FItems[j], P) > 0 do
+          Dec(j);
+        if i <= j then
+        begin
+          T := FItems[i];
+          FItems[i] := FItems[j];
+          FItems[j] := T;
+          Inc(i);
+          Dec(j);
+        end;
+      until i > j;
+      if L < j then
+        SortFragment(L, j);
+      L := i;
+    until i >= R;
+  end;
+
+begin
+  if FCount > 1 then
+    SortFragment(0, FCount - 1);
 end;
 
 end.

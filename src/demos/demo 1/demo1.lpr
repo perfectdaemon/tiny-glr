@@ -43,7 +43,14 @@ end;
 
 procedure TGame.OnRender;
 begin
-
+  gl.MatrixMode(GL_MODELVIEW);
+  gl.LoadIdentity();
+  gl.Color3f(1, 1, 1);
+  gl.Beginp(GL_TRIANGLES);
+    gl.Vertex3f(100, 100, 1);
+    gl.Vertex3f(100, 200, 1);
+    gl.Vertex3f(200, 200, 1);
+  gl.Endp();
 end;
 
 procedure TGame.OnResume;
@@ -59,6 +66,8 @@ end;
 procedure TGame.OnStart;
 begin
   WriteLn('Start');
+  gl.MatrixMode(GL_PROJECTION);
+  gl.Ortho(0, 800, 600, 0, -1, 100);
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
@@ -77,7 +86,7 @@ begin
     Height := 600;
     X := 100;
     Y := 100;
-    Caption := 'tiny glr яд';
+    Caption := 'tiny glr';
     vSync := True;
   end;
 
