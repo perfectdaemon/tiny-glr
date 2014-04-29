@@ -50,8 +50,8 @@ type
   TglrIndex = type Word;
 
   TglrTextureFormat = (tfFuck);
-  TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2{, ...}, vfLIMIT);
-  TglrIndexFormat = (ifByte, ifShort, ifInt{, ...}, ifLIMIT);
+  TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2);
+  TglrIndexFormat = (ifByte, ifShort, ifInt);
 
   TglrVertexP2T2 = record
     vec, tex: TdfVec2f;
@@ -126,8 +126,7 @@ type
   end;
 
 
-  TglrBlendingMode = (bmOpaque, bmTransparency, bmAdditive, bmAlphaTest50,
-    bmAlphaTest100, bmModulate);
+  TglrBlendingMode = ( bmNone, bmAlpha, bmAdditive, bmMultiply, bmScreen);
   TglrCullMode = (cmNone, cmBack, cmFront);
   TglrFuncComparison = (fcNever, fcLess, fcEqual, fcLessOrEqual,
     fcGreater, fcNotEqual, fcGreaterOrEqual, fcAlways);
@@ -140,25 +139,30 @@ type
   protected
     class var fBlendingMode: TglrBlendingMode;
     class var fCullMode: TglrCullMode;
-    class var fDepthWrite, fDepthTest: Boolean;
+    class var fDepthWrite, fDepthTest, fLight: Boolean;
+    class var fDepthFunc, fAlphaFunc: TglrFuncComparison;
+    class var fAlphaTest: Single;
     class var fShader: TglrShaderId;
     class var fTexture: TglrTextureId;
     class var fVB: TglrVertexBufferId;
     class var fIB: TglrIndexBufferId;
     class var fFB: TglrFrameBufferId;
+
     class var fStatTextureBind: Integer;
+    class var fWidth, fHeight: Integer;
   public
     class procedure Init();
     class procedure DeInit();
 
-  	class procedure Resize(aWidth, aHeight: Integer);
+    class procedure Resize(aWidth, aHeight: Integer);
     class procedure ResetStates();
     class procedure Clear(aClearMask: TglrClearMask);
     class procedure SetClearColor(R, G, B: Single);
 
+    class procedure SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
     class procedure SetCullMode(aCullMode: TglrCullMode);
     class procedure SetBlendingMode(aBlendingMode: TglrBlendingMode);
-    class procedure SetLighting(aEnabled: Boolean);
+    class procedure SetLighting(aEnabled: Boolean); deprecated;
     class procedure SetDepthWrite(aEnabled: Boolean);
     class procedure SetDepthTest(aEnabled: Boolean);
     class procedure SetDepthFunc(aComparison: TglrFuncComparison);
@@ -174,7 +178,8 @@ type
 //    class procedure DrawPointSprites();
 
     //stat
-    class function GetStatTextureBinds(): Integer;
+    class property TextureBinds: Integer read fStatTextureBind;
+    class property Width: Integer read fWidth;
   end;
 
 {$ENDREGION}
@@ -203,33 +208,35 @@ type
   {$IFDEF WINDOWS}
     kNoInput = $00,
 
-		kLeftButton = $01,
-		kRightButton, kCancel, kMiddleButton, kXButton1, kXButton2,
+    kLeftButton = $01,
+    kRightButton, kCancel, kMiddleButton, kXButton1, kXButton2,
 
-		kBack = $08, kTab,
+    kBack = $08, kTab,
 
-		kClear = $0C, kReturn,
+    kClear = $0C, kReturn,
 
-		kShift = $10, kCtrl, kAlt, kPause, kCapsLock,
+    kShift = $10, kCtrl, kAlt, kPause, kCapsLock,
 
-		kEscape = $1B,
+    kEscape = $1B,
 
-		kSpace = $20, kPageUp, kPageDown,
-		kEnd, kHome, kLeft, kUp, kRight, kDown,
+    kSpace = $20, kPageUp, kPageDown,
+    kEnd, kHome, kLeft, kUp, kRight, kDown,
 
-		kPrintScreen = $2C, kInsert, kDelete,
+    kPrintScreen = $2C, kInsert, kDelete,
 
-		k0 = $30, k1, k2, k3, k4, k5, k6, k7, k8, k9,
-		kA = $41, kB, kC, kD, kE, kF, kG, kH, kI, kJ, kK, kL, kM, kN, kO, kP, kQ, kR, kS, kT, kU, kV, kW, kX, kY, kZ,
+    k0 = $30, k1, k2, k3, k4, k5, k6, k7, k8, k9,
+    kA = $41, kB, kC, kD, kE, kF, kG, kH, kI, kJ, kK, kL, kM, kN, kO, kP, kQ, kR, kS, kT, kU, kV, kW, kX, kY, kZ,
 
-		kLeftWin = $5B, kRightWin,
+    kLeftWin = $5B, kRightWin,
 
-		kNumPad0 = $60, kNumPad1, kNumPad2, kNumPad3, kNumPad4, kNumPad5, kNumPad6, kNumPad7, kNumPad8, kNumPad9,
-		kNumPadMul, kNumPadAdd, kNumPadSeparator, kNumPadSub, kNumPadDecimal, kNumPadDiv,
+    kNumPad0 = $60, kNumPad1, kNumPad2, kNumPad3, kNumPad4, kNumPad5, kNumPad6, kNumPad7, kNumPad8, kNumPad9,
+    kNumPadMul, kNumPadAdd, kNumPadSeparator, kNumPadSub, kNumPadDecimal, kNumPadDiv,
 
-		kF1, kF2, kF3, kF4, kF5, kF6, kF7, kF8, kF9, kF10, kF11, kF12, kF13, kF14, kF15, kF16, kF17, kF18, kF19, kF20, kF21, kF22, kF23, kF24,
+    kF1, kF2, kF3, kF4, kF5, kF6, kF7, kF8, kF9, kF10, kF11, kF12, kF13, kF14, kF15, kF16, kF17, kF18, kF19, kF20, kF21, kF22, kF23, kF24,
 
-		kNumLock = $90, kScrollLock
+    kNumLock = $90, kScrollLock,
+
+    kWheelUp = $97, kWheelDown //engine defined, according to win api reference these codes are not assigned
   {$ENDIF}
   );
 
@@ -239,9 +246,10 @@ type
 
   TglrInput = class
     Touch: array[0..9] of TglrTouch;
-		KeyDown: array[0..255] of Boolean;
+    KeyDown: array[Low(TglrKey)..High(TglrKey)] of Boolean;
+    lastWheelDelta: Integer;
 
-		procedure Process(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
+    procedure Process(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
     function GetKeyName(aKey: TglrKey): AnsiString;
     function GetInputTypeName(aType: TglrInputType): AnsiString;
   end;
@@ -279,6 +287,7 @@ type
     class var fAppView: TglrAppView;
   public
     class var Input: TglrInput;
+
     class procedure Init(aGame: TglrGame; aInitParams: TglrInitParams);
 
     class procedure Resize(aNewWidth, aNewHeight: Integer);
@@ -305,10 +314,13 @@ uses
   resload;
 
 const
-  VF_STRIDE: array[0..TglrVertexFormat.vfLIMIT - 1] of Integer =
+  VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2));
-  IF_STRIDE: array[0..ifLimit - 1] of Integer =
+  IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
     (SizeOf(Byte), SizeOf(ShortInt), SizeOf(Integer));
+
+  comparison: array[Low(TglrFuncComparison)..High(TglrFuncComparison)] of TGLConst =
+    (GL_NEVER, GL_LESS, GL_EQUAL, GL_LEQUAL, GL_GREATER, GL_NOTEQUAL, GL_GEQUAL, GL_ALWAYS);
 
 { Core }
 
@@ -383,7 +395,7 @@ var
   k: ^Boolean;
 begin
   t := @Touch[Ord(aKey)];
-  k := @KeyDown[Ord(aKey)];
+  k := @KeyDown[aKey];
   case aType of
     itTouchDown:
       with t^ do
@@ -401,7 +413,7 @@ begin
     itKeyUp:
       k^ := False;
     itWheel:
-      ;
+      lastWheelDelta := aOtherParam;
   end;
 end;
 
@@ -439,7 +451,9 @@ end;
 
 class procedure GLRender.Resize(aWidth, aHeight: Integer);
 begin
-
+  SetViewPort(0, 0, aWidth, aHeight);
+  fWidth := aWidth;
+  fHeight := aHeight;
 end;
 
 class procedure GLRender.ResetStates;
@@ -464,40 +478,98 @@ begin
   gl.ClearColor(R, G, B, 1.0);
 end;
 
+class procedure GLRender.SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
+begin
+  gl.Viewport(aLeft, aTop, aWidth, aHeight);
+end;
+
 class procedure GLRender.SetCullMode(aCullMode: TglrCullMode);
 begin
+  if (fCullMode = aCullMode) then
+    Exit();
 
+  case aCullMode of
+    cmNone:
+      gl.Disable(GL_CULL_FACE);
+    cmFront:
+      gl.CullFace(GL_FRONT);
+    cmBack:
+      gl.CullFace(GL_BACK);
+  end;
+
+  if (fCullMode = cmNone) then
+    gl.Enable(GL_CULL_FACE);
+  fCullMode := aCullMode;
 end;
 
 class procedure GLRender.SetBlendingMode(aBlendingMode: TglrBlendingMode);
 begin
+  if (fBlendingMode = aBlendingMode) then
+    Exit();
+  case aBlendingMode of
+    bmNone:
+      gl.Disable(GL_BLEND);
+    bmAlpha:
+      gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    bmAdditive:
+      gl.BlendFunc(GL_ONE, GL_ONE);
+    bmMultiply:
+      gl.BlendFunc(GL_DST_COLOR, GL_ZERO);
+    bmScreen:
+      gl.BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+  end;
 
+  if (fBlendingMode = bmNone) then
+    gl.Enable(GL_BLEND);
+
+  fBlendingMode := aBlendingMode;
 end;
 
 class procedure GLRender.SetLighting(aEnabled: Boolean);
 begin
-
+  if (fLight = aEnabled) then
+    Exit();
+  if (aEnabled) then
+    gl.Enable(GL_LIGHTING)
+  else
+    gl.Disable(GL_LIGHTING);
 end;
 
 class procedure GLRender.SetDepthWrite(aEnabled: Boolean);
 begin
-
+  if (aEnabled = fDepthWrite) then
+    Exit();
+  gl.DepthMask(aEnabled);
+  fDepthWrite := aEnabled;
 end;
 
 class procedure GLRender.SetDepthTest(aEnabled: Boolean);
 begin
-
+  if (aEnabled = fDepthTest) then
+    Exit();
+  if (aEnabled) then
+    gl.Enable(GL_DEPTH_TEST)
+  else
+    gl.Disable(GL_DEPTH_TEST);
+  fDepthTest := aEnabled;
 end;
 
 class procedure GLRender.SetDepthFunc(aComparison: TglrFuncComparison);
 begin
-
+  if (fDepthFunc = aComparison) then
+    Exit();
+  gl.DepthFunc(comparison[aComparison]);
+  fDepthFunc := aComparison;
 end;
 
 class procedure GLRender.SetAlphaTest(aComparison: TglrFuncComparison;
   aValue: Single);
 begin
-
+  if (fAlphaFunc = aComparison) or (Abs(fAlphaTest - aValue) < cEPS) then
+    Exit();
+  gl.AlphaFunc(comparison[aComparison], aValue);
+  fAlphaFunc := aComparison;
+  fAlphaTest := aValue;
 end;
 
 class procedure GLRender.SetShader(aShader: TglrShaderId);
@@ -520,11 +592,6 @@ class procedure GLRender.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
   aVertCount: Integer);
 begin
 
-end;
-
-class function GLRender.GetStatTextureBinds(): Integer;
-begin
-  Result := fStatTextureBind;
 end;
 
 { TglrFrameBuffer }
@@ -567,7 +634,7 @@ constructor TglrIndexBuffer.Create(aData: Pointer; aCount: Integer;
 begin
   gl.GenBuffers(1, @Self.Id);
   Self.Bind();
-  gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[Ord(aFormat)] * aCount, aData, GL_STATIC_DRAW);
+  gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[aFormat] * aCount, aData, GL_STATIC_DRAW);
   Self.Unbind();
 end;
 
@@ -594,7 +661,7 @@ constructor TglrVertexBuffer.Create(aData: Pointer; aCount: Integer;
 begin
   gl.GenBuffers(1, @Self.Id);
   Self.Bind();
-  gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[Ord(aFormat)] * aCount, aData, GL_STATIC_DRAW);
+  gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[aFormat] * aCount, aData, GL_STATIC_DRAW);
   Self.Unbind();
 end;
 
@@ -790,14 +857,14 @@ begin
   Target := GL_TEXTURE_2D;
   gl.BindTexture(Target, Self.Id);
 
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Ord(GL_LINEAR));
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Ord(GL_LINEAR));
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Ord(GL_LINEAR));
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Ord(GL_LINEAR));
 
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, Ord(GL_REPEAT));
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, Ord(GL_REPEAT));
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, Ord(GL_REPEAT));
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, Ord(GL_REPEAT));
 
-	gl.GetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, @anisotropy);
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
+  gl.GetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, @anisotropy);
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
 
   //todo: combine mode ?
 

@@ -48,11 +48,11 @@ var
 function WndProcFirst(hWnd: HWND; message: UINT; wParam: WPARAM;
   lParam: LPARAM): LRESULT; stdcall;
 begin
-	wnd := TglrWindow(GetWindowLongPtrW(hwnd, GWL_USERDATA));
-	if (wnd <> nil) then
-		Result := wnd.WndProc(hWnd, message, wParam, lParam)
-	else
-		Result := DefWindowProcW(hWnd, message, wParam, lParam);
+  wnd := TglrWindow(GetWindowLongPtrW(hwnd, GWL_USERDATA));
+  if (wnd <> nil) then
+    Result := wnd.WndProc(hWnd, message, wParam, lParam)
+  else
+    Result := DefWindowProcW(hWnd, message, wParam, lParam);
 end;
 
 function TglrWindow.GetTime(): Integer;
@@ -67,48 +67,51 @@ begin
   Result := 0;
   case (message) of
     WM_ACTIVATEAPP:
-  	  if (wParam = 0) then
+      if (wParam = 0) then
         Core.Pause()
-  	  else
+      else
         Core.Resume();
 
-  	WM_CLOSE, WM_DESTROY:
-  		Self.fShouldQuit := True;
+    WM_CLOSE, WM_DESTROY:
+      Self.fShouldQuit := True;
 
     WM_MOUSEMOVE:
-  		if (wParam and MK_LBUTTON <> 0) then
-  			Core.InputReceived(itTouchMove, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0)
-  		else if (wParam and MK_RBUTTON <> 0) then
-  			Core.InputReceived(itTouchMove, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
-  		else if (wParam and MK_MBUTTON <> 0) then
-  			Core.InputReceived(itTouchMove, kMiddleButton, LOWORD(lParam), HIWORD(lParam), 0)
-  		else
-  			Core.InputReceived(itTouchMove, kNoInput, LOWORD(lParam), HIWORD(lParam), 0);
+      if (wParam and MK_LBUTTON <> 0) then
+        Core.InputReceived(itTouchMove, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0)
+      else if (wParam and MK_RBUTTON <> 0) then
+        Core.InputReceived(itTouchMove, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
+      else if (wParam and MK_MBUTTON <> 0) then
+        Core.InputReceived(itTouchMove, kMiddleButton, LOWORD(lParam), HIWORD(lParam), 0)
+      else
+        Core.InputReceived(itTouchMove, kNoInput, LOWORD(lParam), HIWORD(lParam), 0);
 
     WM_LBUTTONDOWN, WM_LBUTTONUP, WM_LBUTTONDBLCLK:
       if (message = WM_LBUTTONUP) then
-  			Core.InputReceived(itTouchUp, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0)
+        Core.InputReceived(itTouchUp, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0)
       else
         Core.InputReceived(itTouchDown, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0);
 
 
-  	WM_RBUTTONDOWN, WM_RBUTTONUP, WM_RBUTTONDBLCLK:
+    WM_RBUTTONDOWN, WM_RBUTTONUP, WM_RBUTTONDBLCLK:
       if (message = WM_LBUTTONUP) then
-  			Core.InputReceived(itTouchUp, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
+        Core.InputReceived(itTouchUp, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
       else
         Core.InputReceived(itTouchDown, kRightButton, LOWORD(lParam), HIWORD(lParam), 0);
 
-  	WM_KEYDOWN, WM_KEYUP:
+    WM_KEYDOWN, WM_KEYUP:
       if (message = WM_KEYUP) then
-			  Core.InputReceived(itKeyUp, TglrKey(wParam), 0, 0, 0)
+        Core.InputReceived(itKeyUp, TglrKey(wParam), 0, 0, 0)
       else
         Core.InputReceived(itKeyDown, TglrKey(wParam), 0, 0, 0);
 
     WM_MOUSEWHEEL:
-  		Core.InputReceived(itWheel, kNoInput, LOWORD(lParam), HIWORD(lParam), HIWORD(wParam) div WHEEL_DELTA);
+      if (HIWORD(wParam) > 0) then
+        Core.InputReceived(itWheel, kWheelUp, LOWORD(lParam), HIWORD(lParam), HIWORD(wParam) div WHEEL_DELTA)
+      else
+        Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), HIWORD(wParam) div WHEEL_DELTA);
 
     else
-  		Result := DefWindowProcW(hWnd, message, wParam, lParam);
+      Result := DefWindowProcW(hWnd, message, wParam, lParam);
   end;
 end;
 
@@ -134,25 +137,25 @@ begin
 
   fStyle := WS_VISIBLE or WS_OVERLAPPED or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPSIBLINGS or WS_CLIPCHILDREN; //WS_VISIBLE or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPCHILDREN;
 
-	SetRect(r, 0, 0, p^.Width, p^.Height);
-	AdjustWindowRect(r, fStyle, False);
-	fHandle := CreateWindowW(PWideChar('TglrWindow'), PWideChar(p^.Caption), fStyle, p^.X, p^.Y, r.Right - r.Left, r.Bottom - r.Top, 0, 0, 0, Self);
-	SetWindowLongPtrW(fHandle, GWL_USERDATA, LONG_PTR(Self));
+  SetRect(r, 0, 0, p^.Width, p^.Height);
+  AdjustWindowRect(r, fStyle, False);
+  fHandle := CreateWindowW(PWideChar('TglrWindow'), PWideChar(p^.Caption), fStyle, p^.X, p^.Y, r.Right - r.Left, r.Bottom - r.Top, 0, 0, 0, Self);
+  SetWindowLongPtrW(fHandle, GWL_USERDATA, LONG_PTR(Self));
 
-	fDC := GetDC(fHandle);
+  fDC := GetDC(fHandle);
 
-	ZeroMemory(@pfd, SizeOf(pfd));
-	pfd.nSize := SizeOf(pfd);
-	pfd.nVersion := 1;
-	pfd.dwFlags := PFD_DRAW_TO_WINDOW or PFD_SUPPORT_OPENGL or PFD_DOUBLEBUFFER;
-	pfd.cColorBits := 32;
-	pfd.cAlphaBits := 8;
-	pfd.cDepthBits := 24;
-	pfd.cStencilBits := 8;
+  ZeroMemory(@pfd, SizeOf(pfd));
+  pfd.nSize := SizeOf(pfd);
+  pfd.nVersion := 1;
+  pfd.dwFlags := PFD_DRAW_TO_WINDOW or PFD_SUPPORT_OPENGL or PFD_DOUBLEBUFFER;
+  pfd.cColorBits := 32;
+  pfd.cAlphaBits := 8;
+  pfd.cDepthBits := 24;
+  pfd.cStencilBits := 8;
 
-	SetPixelFormat(fDC, ChoosePixelFormat(fDC, pfd), @pfd);
-	fRC := wglCreateContext(fDC);
-	wglMakeCurrent(fDC, fRC);
+  SetPixelFormat(fDC, ChoosePixelFormat(fDC, pfd), @pfd);
+  fRC := wglCreateContext(fDC);
+  wglMakeCurrent(fDC, fRC);
 
   QueryPerformanceFrequency(@freq);
   QueryPerformanceCounter(@startTime);
@@ -162,34 +165,34 @@ end;
 
 destructor TglrWindow.Destroy();
 begin
-	wglMakeCurrent(0, 0);
-	wglDeleteContext(fRC);
-	ReleaseDC(fHandle, fDC);
+  wglMakeCurrent(0, 0);
+  wglDeleteContext(fRC);
+  ReleaseDC(fHandle, fDC);
   CloseWindow(fHandle);
-	DestroyWindow(fHandle);
+  DestroyWindow(fHandle);
 end;
 
 procedure TglrWindow.Loop();
 begin
-	repeat
+  repeat
     if (PeekMessageW(msg, fHandle, 0, 0, PM_REMOVE)) then
     begin
-			TranslateMessage(msg);
-			DispatchMessageW(msg);
+      TranslateMessage(msg);
+      DispatchMessageW(msg);
     end
     else
     begin
       currentTime := getTime();
-			fDeltaTime := (currentTime - lastTime) / 1000.0;
-  		lastTime := currentTime;
+      fDeltaTime := (currentTime - lastTime) / 1000.0;
+      lastTime := currentTime;
 
-			if (fDeltaTime > 0.05) then
-				fDeltaTime := 0.05;
+      if (fDeltaTime > 0.05) then
+        fDeltaTime := 0.05;
 
-			Core.Update(fDeltaTime);
-			Core.Render();
+      Core.Update(fDeltaTime);
+      Core.Render();
 
-			SwapBuffers(fDC);
+      SwapBuffers(fDC);
     end;
   until Self.fShouldQuit;
 end;

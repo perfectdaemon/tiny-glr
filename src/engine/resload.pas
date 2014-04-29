@@ -10,9 +10,9 @@ uses
   ogl, tinyglr;
 
 function LoadTexture(const Stream: TglrStream; ext: String;
-  var iFormat,cFormat,dType: TGLConst;
-  var pSize: Integer;
-  var Width, Height: Integer): Pointer;
+  out iFormat,cFormat,dType: TGLConst;
+  out pSize: Integer;
+  out Width, Height: Integer): Pointer;
 
 implementation
 
@@ -65,7 +65,7 @@ type
     biClrImportant : LongWord;
   end;
 
-function myLoadBMPTexture(Stream: TglrStream; var Format : TGLConst; var Width, Height: Integer): Pointer;
+function myLoadBMPTexture(Stream: TglrStream; out Format : TGLConst; out Width, Height: Integer): Pointer;
 var
   FileHeader: BITMAPFILEHEADER;
   InfoHeader: BITMAPINFOHEADER;
@@ -133,7 +133,7 @@ type
      ImageDescriptor   : Byte;
   end;
 
-function myLoadTGATexture(Stream: TglrStream; var Format: TGLConst; var Width, Height: Integer): Pointer; overload;
+function myLoadTGATexture(Stream: TglrStream; out Format: TGLConst; out Width, Height: Integer): Pointer;
 var
   //tgaFile: File;
   tgaHeader: TTGAHeader;
@@ -281,8 +281,8 @@ begin
 end;
 
 
-function LoadTexture(const Stream: TglrStream; ext: String; var iFormat, cFormat, dType: TGLConst;
-  var pSize: Integer; var Width, Height: Integer): Pointer;
+function LoadTexture(const Stream: TglrStream; ext: String; out iFormat, cFormat, dType: TGLConst;
+  out pSize: Integer; out Width, Height: Integer): Pointer;
 begin
   Result := nil;
   if ext = 'BMP' then

@@ -77,7 +77,7 @@ begin
     Height := 600;
     X := 100;
     Y := 100;
-    Caption := 'tiny glr ляля';
+    Caption := 'tiny glr яд';
     vSync := True;
   end;
 
