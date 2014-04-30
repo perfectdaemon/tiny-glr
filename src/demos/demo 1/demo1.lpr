@@ -10,6 +10,8 @@ type
   { TGame }
 
   TGame = class(TglrGame)
+  protected
+    Scene: TglrScene;
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -66,8 +68,9 @@ end;
 procedure TGame.OnStart;
 begin
   WriteLn('Start');
-  gl.MatrixMode(GL_PROJECTION);
-  gl.Ortho(0, 800, 600, 0, -1, 100);
+  Scene := TglrScene.Create(True);
+  //gl.MatrixMode(GL_PROJECTION);
+  //gl.Ortho(0, 800, 600, 0, -1, 100);
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
@@ -86,7 +89,7 @@ begin
     Height := 600;
     X := 100;
     Y := 100;
-    Caption := 'tiny glr';
+    Caption := 'tiny glr ляля';
     vSync := True;
   end;
 

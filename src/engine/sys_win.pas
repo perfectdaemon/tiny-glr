@@ -17,8 +17,6 @@ type
     currentTime, lastTime: Integer;
   protected
     fHandle: THandle;
-    fStyle: LongWord;
-    fClass: TWndClassW;
     fDC: HDC;
     fRC: HGLRC;
 
@@ -60,11 +58,11 @@ var
 function WndProcFirst(hWnd: HWND; message: UINT; wParam: WPARAM;
   lParam: LPARAM): LRESULT; stdcall;
 begin
-  wnd := TglrWindow(GetWindowLongPtrW(hwnd, GWL_USERDATA));
+  wnd := TglrWindow(GetWindowLongPtrA(hwnd, GWL_USERDATA));
   if (wnd <> nil) then
     Result := wnd.WndProc(hWnd, message, wParam, lParam)
   else
-    Result := DefWindowProcW(hWnd, message, wParam, lParam);
+    Result := DefWindowProcA(hWnd, message, wParam, lParam);
 end;
 
 function TglrWindow.GetTime(): Integer;
@@ -123,19 +121,22 @@ begin
         Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), HIWORD(wParam) div WHEEL_DELTA);
 
     else
-      Result := DefWindowProcW(hWnd, message, wParam, lParam);
+      Result := DefWindowProcA(hWnd, message, wParam, lParam);
   end;
 end;
 
 constructor TglrWindow.Create(aData: Pointer);
 var
-  p: PglrInitParams;
+  p: TglrInitParams;
   r: RECT;
   pfd: PIXELFORMATDESCRIPTOR;
+  wStyle: LongWord;
+  wClass: TWndClass;
 begin
   inherited;
-  p := PglrInitParams(aData);
-  with fClass do
+  p := TglrInitParams(aData^);
+  ZeroMemory(@wClass, SizeOf(wClass));
+  with wClass do
   begin
     style := CS_VREDRAW or CS_HREDRAW or CS_OWNDC;
     hInstance := 0;
@@ -143,16 +144,16 @@ begin
     hCursor := LoadCursor(0, IDC_ARROW);
     hbrBackground := GetStockObject (White_Brush);
     lpfnWndProc := @WndProcFirst;
-    lpszClassName := PWideChar('TglrWindow');
+    lpszClassName := 'TglrWindow';
   end;
-  Windows.RegisterClassW(fClass);
+  Windows.RegisterClass(wClass);
 
-  fStyle := WS_VISIBLE or WS_OVERLAPPED or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPSIBLINGS or WS_CLIPCHILDREN; //WS_VISIBLE or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPCHILDREN;
+  wStyle := WS_VISIBLE or WS_OVERLAPPED or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPSIBLINGS or WS_CLIPCHILDREN; //WS_VISIBLE or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPCHILDREN;
 
-  SetRect(r, 0, 0, p^.Width, p^.Height);
-  AdjustWindowRect(r, fStyle, False);
-  fHandle := CreateWindowW(PWideChar('TglrWindow'), PWideChar(p^.Caption), fStyle, p^.X, p^.Y, r.Right - r.Left, r.Bottom - r.Top, 0, 0, 0, Self);
-  SetWindowLongPtrW(fHandle, GWL_USERDATA, LONG_PTR(Self));
+  SetRect(r, 0, 0, p.Width, p.Height);
+  AdjustWindowRect(r, wStyle, False);
+  fHandle := CreateWindow('TglrWindow', PAnsiChar(Utf8ToAnsi(p.Caption)), wStyle, p.X, p.Y, r.Right - r.Left, r.Bottom - r.Top, 0, 0, 0, Self);
+  SetWindowLongPtrA(fHandle, GWL_USERDATA, LONG_PTR(Self));
 
   fDC := GetDC(fHandle);
 
@@ -187,10 +188,10 @@ end;
 procedure TglrWindow.Loop();
 begin
   repeat
-    if (PeekMessageW(msg, fHandle, 0, 0, PM_REMOVE)) then
+    if (PeekMessageA(msg, fHandle, 0, 0, PM_REMOVE)) then
     begin
       TranslateMessage(msg);
-      DispatchMessageW(msg);
+      DispatchMessageA(msg);
     end
     else
     begin
@@ -202,7 +203,7 @@ begin
         fDeltaTime := 0.05;
 
       Core.Update(fDeltaTime);
-      Core.Render();
+      Core.RenderAll();
 
       SwapBuffers(fDC);
     end;

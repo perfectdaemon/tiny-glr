@@ -40,9 +40,12 @@ type
   end;
 
   TglrListCompareFunc = function (Item1, Item2: Pointer): LongInt;
+
+  { TglrList }
+
   TglrList = class
     procedure Init(Capacity: LongInt = 1);
-    procedure Free(FreeClass: Boolean = False);
+    procedure Free(FreeItems: Boolean = False);
   private
     FItems    : array of Pointer;
     FCount    : LongInt;
@@ -53,7 +56,8 @@ type
   public
     function IndexOf(Item: Pointer): LongInt;
     function Add(Item: Pointer): LongInt;
-    procedure Delete(Index: LongInt; FreeClass: Boolean = False);
+    procedure Delete(Index: LongInt; FreeItem: Boolean = False); overload;
+    procedure Delete(Item: Pointer; FreeItem: Boolean = False); overload;
     procedure Insert(Index: LongInt; Item: Pointer);
     procedure Sort(CompareFunc: TglrListCompareFunc);
     property Count: LongInt read FCount;
@@ -77,9 +81,9 @@ type
     class function ToStringW(aVal: Integer): UnicodeString; overload;
     class function ToStringW(aVal: Single): UnicodeString; overload;
     class function ToInt(aStr: AnsiString): Integer; overload;
-    class function ToInt(aStr: WideString): Integer; overload;
+    class function ToInt(aStr: UnicodeString): Integer; overload;
     class function ToFloat(aStr: AnsiString): Single; overload;
-    class function ToFloat(aStr: WideString): Single; overload;
+    class function ToFloat(aStr: UnicodeString): Single; overload;
   end;
 
   {$ENDREGION}
@@ -176,9 +180,14 @@ type
     fcGreater, fcNotEqual, fcGreaterOrEqual, fcAlways);
   TglrClearMask = (cmAll, cmColor, cmDepth);
 
-  { GLRender }
+  { Render }
 
-  GLRender = class
+  TglrRenderParams = record
+    ViewProj, Model: TdfMat4f;
+    Color: TdfVec4f;
+  end;
+
+  Render = class
   private
   protected
     class var fBlendingMode: TglrBlendingMode;
@@ -195,6 +204,8 @@ type
     class var fStatTextureBind: Integer;
     class var fWidth, fHeight: Integer;
   public
+    class var Params: TglrRenderParams;
+
     class procedure Init();
     class procedure DeInit();
 
@@ -212,11 +223,9 @@ type
     class procedure SetDepthFunc(aComparison: TglrFuncComparison);
     class procedure SetAlphaTest(aComparison: TglrFuncComparison; aValue: Single);
     class procedure SetVerticalSync(aEnabled: Boolean);
-
     class procedure SetShader(aShader: TglrShaderId);
     class procedure SetTexture(aTexture: TglrTextureId; aSampler: Integer);
 
-    //todo:
     class procedure DrawTriangles(vBuffer: TglrVertexBuffer; iBuffer: TglrIndexBuffer;
       aStart, aVertCount: Integer);
     class procedure DrawPoints(vBuffer: TglrVertexBuffer; aStart, aVertCount: Integer);
@@ -322,13 +331,13 @@ type
 
   TglrInitParams = record
     X, Y, Width, Height: Integer;
-    Caption: UnicodeString;
+    Caption: AnsiString;
     vSync: Boolean;
   {$IFDEF WINDOWS}
   {$ENDIF}
   end;
 
-  PglrInitParams = ^TglrInitParams;
+  //PglrInitParams = ^TglrInitParams;
 
   Core = class
   protected
@@ -347,7 +356,7 @@ type
     class procedure Resume();
 
     class procedure Update(const dt: Double);
-    class procedure Render();
+    class procedure RenderAll();
 
     class procedure DeInit();
   end;
@@ -359,20 +368,22 @@ type
   { TglrNode }
 
   TglrNode = class
-  private
-    function GetAbsMatrix: TdfMat4f;
   protected
+    fDir, fRight, fUp, fPos,
+    fLastDir, fLastRight, fLastUp: TdfVec3f;
     fParent: TglrNode;
     fAbsMatrix: TdfMat4f;
 
-    function GetChildIndex(aChild: TglrNode): Integer;
     procedure SetParent(AValue: TglrNode);
-    procedure UpdateDirUpRight(aNewDir, aNewUp, aNewRight: TdfVec3f); virtual;
-    procedure UpdateAbsoluteMatrix(); virtual;
+    function GetAbsMatrix: TdfMat4f;
+    procedure SetDir(aDir: TdfVec3f);
+    procedure SetRight(aRight: TdfVec3f);
+    procedure SetUp(aUp: TdfVec3f);
+    procedure UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TdfVec3f); virtual;
     procedure RenderChilds(); virtual;
+    procedure DoRender(); virtual;
   public
     Visible: Boolean;
-    Direction, Right, Up, Position: TdfVec3f;
     Matrix: TdfMat4f;
     Childs: TglrList;
 
@@ -382,11 +393,66 @@ type
     property AbsoluteMatrix: TdfMat4f read GetAbsMatrix write fAbsMatrix;
     property Parent: TglrNode read fParent write SetParent;
 
-    procedure Render(); virtual;
+    property Position: TdfVec3f read fPos write fPos;
+    property Up: TdfVec3f read fUp write SetUp;
+    property Direction: TdfVec3f read fDir write SetDir;
+    property Right: TdfVec3f read fRight write SetRight;
+
+    procedure RenderSelf(); virtual;
   end;
 
-  TglrScene = class
+  { TglrCamera }
 
+  TglrCameraProjectionMode = (pmOrtho, pmPerpective);
+  TglrCameraTargetMode = (mPoint, mTarget, mFree);
+
+  TglrViewportParams = record
+    X, Y, W, H: Integer;
+    FOV, ZNear, ZFar: Single;
+  end;
+
+  TglrCamera = class (TglrNode)
+  protected
+    fProjMode: TglrCameraProjectionMode;
+    fProjMatrix: TdfMat4f;
+    fMode: TglrCameraTargetMode;
+    fTargetPoint: TdfVec3f;
+    fTarget: TglrNode;
+    fFOV, fZNear, fZFar: Single;
+    fX, fY, fW, fH: Integer;
+    procedure SetProjMode(aMode: TglrCameraProjectionMode);
+  public
+    procedure Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
+    procedure ViewportOnly(x, y, w, h: Integer);
+
+    procedure Translate(alongUpVector, alongRightVector: Single);
+    procedure Scale(aScale: Single);
+    procedure Rotate(delta: Single; Axis: TdfVec3f);
+
+    function GetViewport(): TglrViewportParams;
+
+    procedure Update;
+
+    procedure SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
+//    procedure SetTarget(aPoint: TdfVec3f); overload;
+//    procedure SetTarget(aTarget: IglrNode); overload;
+
+    property ProjectionMode: TglrCameraProjectionMode read fProjMode write SetProjMode;
+  end;
+
+  { TglrScene }
+
+  TglrScene = class
+  protected
+    fOwnCamera: Boolean;
+  public
+    Root: TglrNode;
+    Camera: TglrCamera;
+
+    constructor Create(aCreateCamera: Boolean = True); virtual;
+    destructor Destroy(); override;
+
+    procedure Render(); virtual;
   end;
 
   {$ENDREGION}
@@ -411,6 +477,154 @@ const
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
   aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
     (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
+
+{ TglrCamera }
+
+procedure TglrCamera.SetProjMode(aMode: TglrCameraProjectionMode);
+begin
+  fProjMatrix.Identity;
+  case aMode of
+    pmPerpective:
+      fProjMatrix.Perspective(FFOV, FW / FH, FZNear, FZFar);
+    pmOrtho:
+      fProjMatrix.Ortho(FX, FW, FH, FY, FZNear, FZFar);
+  end;
+  fProjMode := aMode;
+  gl.Viewport(fX, fY, fW, fH);
+end;
+
+procedure TglrCamera.Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
+begin
+  fFOV := FOV;
+  fZNear := ZNear;
+  fZFar := ZFar;
+  fX := x;
+  fY := y;
+  if w > 0 then
+    fW := w
+  else
+    fW := 1;
+  if h > 0 then
+    fH := h
+  else
+    fH := 1;
+
+  ProjectionMode := fProjMode; //Обновляем
+end;
+
+procedure TglrCamera.ViewportOnly(x, y, w, h: Integer);
+begin
+  Viewport(x, y, w, h, fFOV, fZNear, fZFar);
+end;
+
+procedure TglrCamera.Translate(alongUpVector, alongRightVector: Single);
+var
+  v: TdfVec3f;
+begin
+  v := Up * alongUpVector;
+  v := v + (Right * alongRightVector);
+  Matrix.Translate(v);
+  fPos := Matrix.Pos.NegateVector;
+end;
+
+procedure TglrCamera.Scale(aScale: Single);
+begin
+  Matrix.Scale(dfVec3f(aScale, aScale, aScale));
+end;
+
+procedure TglrCamera.Rotate(delta: Single; Axis: TdfVec3f);
+begin
+  Matrix.Rotate(delta, Axis);
+end;
+
+function TglrCamera.GetViewport: TglrViewportParams;
+begin
+  with Result do
+  begin
+    X := fX;
+    Y := fY;
+    W := fW;
+    H := fH;
+    FOV := fFOV;
+    ZNear := fZNear;
+    ZFar := fZFar;
+  end;
+end;
+
+procedure TglrCamera.Update;
+begin
+  Matrix.Pos := dfVec3f(0, 0, 0);
+  Matrix.Pos := Matrix * fPos.NegateVector;
+  Render.Params.ViewProj := fProjMatrix * Matrix;
+end;
+
+procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
+var
+  vDir, vUp, vLeft: TdfVec3f;
+begin
+  Matrix.Identity;
+  vUp := aUp;
+  vUp.Normalize;
+  vDir := aTargetPos - aPos;
+  vDir.Normalize;
+  vLeft := vDir.Cross(vUp);
+  vLeft.Normalize;
+  vUp := vLeft.Cross(vDir);
+  vUp.Normalize;
+
+  fPos := aPos;
+  fRight := vLeft;
+  fUp   := vUp;
+  fDir  := vDir;
+
+  vDir.Negate;
+
+  with Matrix do
+  begin
+    e00 := vLeft.x;  e10 := vLeft.y;  e20 := vLeft.z;  e30 := 0;
+    e01 := vUp.x;    e11 := vUp.y;    e21 := vUp.z;    e31 := 0;
+    e02 := vDir.x;   e12 := vDir.y;   e22 := vDir.z;   e32 := 0;
+    e03 := 0;        e13 := 0;        e23 := 0;        e33 := 1;
+  end;
+
+  Matrix := Matrix.Transpose();
+  aPos.Negate;
+  aPos := Matrix * aPos;
+  with Matrix do
+  begin
+    e03 := aPos.x;        e13 := aPos.y;        e23 := aPos.z;        e33 := 1;
+  end;
+
+  fTargetPoint := aTargetPos;
+  fMode := mPoint;
+end;
+
+{ TglrScene }
+
+constructor TglrScene.Create(aCreateCamera: Boolean);
+begin
+  inherited Create();
+  fOwnCamera := aCreateCamera;
+  if (fOwnCamera) then
+    Camera := TglrCamera.Create();
+  Root := TglrNode.Create();
+end;
+
+destructor TglrScene.Destroy;
+begin
+  if (fOwnCamera) then
+    Camera.Free();
+  Root.Free();
+  inherited Destroy;
+end;
+
+procedure TglrScene.Render;
+begin
+  Assert(Assigned(Camera), 'No camera assigned to scene');
+
+  Camera.Update();
+  Root.RenderSelf();
+end;
 
 { Convert }
 
@@ -439,7 +653,7 @@ begin
   Assert(False, 'Not implemented');
 end;
 
-class function Convert.ToInt(aStr: WideString): Integer;
+class function Convert.ToInt(aStr: UnicodeString): Integer;
 begin
   Assert(False, 'Not implemented');
 end;
@@ -449,7 +663,7 @@ begin
   Assert(False, 'Not implemented');
 end;
 
-class function Convert.ToFloat(aStr: WideString): Single;
+class function Convert.ToFloat(aStr: UnicodeString): Single;
 begin
   Assert(False, 'Not implemented');
 end;
@@ -473,39 +687,109 @@ begin
   Exit(fAbsMatrix);
 end;
 
-function TglrNode.GetChildIndex(aChild: TglrNode): Integer;
+procedure TglrNode.SetDir(aDir: TdfVec3f);
+var
+  NewUp, NewRight: TdfVec3f;
 begin
-  Assert(False, 'Not implemented');
+  if (fDir = aDir) then
+    Exit;
+  NewRight := fUp.Cross(aDir);
+  NewRight.Negate;
+  NewRight.Normalize;
+  NewUp := aDir.Cross(NewRight);
+  NewUp.Normalize;
+  UpdateModelMatrix(aDir, NewUp, NewRight);
 end;
 
-procedure TglrNode.UpdateDirUpRight(aNewDir, aNewUp, aNewRight: TdfVec3f);
+procedure TglrNode.SetRight(aRight: TdfVec3f);
+var
+  NewDir, NewUp: TdfVec3f;
 begin
-  Assert(False, 'Not implemented');
+  if (fRight = aRight) then
+    Exit();
+  NewDir := aRight.Cross(fUp);
+  NewDir.Normalize;
+  NewUp := NewDir.Cross(aRight);
+  NewUp.Normalize;
+  UpdateModelMatrix(NewDir, NewUp, aRight);
 end;
 
-procedure TglrNode.UpdateAbsoluteMatrix;
+procedure TglrNode.SetUp(aUp: TdfVec3f);
+var
+  NewDir, NewRight: TdfVec3f;
 begin
-  Assert(False, 'Not implemented');
+  if (fUp = aUp) then
+    Exit();
+  NewRight := aUp.Cross(fDir);
+  NewRight.Negate;
+  NewRight.Normalize;
+  NewDir := NewRight.Cross(aUp);
+  NewDir.Normalize;
+  UpdateModelMatrix(NewDir, aUp, NewRight);
+end;
+
+procedure TglrNode.UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TdfVec3f);
+begin
+  with Matrix do
+  begin
+    e00 := aNewRight.x; e01 := aNewRight.y; e02 := aNewRight.z; e03 := FPos.Dot(aNewRight);
+    e10 := aNewUp.x;    e11 := aNewUp.y;    e12 := aNewUp.z;    e13 := FPos.Dot(aNewUp);
+    e20 := aNewDir.x;   e21 := aNewDir.y;   e22 := aNewDir.z;   e23 := FPos.Dot(aNewDir);
+    e30 := 0;           e31 := 0;           e32 := 0;           e33 := 1;
+  end;
+  fRight := aNewRight;
+  fUp   := aNewUp;
+  fDir  := aNewDir;
+  fLastDir := fDir;
+  fLastRight := fRight;
+  fLastUp := fUp;
+
+  GetAbsMatrix();
 end;
 
 procedure TglrNode.RenderChilds;
+var
+  i: Integer;
 begin
-  Assert(False, 'Not implemented');
+  for i := 0 to Childs.Count - 1 do
+    TglrNode(Childs[i]).RenderSelf;
+end;
+
+procedure TglrNode.DoRender;
+begin
+  //nothing
 end;
 
 constructor TglrNode.Create;
 begin
-  Assert(False, 'Not implemented');
+  inherited Create();
+  Childs := TglrList.Create();
+  Matrix.Identity;
+  Visible := True;
+  Parent := nil;
+  Right := dfVec3f(1, 0, 0);
+  Up := dfVec3f(0, 1, 0);
+  Direction := dfVec3f(0, 0, 1);
 end;
 
 destructor TglrNode.Destroy;
 begin
+  if (Parent <> nil) then
+    Parent.Childs.Delete(Self, False);
+  Childs.Free(True);
   inherited Destroy;
 end;
 
-procedure TglrNode.Render;
+procedure TglrNode.RenderSelf();
 begin
-  Assert(False, 'Not implemented');
+  if (Direction <> fLastDir) or (Up <> fLastUp) or (Right <> fLastRight) then
+    UpdateModelMatrix(fDir, fUp, fRight);
+  Matrix.Pos := fPos;
+
+  if (not Visible) then
+    Exit();
+  DoRender();
+  RenderChilds();
 end;
 
 { FileSystem }
@@ -524,7 +808,7 @@ end;
 
 class procedure Core.Resize(aNewWidth, aNewHeight: Integer);
 begin
-  GLRender.Resize(aNewWidth, aNewHeight);
+  Render.Resize(aNewWidth, aNewHeight);
   fGame.OnResize(aNewWidth, aNewHeight);
 end;
 
@@ -543,9 +827,9 @@ begin
   fAppView :=
   {$IFDEF WINDOWS}TglrWindow{$ENDIF}
     .Create(@aInitParams);
-  GLRender.Init();
-  GLRender.SetClearColor(0.2, 0.21, 0.25);
-  GLRender.SetViewPort(0, 0, aInitParams.Width, aInitParams.Height);
+  Render.Init();
+  Render.SetClearColor(0.2, 0.21, 0.25);
+  Render.SetViewPort(0, 0, aInitParams.Width, aInitParams.Height);
 end;
 
 class procedure Core.Loop();
@@ -570,18 +854,18 @@ begin
   fGame.OnUpdate(dt);
 end;
 
-class procedure Core.Render();
+class procedure Core.RenderAll();
 begin
-  GLRender.Clear(cmAll);
-  GLRender.ResetStates();
-  GLRender.fStatTextureBind := 0;
+  Render.Clear(cmAll);
+  Render.ResetStates();
+  Render.fStatTextureBind := 0;
   fGame.OnRender();
 end;
 
 class procedure Core.DeInit();
 begin
   fAppView.Free();
-  GLRender.DeInit();
+  Render.DeInit();
   Input.Free();
 end;
 
@@ -636,26 +920,26 @@ begin
   SetLength(Result, l);
 end;
 
-{ GLRender }
+{ Render }
 
-class procedure GLRender.Init;
+class procedure Render.Init;
 begin
   gl.Init();
 end;
 
-class procedure GLRender.DeInit;
+class procedure Render.DeInit;
 begin
   gl.Free();
 end;
 
-class procedure GLRender.Resize(aWidth, aHeight: Integer);
+class procedure Render.Resize(aWidth, aHeight: Integer);
 begin
   SetViewPort(0, 0, aWidth, aHeight);
   fWidth := aWidth;
   fHeight := aHeight;
 end;
 
-class procedure GLRender.ResetStates;
+class procedure Render.ResetStates;
 begin
   SetCullMode(cmBack);
   SetBlendingMode(bmAlpha);
@@ -664,10 +948,14 @@ begin
   SetDepthTest(True);
   SetAlphaTest(fcGreaterOrEqual, 0.0);
 
+  Params.Color := dfVec4f(1, 1, 1, 1);
+  Params.ViewProj.Identity;
+  Params.Model.Identity;
+
   gl.Enable(GL_COLOR_MATERIAL);
 end;
 
-class procedure GLRender.Clear(aClearMask: TglrClearMask);
+class procedure Render.Clear(aClearMask: TglrClearMask);
 begin
   case aClearMask of
     cmAll:
@@ -679,17 +967,17 @@ begin
   end;
 end;
 
-class procedure GLRender.SetClearColor(R, G, B: Single);
+class procedure Render.SetClearColor(R, G, B: Single);
 begin
   gl.ClearColor(R, G, B, 1.0);
 end;
 
-class procedure GLRender.SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
+class procedure Render.SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
 begin
   gl.Viewport(aLeft, aTop, aWidth, aHeight);
 end;
 
-class procedure GLRender.SetCullMode(aCullMode: TglrCullMode);
+class procedure Render.SetCullMode(aCullMode: TglrCullMode);
 begin
   if (fCullMode = aCullMode) then
     Exit();
@@ -708,7 +996,7 @@ begin
   fCullMode := aCullMode;
 end;
 
-class procedure GLRender.SetBlendingMode(aBlendingMode: TglrBlendingMode);
+class procedure Render.SetBlendingMode(aBlendingMode: TglrBlendingMode);
 begin
   if (fBlendingMode = aBlendingMode) then
     Exit();
@@ -731,7 +1019,7 @@ begin
   fBlendingMode := aBlendingMode;
 end;
 
-class procedure GLRender.SetLighting(aEnabled: Boolean);
+class procedure Render.SetLighting(aEnabled: Boolean);
 begin
   if (fLight = aEnabled) then
     Exit();
@@ -741,7 +1029,7 @@ begin
     gl.Disable(GL_LIGHTING);
 end;
 
-class procedure GLRender.SetDepthWrite(aEnabled: Boolean);
+class procedure Render.SetDepthWrite(aEnabled: Boolean);
 begin
   if (aEnabled = fDepthWrite) then
     Exit();
@@ -749,7 +1037,7 @@ begin
   fDepthWrite := aEnabled;
 end;
 
-class procedure GLRender.SetDepthTest(aEnabled: Boolean);
+class procedure Render.SetDepthTest(aEnabled: Boolean);
 begin
   if (aEnabled = fDepthTest) then
     Exit();
@@ -760,7 +1048,7 @@ begin
   fDepthTest := aEnabled;
 end;
 
-class procedure GLRender.SetDepthFunc(aComparison: TglrFuncComparison);
+class procedure Render.SetDepthFunc(aComparison: TglrFuncComparison);
 begin
   if (fDepthFunc = aComparison) then
     Exit();
@@ -768,7 +1056,7 @@ begin
   fDepthFunc := aComparison;
 end;
 
-class procedure GLRender.SetAlphaTest(aComparison: TglrFuncComparison;
+class procedure Render.SetAlphaTest(aComparison: TglrFuncComparison;
   aValue: Single);
 begin
   if (fAlphaFunc = aComparison) or (Abs(fAlphaTest - aValue) < cEPS) then
@@ -778,28 +1066,28 @@ begin
   fAlphaTest := aValue;
 end;
 
-class procedure GLRender.SetVerticalSync(aEnabled: Boolean);
+class procedure Render.SetVerticalSync(aEnabled: Boolean);
 begin
   gl.SwapInterval(LongInt(aEnabled));
 end;
 
-class procedure GLRender.SetShader(aShader: TglrShaderId);
+class procedure Render.SetShader(aShader: TglrShaderId);
 begin
   Assert(False, 'Not implemented');
 end;
 
-class procedure GLRender.SetTexture(aTexture: TglrTextureId; aSampler: Integer);
+class procedure Render.SetTexture(aTexture: TglrTextureId; aSampler: Integer);
 begin
   Assert(False, 'Not implemented');
 end;
 
-class procedure GLRender.DrawTriangles(vBuffer: TglrVertexBuffer;
+class procedure Render.DrawTriangles(vBuffer: TglrVertexBuffer;
   iBuffer: TglrIndexBuffer; aStart, aVertCount: Integer);
 begin
   Assert(False, 'Not implemented');
 end;
 
-class procedure GLRender.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
+class procedure Render.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
   aVertCount: Integer);
 begin
   Assert(False, 'Not implemented');
@@ -1101,11 +1389,11 @@ begin
   FCapacity := Capacity;
 end;
 
-procedure TglrList.Free(FreeClass: Boolean);
+procedure TglrList.Free(FreeItems: Boolean);
 var
   i : LongInt;
 begin
-  if FreeClass then
+  if FreeItems then
     for i := 0 to Count - 1 do
       TObject(FItems[i]).Free;
   FItems := nil;
@@ -1151,15 +1439,20 @@ begin
   Inc(FCount);
 end;
 
-procedure TglrList.Delete(Index: LongInt; FreeClass: Boolean);
+procedure TglrList.Delete(Index: LongInt; FreeItem: Boolean);
 begin
   BoundsCheck(Index);
-  if FreeClass then
+  if FreeItem then
     TObject(FItems[Index]).Free;
   Move(FItems[Index + 1], FItems[Index], (FCount - Index - 1) * SizeOf(FItems[0]));
   Dec(FCount);
   if Length(FItems) - FCount + 1 > FCapacity then
     SetLength(FItems, Length(FItems) - FCapacity);
+end;
+
+procedure TglrList.Delete(Item: Pointer; FreeItem: Boolean);
+begin
+  Delete(IndexOf(Item), FreeItem);
 end;
 
 procedure TglrList.Insert(Index: LongInt; Item: Pointer);
