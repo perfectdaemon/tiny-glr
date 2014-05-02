@@ -77,13 +77,13 @@ type
   Convert = class
   public
     class function ToStringA(aVal: Integer): AnsiString; overload;
-    class function ToStringA(aVal: Single): AnsiString; overload;
-    class function ToStringW(aVal: Integer): UnicodeString; overload;
-    class function ToStringW(aVal: Single): UnicodeString; overload;
-    class function ToInt(aStr: AnsiString): Integer; overload;
-    class function ToInt(aStr: UnicodeString): Integer; overload;
-    class function ToFloat(aStr: AnsiString): Single; overload;
-    class function ToFloat(aStr: UnicodeString): Single; overload;
+    class function ToStringA(aVal: Single; Digits: Integer = 5): AnsiString; overload;
+//    class function ToStringW(aVal: Integer): UnicodeString; overload;
+//    class function ToStringW(aVal: Single): UnicodeString; overload;
+    class function ToInt(aStr: AnsiString; aDefault: Integer = -1): Integer; overload;
+//    class function ToInt(aStr: WideString): Integer; overload;
+    class function ToFloat(aStr: AnsiString; aDefault: Single = -1.0): Single; overload;
+//    class function ToFloat(aStr: WideString): Single; overload;
   end;
 
   {$ENDREGION}
@@ -630,42 +630,30 @@ end;
 
 class function Convert.ToStringA(aVal: Integer): AnsiString;
 begin
-  Assert(False, 'Not implemented');
+  Str(aVal, Result);
 end;
 
-class function Convert.ToStringA(aVal: Single): AnsiString;
+class function Convert.ToStringA(aVal: Single; Digits: Integer = 5): AnsiString;
 begin
-  Assert(False, 'Not implemented');
+  Str(aVal:0:Digits, Result);
 end;
 
-class function Convert.ToStringW(aVal: Integer): UnicodeString;
+class function Convert.ToInt(aStr: AnsiString; aDefault: Integer): Integer;
+var
+  Code: Integer;
 begin
-  Assert(False, 'Not implemented');
+  Val(aStr, Result, Code);
+  if (Code <> 0) then
+    Result := aDefault;
 end;
 
-class function Convert.ToStringW(aVal: Single): UnicodeString;
+class function Convert.ToFloat(aStr: AnsiString; aDefault: Single): Single;
+var
+  Code: Integer;
 begin
-  Assert(False, 'Not implemented');
-end;
-
-class function Convert.ToInt(aStr: AnsiString): Integer;
-begin
-  Assert(False, 'Not implemented');
-end;
-
-class function Convert.ToInt(aStr: UnicodeString): Integer;
-begin
-  Assert(False, 'Not implemented');
-end;
-
-class function Convert.ToFloat(aStr: AnsiString): Single;
-begin
-  Assert(False, 'Not implemented');
-end;
-
-class function Convert.ToFloat(aStr: UnicodeString): Single;
-begin
-  Assert(False, 'Not implemented');
+  Val(aStr, Result, Code);
+  if (Code <> 0) then
+    Result := aDefault;
 end;
 
 { TglrNode }
