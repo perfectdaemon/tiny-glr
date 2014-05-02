@@ -45,13 +45,15 @@ end;
 
 procedure TGame.OnRender;
 begin
+  Scene.Camera.Update();
   gl.MatrixMode(GL_MODELVIEW);
   gl.LoadIdentity();
   gl.Color3f(1, 1, 1);
   gl.Beginp(GL_TRIANGLES);
     gl.Vertex3f(100, 100, 1);
-    gl.Vertex3f(100, 200, 1);
     gl.Vertex3f(200, 200, 1);
+    gl.Vertex3f(100, 200, 1);
+
   gl.Endp();
 end;
 
@@ -69,8 +71,13 @@ procedure TGame.OnStart;
 begin
   WriteLn('Start');
   Scene := TglrScene.Create(True);
-  //gl.MatrixMode(GL_PROJECTION);
+  Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 100);
+  Scene.Camera.ProjectionMode := pmOrtho;
+  gl.MatrixMode(GL_PROJECTION);
+//  gl.LoadIdentity();
+  gl.LoadMatrixf(Scene.Camera.fProjMatrix);
   //gl.Ortho(0, 800, 600, 0, -1, 100);
+  Render.SetCullMode(cmNone);
 end;
 
 procedure TGame.OnUpdate(const dt: Double);

@@ -1,6 +1,6 @@
 {
   TODO:
-    - Окно
+    - Render должен взаимодейсствовать с текущей камерой - устанавливать ей viewport
     - Начинка рендера
     - Логгер ?
 }
@@ -234,6 +234,7 @@ type
     //stat
     class property TextureBinds: Integer read fStatTextureBind;
     class property Width: Integer read fWidth;
+    class property Height: Integer read fHeight;
   end;
 
 {$ENDREGION}
@@ -414,7 +415,7 @@ type
   TglrCamera = class (TglrNode)
   protected
     fProjMode: TglrCameraProjectionMode;
-    fProjMatrix: TdfMat4f;
+
     fMode: TglrCameraTargetMode;
     fTargetPoint: TdfVec3f;
     fTarget: TglrNode;
@@ -422,6 +423,7 @@ type
     fX, fY, fW, fH: Integer;
     procedure SetProjMode(aMode: TglrCameraProjectionMode);
   public
+    fProjMatrix: TdfMat4f;
     procedure Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
     procedure ViewportOnly(x, y, w, h: Integer);
 
@@ -556,6 +558,9 @@ begin
   Matrix.Pos := dfVec3f(0, 0, 0);
   Matrix.Pos := Matrix * fPos.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
+  //BUG HERE
+  if (Render.Width <> fW) or (Render.Height <> fH) then
+    ViewportOnly(0, 0, Render.Width, Render.Height);
 end;
 
 procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
