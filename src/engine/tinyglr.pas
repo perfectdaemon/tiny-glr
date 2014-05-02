@@ -1,8 +1,8 @@
 {
   TODO:
-    - Render должен взаимодейсствовать с текущей камерой - устанавливать ей viewport
-    - Начинка рендера
-    - Логгер ?
+    - Базовый шейдер
+    - Класс батча?
+    - Спрайт, меш
 }
 
 unit tinyglr;
@@ -381,6 +381,7 @@ type
     procedure SetRight(aRight: TdfVec3f);
     procedure SetUp(aUp: TdfVec3f);
     procedure UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TdfVec3f); virtual;
+    procedure UpdateVectorFromMatrix(); virtual;
     procedure RenderChilds(); virtual;
     procedure DoRender(); virtual;
   public
@@ -404,7 +405,7 @@ type
 
   { TglrCamera }
 
-  TglrCameraProjectionMode = (pmOrtho, pmPerpective);
+  TglrCameraProjectionMode = (pmOrtho, pmPerspective);
   TglrCameraTargetMode = (mPoint, mTarget, mFree);
 
   TglrViewportParams = record
@@ -424,6 +425,9 @@ type
     procedure SetProjMode(aMode: TglrCameraProjectionMode);
   public
     fProjMatrix: TdfMat4f;
+
+    constructor Create(); override;
+
     procedure Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
     procedure ViewportOnly(x, y, w, h: Integer);
 
@@ -436,6 +440,9 @@ type
     procedure Update;
 
     procedure SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
+
+    procedure RenderSelf(); override;
+
 //    procedure SetTarget(aPoint: TdfVec3f); overload;
 //    procedure SetTarget(aTarget: IglrNode); overload;
 
@@ -454,7 +461,7 @@ type
     constructor Create(aCreateCamera: Boolean = True); virtual;
     destructor Destroy(); override;
 
-    procedure Render(); virtual;
+    procedure RenderScene(); virtual;
   end;
 
   {$ENDREGION}
@@ -486,13 +493,26 @@ procedure TglrCamera.SetProjMode(aMode: TglrCameraProjectionMode);
 begin
   fProjMatrix.Identity;
   case aMode of
-    pmPerpective:
+    pmPerspective:
       fProjMatrix.Perspective(FFOV, FW / FH, FZNear, FZFar);
     pmOrtho:
       fProjMatrix.Ortho(FX, FW, FH, FY, FZNear, FZFar);
   end;
   fProjMode := aMode;
-  gl.Viewport(fX, fY, fW, fH);
+end;
+
+constructor TglrCamera.Create;
+begin
+  inherited Create;
+  fFOV := 90;
+  fZNear := -1;
+  fZFar := 100;
+  fX := 0;
+  fY := 0;
+  fW := Render.Width;
+  fH := Render.Height;
+  fProjMatrix.Identity;
+  SetCamera(dfVec3f(0, 0, 10), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
 end;
 
 procedure TglrCamera.Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
@@ -511,7 +531,9 @@ begin
   else
     fH := 1;
 
-  ProjectionMode := fProjMode; //Обновляем
+  ProjectionMode := fProjMode; //Обновляем матрицу проекции
+
+  Render.SetViewPort(fX, fY, fW, fH);
 end;
 
 procedure TglrCamera.ViewportOnly(x, y, w, h: Integer);
@@ -555,12 +577,20 @@ end;
 
 procedure TglrCamera.Update;
 begin
+  UpdateVectorFromMatrix();
   Matrix.Pos := dfVec3f(0, 0, 0);
   Matrix.Pos := Matrix * fPos.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
-  //BUG HERE
   if (Render.Width <> fW) or (Render.Height <> fH) then
     ViewportOnly(0, 0, Render.Width, Render.Height);
+
+
+
+  //no shaders, bad
+  gl.MatrixMode(GL_PROJECTION);
+  gl.LoadMatrixf(fProjMatrix);
+  gl.MatrixMode(GL_MODELVIEW);
+  gl.LoadMatrixf(Matrix);
 end;
 
 procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
@@ -604,6 +634,11 @@ begin
   fMode := mPoint;
 end;
 
+procedure TglrCamera.RenderSelf;
+begin
+  //nothing!!!!
+end;
+
 { TglrScene }
 
 constructor TglrScene.Create(aCreateCamera: Boolean);
@@ -623,7 +658,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TglrScene.Render;
+procedure TglrScene.RenderScene;
 begin
   Assert(Assigned(Camera), 'No camera assigned to scene');
 
@@ -740,6 +775,16 @@ begin
   GetAbsMatrix();
 end;
 
+procedure TglrNode.UpdateVectorFromMatrix;
+begin
+  with Matrix do
+  begin
+    fDir.x := e20; fDir.y := e21; fDir.z := e22;
+    fUp.x := e10; fUp.y := e11; fUp.z := e12;
+    fRight.x := e00; fRight.y := e01; fRight.z := e02;
+  end;
+end;
+
 procedure TglrNode.RenderChilds;
 var
   i: Integer;
@@ -775,9 +820,12 @@ end;
 
 procedure TglrNode.RenderSelf();
 begin
-  if (Direction <> fLastDir) or (Up <> fLastUp) or (Right <> fLastRight) then
-    UpdateModelMatrix(fDir, fUp, fRight);
+//  if (Direction <> fLastDir) or (Up <> fLastUp) or (Right <> fLastRight) then
+//    UpdateModelMatrix(fDir, fUp, fRight);
   Matrix.Pos := fPos;
+  Render.Params.Model := GetAbsMatrix;
+
+  UpdateVectorFromMatrix();
 
   if (not Visible) then
     Exit();
@@ -967,6 +1015,8 @@ end;
 
 class procedure Render.SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
 begin
+  fWidth := aWidth;
+  fHeight := aHeight;
   gl.Viewport(aLeft, aTop, aWidth, aHeight);
 end;
 

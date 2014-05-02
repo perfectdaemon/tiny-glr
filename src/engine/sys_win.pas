@@ -7,7 +7,6 @@ uses
   tinyglr;
 
 type
-
   { TglrWindow }
 
   TglrWindow = class (TglrAppView)
@@ -39,11 +38,11 @@ implementation
 uses
   ogl;
 
-function FileExists(const FileName: String): Boolean;
+function FileExists(const FileName: AnsiString): Boolean;
 var
   Attr: Dword;
 begin
-  Attr := GetFileAttributesA(PChar(FileName));
+  Attr := GetFileAttributesA(PAnsiChar(FileName));
   if (Attr <> $ffffffff) then
     Result := (Attr and FILE_ATTRIBUTE_DIRECTORY) = 0
   else

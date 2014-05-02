@@ -11,7 +11,9 @@ type
 
   TGame = class(TglrGame)
   protected
+    dx, dy: Integer;
     Scene: TglrScene;
+    Points: array of TdfVec3f;
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -36,6 +38,20 @@ procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
 begin
   if (aKey <> kNoInput) then
     WriteLn('Input : ' + Core.Input.GetInputTypeName(aType) + ' : ' + Core.Input.GetKeyName(aKey));
+
+  if (aType = itTouchDown) and (aKey = kLeftButton) then
+  begin
+    dx := X;
+    dy := Y;
+  end;
+
+  if (aType = itTouchMove) and (aKey = kLeftButton) then
+  begin
+    Scene.Camera.Rotate((x - dx) * deg2rad, dfVec3f(0, 1, 0));
+    Scene.Camera.Rotate((y - dy) * deg2rad, Scene.Camera.Right);
+    dx := X;
+    dy := Y;
+  end;
 end;
 
 procedure TGame.OnPause;
@@ -44,16 +60,21 @@ begin
 end;
 
 procedure TGame.OnRender;
+var
+  i: Integer;
 begin
-  Scene.Camera.Update();
-  gl.MatrixMode(GL_MODELVIEW);
-  gl.LoadIdentity();
+  Scene.RenderScene();
   gl.Color3f(1, 1, 1);
-  gl.Beginp(GL_TRIANGLES);
-    gl.Vertex3f(100, 100, 1);
-    gl.Vertex3f(200, 200, 1);
-    gl.Vertex3f(100, 200, 1);
 
+  gl.Beginp(GL_POINTS);
+    for i := 0 to Length(Points) do
+      gl.Vertex3fv(Points[i]);
+  gl.Endp();
+
+  gl.Beginp(GL_TRIANGLES);
+    gl.Vertex3f(100, 100, 5);
+    gl.Vertex3f(100, 200, 5);
+    gl.Vertex3f(200, 200, 5);
   gl.Endp();
 end;
 
@@ -68,16 +89,17 @@ begin
 end;
 
 procedure TGame.OnStart;
+var
+  i: Integer;
 begin
   WriteLn('Start');
+  SetLength(Points, 1024);
+  Randomize();
+  for i := 0 to Length(Points) do
+    Points[i] := dfVec3f(300 - Random(600), 300 - Random(600), 300 - Random(600));
   Scene := TglrScene.Create(True);
-  Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 100);
+//  Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 10);
   Scene.Camera.ProjectionMode := pmOrtho;
-  gl.MatrixMode(GL_PROJECTION);
-//  gl.LoadIdentity();
-  gl.LoadMatrixf(Scene.Camera.fProjMatrix);
-  //gl.Ortho(0, 800, 600, 0, -1, 100);
-  Render.SetCullMode(cmNone);
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
