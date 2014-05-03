@@ -1,4 +1,8 @@
 /dcu
+
 *.dbg
+
 *.lps
+
 backup
+bin/*.exe
