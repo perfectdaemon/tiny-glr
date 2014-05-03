@@ -7,6 +7,8 @@
 
 unit tinyglr;
 
+{$Assertions on}
+
 interface
 
 uses
@@ -88,9 +90,10 @@ type
 
   {$ENDREGION}
 
-  {$REGION 'Render'}
+  {$REGION 'Render Basic'}
 
   TglrTextureId = type LongWord;
+  TglrShaderProgramId = type LongWord;
   TglrShaderId = type LongWord;
   TglrIndexBufferId = type LongWord;
   TglrVertexBufferId = type LongWord;
@@ -134,7 +137,8 @@ type
     procedure SetCombineMode(aCombineMode: TglrTexCombineMode);
 
     //constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
-    constructor CreateFromFileStream(aStream: TglrStream; aExt: AnsiString); virtual;
+    constructor Create(aStream: TglrStream; aExt: AnsiString;
+      aFreeStreamOnFinish: Boolean = True); virtual;
     //constructor CreateEmpty2D(aWidth, aHeight, aFormat: TGLConst);
     //todo 1d, 3d
     destructor Destroy(); override;
@@ -173,6 +177,28 @@ type
     //procedure AttachTexture(aTextureId: TglrTextureId);
   end;
 
+  TglrShaderType = (stVertex, stFragment);
+
+  { TglrShaderProgram }
+
+  TglrShaderProgram = class
+  protected
+    fLinkStatus: Integer;
+  public
+    Id: TglrShaderProgramId;
+    ShadersId: array of TglrShaderId;
+
+    procedure Bind();
+    class procedure Unbind();
+
+    procedure LoadAndAttachShader(aStream: TglrStream; aShaderType: TglrShaderType;
+      aFreeStreamOnFinish: Boolean = True);
+    procedure Link();
+
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+  end;
+
 
   TglrBlendingMode = ( bmNone, bmAlpha, bmAdditive, bmMultiply, bmScreen);
   TglrCullMode = (cmNone, cmBack, cmFront);
@@ -187,6 +213,10 @@ type
     Color: TdfVec4f;
   end;
 
+const
+  TEXURE_SAMPLERS_MAX = 8;
+
+type
   Render = class
   private
   protected
@@ -196,7 +226,8 @@ type
     class var fDepthFunc, fAlphaFunc: TglrFuncComparison;
     class var fAlphaTest: Single;
     class var fShader: TglrShaderId;
-    class var fTexture: TglrTextureId;
+    class var fTextureSampler: array[0..TEXURE_SAMPLERS_MAX - 1] of TglrTextureId;
+    class var fActiveSampler: Integer;
     class var fVB: TglrVertexBufferId;
     class var fIB: TglrIndexBufferId;
     class var fFB: TglrFrameBufferId;
@@ -229,9 +260,7 @@ type
     class procedure DrawTriangles(vBuffer: TglrVertexBuffer; iBuffer: TglrIndexBuffer;
       aStart, aVertCount: Integer);
     class procedure DrawPoints(vBuffer: TglrVertexBuffer; aStart, aVertCount: Integer);
-//    class procedure DrawPointSprites();
 
-    //stat
     class property TextureBinds: Integer read fStatTextureBind;
     class property Width: Integer read fWidth;
     class property Height: Integer read fHeight;
@@ -364,7 +393,7 @@ type
 
   {$ENDREGION}
 
-  {$REGION 'Scene'}
+  {$REGION 'Node, Camera, Scene'}
 
   { TglrNode }
 
@@ -381,7 +410,7 @@ type
     procedure SetRight(aRight: TdfVec3f);
     procedure SetUp(aUp: TdfVec3f);
     procedure UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TdfVec3f); virtual;
-    procedure UpdateVectorFromMatrix(); virtual;
+    procedure UpdateVectorsFromMatrix(); virtual;
     procedure RenderChilds(); virtual;
     procedure DoRender(); virtual;
   public
@@ -423,6 +452,7 @@ type
     fFOV, fZNear, fZFar: Single;
     fX, fY, fW, fH: Integer;
     procedure SetProjMode(aMode: TglrCameraProjectionMode);
+    procedure UpdateVectorsFromMatrix(); override;
   public
     fProjMatrix: TdfMat4f;
 
@@ -431,7 +461,7 @@ type
     procedure Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
     procedure ViewportOnly(x, y, w, h: Integer);
 
-    procedure Translate(alongUpVector, alongRightVector: Single);
+    procedure Translate(alongUpVector, alongRightVector, alongDirVector: Single);
     procedure Scale(aScale: Single);
     procedure Rotate(delta: Single; Axis: TdfVec3f);
 
@@ -465,6 +495,48 @@ type
   end;
 
   {$ENDREGION}
+
+  {$REGION 'Material, Sprite, Mesh'}
+
+  { TglrMaterial }
+
+  TglrMaterial = class
+    Shader: TglrShaderProgram;
+    Textures: array of TglrTexture;
+    Color: TdfVec4f;
+  	Blend: TglrBlendingMode;
+  	DepthWrite: Boolean;
+    DepthTest: Boolean;
+    AlphaTest: TglrFuncComparison;
+    AlphaTestValue: Single;
+  	Cull: TglrCullMode;
+
+    constructor Create(); virtual; overload;
+    constructor Create(aStream: TglrStream;
+      aFreeStreamOnFinish: Boolean = True); virtual; overload;
+    destructor Destroy(); override;
+
+    procedure Bind();
+    class procedure Unbind();
+  end;
+
+  {$ENDREGION}
+
+  {$REGION 'Default'}
+
+  { Default }
+
+  Default = class
+  protected
+    class procedure Init();
+    class procedure Deinit();
+  public
+    class var Material: TglrMaterial;
+    class property Shader: TglrShaderProgram read Material.Shader;
+  end;
+
+  {$ENDREGION}
+
 implementation
 
 uses
@@ -487,6 +559,129 @@ const
   aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
     (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
 
+{ Default }
+
+class procedure Default.Init;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class procedure Default.Deinit;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+{ TglrMaterial }
+
+constructor TglrMaterial.Create;
+begin
+  inherited;
+  Assert(False, 'Not implemented');
+end;
+
+constructor TglrMaterial.Create(aStream: TglrStream;
+  aFreeStreamOnFinish: Boolean);
+begin
+  Create();
+  Assert(False, 'Not implemented');
+end;
+
+destructor TglrMaterial.Destroy;
+begin
+  Assert(False, 'Not implemented');
+  inherited Destroy;
+end;
+
+procedure TglrMaterial.Bind;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+class procedure TglrMaterial.Unbind;
+begin
+  Assert(False, 'Not implemented');
+end;
+
+{ TglrShaderProgram }
+
+procedure TglrShaderProgram.Bind;
+begin
+  gl.UseProgram(Self.Id);
+end;
+
+class procedure TglrShaderProgram.Unbind;
+begin
+  gl.UseProgram(0);
+end;
+
+procedure TglrShaderProgram.LoadAndAttachShader(aStream: TglrStream;
+  aShaderType: TglrShaderType; aFreeStreamOnFinish: Boolean);
+var
+  aType: TGLConst;
+  i: Integer;
+  param, len: Integer;
+  ErrorLog: PAnsiChar;
+  data: Pointer;
+begin
+  case aShaderType of
+    stVertex: aType := GL_VERTEX_SHADER;
+    stFragment: aType := GL_FRAGMENT_SHADER;
+  end;
+  i := Length(ShadersId);
+  SetLength(ShadersId, i + 1);
+  ShadersId[i] := gl.CreateShader(aType);
+  data := LoadShader(aStream);
+  gl.ShaderSource(ShadersId[i], 1, @data, nil);
+  Dispose(data);
+  gl.CompileShader(ShadersId[i]);
+  gl.GetShaderiv(ShadersId[i], GL_COMPILE_STATUS, @param);
+  if (param = Ord(GL_FALSE)) then
+  begin
+    gl.GetShaderiv(ShadersId[i], GL_INFO_LOG_LENGTH, @param);
+    GetMem(ErrorLog, param);
+    gl.GetShaderInfoLog(ShadersId[i], param, len, ErrorLog);
+    Assert(False, 'Shader compilation failed. Log: #13#10' + ErrorLog);
+    FreeMem(ErrorLog, param);
+  end;
+  aStream.Free();
+
+  gl.AttachShader(Self.Id, ShadersId[i]);
+end;
+
+procedure TglrShaderProgram.Link;
+var
+  param: TGLConst;
+  len: LongInt;
+  infoLog: PAnsiChar;
+begin
+  gl.LinkProgram(Self.Id);
+  gl.GetProgramiv(Self.Id, GL_LINK_STATUS, @param);
+  if (param = GL_FALSE) then
+  begin
+    gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
+    GetMem(infoLog, len);
+    gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
+    Assert(False, 'Shader link failed. Log: #13#10' + InfoLog);
+    FreeMem(infoLog, len);
+  end;
+end;
+
+constructor TglrShaderProgram.Create;
+begin
+  inherited;
+  Self.Id := gl.CreateProgram();
+end;
+
+destructor TglrShaderProgram.Destroy;
+var
+  i: Integer;
+begin
+  for i := 0 to High(ShadersId) do
+    gl.DeleteShader(ShadersId[i]);
+  gl.DeleteProgram(Self.Id);
+  inherited Destroy;
+end;
+
 { TglrCamera }
 
 procedure TglrCamera.SetProjMode(aMode: TglrCameraProjectionMode);
@@ -494,18 +689,34 @@ begin
   fProjMatrix.Identity;
   case aMode of
     pmPerspective:
-      fProjMatrix.Perspective(FFOV, FW / FH, FZNear, FZFar);
+      fProjMatrix.Perspective(fFOV, fW / fH, fZNear, fZFar);
     pmOrtho:
-      fProjMatrix.Ortho(FX, FW, FH, FY, FZNear, FZFar);
+      //todo
+      //предусмотреть аспект
+      fProjMatrix.Ortho(fX, fW, fH, fY, fZNear, fZFar);
   end;
   fProjMode := aMode;
+end;
+
+procedure TglrCamera.UpdateVectorsFromMatrix;
+begin
+  inherited;
+  exit();
+  (*
+  with Matrix do
+  begin
+    fRight.x := e00;  fRight.y := e10;  fRight.z := e20;
+    fUp.x := e01; fUp.y := e11; fUp.z := e21;
+    fDir.x := e02;   fDir.y := e12;   fDir.z := e22;
+  end;
+  *)
 end;
 
 constructor TglrCamera.Create;
 begin
   inherited Create;
   fFOV := 90;
-  fZNear := -1;
+  fZNear := 0.01;
   fZFar := 100;
   fX := 0;
   fY := 0;
@@ -541,14 +752,14 @@ begin
   Viewport(x, y, w, h, fFOV, fZNear, fZFar);
 end;
 
-procedure TglrCamera.Translate(alongUpVector, alongRightVector: Single);
+procedure TglrCamera.Translate(alongUpVector, alongRightVector,
+  alongDirVector: Single);
 var
   v: TdfVec3f;
 begin
-  v := Up * alongUpVector;
-  v := v + (Right * alongRightVector);
-  Matrix.Translate(v);
-  fPos := Matrix.Pos.NegateVector;
+  v := Up * alongUpVector + Right * alongRightVector + Direction * alongDirVector;
+  fPos += v;
+  UpdateVectorsFromMatrix();
 end;
 
 procedure TglrCamera.Scale(aScale: Single);
@@ -559,6 +770,7 @@ end;
 procedure TglrCamera.Rotate(delta: Single; Axis: TdfVec3f);
 begin
   Matrix.Rotate(delta, Axis);
+  UpdateVectorsFromMatrix();
 end;
 
 function TglrCamera.GetViewport: TglrViewportParams;
@@ -577,16 +789,14 @@ end;
 
 procedure TglrCamera.Update;
 begin
-  UpdateVectorFromMatrix();
+//  UpdateVectorsFromMatrix();
   Matrix.Pos := dfVec3f(0, 0, 0);
   Matrix.Pos := Matrix * fPos.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
   if (Render.Width <> fW) or (Render.Height <> fH) then
     ViewportOnly(0, 0, Render.Width, Render.Height);
 
-
-
-  //no shaders, bad
+  //no shaders, bad, bad, bad
   gl.MatrixMode(GL_PROJECTION);
   gl.LoadMatrixf(fProjMatrix);
   gl.MatrixMode(GL_MODELVIEW);
@@ -594,44 +804,29 @@ begin
 end;
 
 procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
-var
-  vDir, vUp, vLeft: TdfVec3f;
 begin
   Matrix.Identity;
-  vUp := aUp;
-  vUp.Normalize;
-  vDir := aTargetPos - aPos;
-  vDir.Normalize;
-  vLeft := vDir.Cross(vUp);
-  vLeft.Normalize;
-  vUp := vLeft.Cross(vDir);
-  vUp.Normalize;
-
+  fUp := aUp.Normal();
+  fDir := (aTargetPos - aPos).Normal();
+  fRight := fDir.Cross(fUp).Normal();
+  fUp := fRight.Cross(fDir).Normal();
   fPos := aPos;
-  fRight := vLeft;
-  fUp   := vUp;
-  fDir  := vDir;
-
-  vDir.Negate;
+  fDir.Negate;
 
   with Matrix do
   begin
-    e00 := vLeft.x;  e10 := vLeft.y;  e20 := vLeft.z;  e30 := 0;
-    e01 := vUp.x;    e11 := vUp.y;    e21 := vUp.z;    e31 := 0;
-    e02 := vDir.x;   e12 := vDir.y;   e22 := vDir.z;   e32 := 0;
+    e00 := fRight.x;  e10 := fRight.y;  e20 := fRight.z;  e30 := -fRight.Dot(fPos);
+    e01 := fUp.x;    e11 := fUp.y;    e21 := fUp.z;    e31 := -fUp.Dot(fPos);
+    e02 := fDir.x;   e12 := fDir.y;   e22 := fDir.z;   e32 := -fDir.Dot(fPos);
     e03 := 0;        e13 := 0;        e23 := 0;        e33 := 1;
   end;
 
   Matrix := Matrix.Transpose();
-  aPos.Negate;
-  aPos := Matrix * aPos;
-  with Matrix do
-  begin
-    e03 := aPos.x;        e13 := aPos.y;        e23 := aPos.z;        e33 := 1;
-  end;
 
   fTargetPoint := aTargetPos;
   fMode := mPoint;
+
+  UpdateVectorsFromMatrix();
 end;
 
 procedure TglrCamera.RenderSelf;
@@ -775,7 +970,7 @@ begin
   GetAbsMatrix();
 end;
 
-procedure TglrNode.UpdateVectorFromMatrix;
+procedure TglrNode.UpdateVectorsFromMatrix;
 begin
   with Matrix do
   begin
@@ -820,12 +1015,10 @@ end;
 
 procedure TglrNode.RenderSelf();
 begin
-//  if (Direction <> fLastDir) or (Up <> fLastUp) or (Right <> fLastRight) then
-//    UpdateModelMatrix(fDir, fUp, fRight);
   Matrix.Pos := fPos;
   Render.Params.Model := GetAbsMatrix;
 
-  UpdateVectorFromMatrix();
+  UpdateVectorsFromMatrix();
 
   if (not Visible) then
     Exit();
@@ -860,8 +1053,32 @@ begin
   fGame.OnInput(aType, aKey, X, Y, aOtherParam);
 end;
 
+type
+  EAssertationFailed = class(TObject)
+  private
+    fMessage: AnsiString;
+  public
+    constructor Create(const aMsg: Ansistring);
+  end;
+
+  constructor EAssertationFailed.Create(const aMsg: Ansistring);
+  begin
+    inherited Create();
+    fMessage := aMsg;
+  end;
+
+procedure AssertErrorHandler(const aMessage, aFileName: ShortString; aLineNo: LongInt; aAddr: Pointer);
+begin
+  raise EAssertationFailed.Create(
+    #13#10 + aMessage +
+    #13#10 + 'file: ' + aFileName +
+    #13#10 + 'line: ' + Convert.ToStringA(aLineNo) +
+    #13#10 + 'addr: ' + Convert.ToStringA(Integer(aAddr)));
+end;
+
 class procedure Core.Init(aGame: TglrGame; aInitParams: TglrInitParams);
 begin
+  AssertErrorProc := @AssertErrorHandler;
   fGame := aGame;
   Input := TglrInput.Create();
 
@@ -915,23 +1132,21 @@ end;
 procedure TglrInput.Process(aType: TglrInputType; aKey: TglrKey; X, Y,
   aOtherParam: Integer);
 var
-  t: ^TglrTouch;
   k: ^Boolean;
 begin
-  t := @Touch[Ord(aKey)];
   k := @KeyDown[aKey];
   case aType of
     itTouchDown:
-      with t^ do
+      with Touch[Ord(aKey)] do
       begin
         IsDown := True;
         Start := dfVec2f(X, Y);
         Pos := Start;
       end;
     itTouchUp:
-      t^.IsDown := False;
+      Touch[Ord(aKey)].IsDown := False;
     itTouchMove:
-      t^.Pos := dfVec2f(X, Y);
+      Touch[Ord(aKey)].Pos := dfVec2f(X, Y);
     itKeyDown:
       k^ := True;
     itKeyUp:
@@ -987,13 +1202,14 @@ begin
   SetDepthFunc(fcLessOrEqual);
   SetDepthWrite(True);
   SetDepthTest(True);
-  SetAlphaTest(fcGreaterOrEqual, 0.0);
+  SetAlphaTest(fcGreater, 0.0);
 
   Params.Color := dfVec4f(1, 1, 1, 1);
   Params.ViewProj.Identity;
   Params.Model.Identity;
 
   gl.Enable(GL_COLOR_MATERIAL);
+  gl.Enable(GL_TEXTURE_2D);
 end;
 
 class procedure Render.Clear(aClearMask: TglrClearMask);
@@ -1121,7 +1337,17 @@ end;
 
 class procedure Render.SetTexture(aTexture: TglrTextureId; aSampler: Integer);
 begin
-  Assert(False, 'Not implemented');
+  if (fTextureSampler[aSampler] <> aTexture) then
+  begin
+    fStatTextureBind += 1;
+    fTextureSampler[aSampler] := aTexture;
+    if (fActiveSampler <> aSampler) then
+    begin
+      gl.ActiveTexture(Ord(GL_TEXTURE0) + aSampler);
+      fActiveSampler := aSampler;
+    end;
+    gl.BindTexture(GL_TEXTURE_2D, aTexture);
+  end;
 end;
 
 class procedure Render.DrawTriangles(vBuffer: TglrVertexBuffer;
@@ -1381,8 +1607,8 @@ begin
   gl.BindTexture(Target, 0);
 end;
 
-constructor TglrTexture.CreateFromFileStream(aStream: TglrStream;
-  aExt: AnsiString);
+constructor TglrTexture.Create(aStream: TglrStream; aExt: AnsiString;
+  aFreeStreamOnFinish: Boolean);
 var
   data: Pointer;
   iFormat, cFormat, dType: TGLConst;
@@ -1417,6 +1643,7 @@ begin
 //  logWriteMessage('Загрузка текстуры завершена. ID = ' + IntToStr(FTex.Id) +
 //    ' Размер текстуры: ' + IntToStr(FTex.Width) + 'x' + IntToStr(FTex.Height) + '; ' + IntToStr(FTex.FullSize) + ' байт');
   Dispose(data);
+  aStream.Free();
 end;
 
 destructor TglrTexture.Destroy();

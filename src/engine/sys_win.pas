@@ -36,7 +36,7 @@ type
 implementation
 
 uses
-  ogl;
+  ogl, glrMath;
 
 function FileExists(const FileName: AnsiString): Boolean;
 var
@@ -114,10 +114,10 @@ begin
         Core.InputReceived(itKeyDown, TglrKey(wParam), 0, 0, 0);
 
     WM_MOUSEWHEEL:
-      if (HIWORD(wParam) > 0) then
-        Core.InputReceived(itWheel, kWheelUp, LOWORD(lParam), HIWORD(lParam), HIWORD(wParam) div WHEEL_DELTA)
+      if (wParam > 0) then
+        Core.InputReceived(itWheel, kWheelUp, LOWORD(lParam), HIWORD(lParam), Sign(wParam) * (HIWORD(wParam) div WHEEL_DELTA))
       else
-        Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), HIWORD(wParam) div WHEEL_DELTA);
+        Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), Sign(wParam) * (HIWORD(wParam) div WHEEL_DELTA));
 
     else
       Result := DefWindowProcA(hWnd, message, wParam, lParam);

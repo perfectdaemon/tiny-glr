@@ -14,6 +14,8 @@ type
     dx, dy: Integer;
     Scene: TglrScene;
     Points: array of TdfVec3f;
+    Tex: TglrTexture;
+    Shader: TglrShaderProgram;
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -36,8 +38,8 @@ end;
 procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
   aOtherParam: Integer);
 begin
-  if (aKey <> kNoInput) then
-    WriteLn('Input : ' + Core.Input.GetInputTypeName(aType) + ' : ' + Core.Input.GetKeyName(aKey));
+//  if (aKey <> kNoInput) then
+//    WriteLn('Input : ' + Core.Input.GetInputTypeName(aType) + ' : ' + Core.Input.GetKeyName(aKey));
 
   if (aType = itTouchDown) and (aKey = kLeftButton) then
   begin
@@ -52,6 +54,9 @@ begin
     dx := X;
     dy := Y;
   end;
+
+  if (aType = itWheel) then
+    Scene.Camera.Translate(0, 0, Sign(aOtherParam));
 end;
 
 procedure TGame.OnPause;
@@ -67,15 +72,35 @@ begin
   gl.Color3f(1, 1, 1);
 
   gl.Beginp(GL_POINTS);
-    for i := 0 to Length(Points) do
+    for i := 0 to Length(Points) - 1 do
       gl.Vertex3fv(Points[i]);
   gl.Endp();
 
+
+    gl.Beginp(GL_LINES);
+      gl.Color4ub(255, 0, 0, 255);
+      gl.Vertex3f(0, 0, 0);
+      gl.Vertex3f(100, 0, 0);
+
+      gl.Color4ub(0, 255, 0, 255);
+      gl.Vertex3f(0, 0, 0);
+      gl.Vertex3f(0, 100, 0);
+
+      gl.Color4ub(0, 0, 255, 255);
+      gl.Vertex3f(0, 0, 0);
+      gl.Vertex3f(0, 0, 100);
+    gl.Endp();
+
+  Shader.Bind();
+  Render.SetTexture(Tex.Id, 0);
+  gl.Color4f(1, 1, 1, 1);
   gl.Beginp(GL_TRIANGLES);
-    gl.Vertex3f(100, 100, 5);
-    gl.Vertex3f(100, 200, 5);
-    gl.Vertex3f(200, 200, 5);
+    gl.TexCoord2f(0, 0); gl.Vertex3f(1, 0, 1);
+    gl.TexCoord2f(0, 1); gl.Vertex3f(1, 0, 2);
+    gl.TexCoord2f(1, 1); gl.Vertex3f(2, 0, 2);
   gl.Endp();
+  Render.SetTexture(0, 0);
+  Shader.Unbind();
 end;
 
 procedure TGame.OnResume;
@@ -91,15 +116,28 @@ end;
 procedure TGame.OnStart;
 var
   i: Integer;
+  data: Pointer;
+  stream: TglrStream;
 begin
   WriteLn('Start');
+
   SetLength(Points, 1024);
   Randomize();
-  for i := 0 to Length(Points) do
-    Points[i] := dfVec3f(300 - Random(600), 300 - Random(600), 300 - Random(600));
+  Render.SetCullMode(cmNone);
+  for i := 0 to Length(Points) - 1 do
+    Points[i] := dfVec3f(15 - Random(30), 10 - Random(20), 15 - Random(30));
+
   Scene := TglrScene.Create(True);
-//  Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 10);
-  Scene.Camera.ProjectionMode := pmOrtho;
+  //Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, 0.1, 100);
+  Scene.Camera.SetCamera(dfVec3f(5, 5, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  Scene.Camera.ProjectionMode := pmPerspective;
+
+  Tex := TglrTexture.Create(FileSystem.GetResource('data\box.tga'), 'tga');
+
+  Shader := TglrShaderProgram.Create();
+  Shader.LoadAndAttachShader(FileSystem.GetResource('data\simple.vs'), stVertex);
+  Shader.LoadAndAttachShader(FileSystem.GetResource('data\simple.fs'), stFragment);
+  Shader.Link();
 end;
 
 procedure TGame.OnUpdate(const dt: Double);

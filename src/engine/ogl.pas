@@ -116,7 +116,9 @@ type
 
   PGLConst = ^TGLConst;
 
-  TglrGL = record
+  { TglrGL }
+
+  TglrGL = object
   private
     Lib : LongWord;
   public
@@ -143,7 +145,7 @@ type
     GenerateMipmap : procedure (target: TGLConst); stdcall;
     CopyTexSubImage2D    : procedure (target: TGLConst; level, xoffset, yoffset, x, y, width, height: LongInt); stdcall;
     CompressedTexImage2D : procedure (target: TGLConst; level: LongInt; internalformat: TGLConst; width, height, border, imageSize: LongInt; data: Pointer); stdcall;
-    ActiveTexture        : procedure (texture: TGLConst); stdcall;
+    ActiveTexture        : procedure (texture: LongWord); stdcall;
     ClientActiveTexture  : procedure (texture: TGLConst); stdcall;
     Clear          : procedure (mask: TGLConst); stdcall;
     ClearColor     : procedure (red, green, blue, alpha: Single); stdcall;
@@ -223,7 +225,7 @@ type
     DeleteShader      : procedure (_shader: LongWord); stdcall;
     ShaderSource      : procedure (_shader: LongWord; count: LongInt; src: Pointer; len: Pointer); stdcall;
     AttachShader      : procedure (_program, _shader: LongWord); stdcall;
-    CompileShader     : function  (_shader: LongWord): Boolean; stdcall;
+    CompileShader     : procedure  (_shader: LongWord); stdcall;
     GetShaderInfoLog  : procedure (_shader: LongWord; maxLength: LongInt; var length: LongInt; infoLog: PAnsiChar); stdcall;
     GetUniformLocation  : function  (_program: LongWord; const ch: PAnsiChar): LongInt; stdcall;
     Uniform1iv          : procedure (location, count: LongInt; value: Pointer); stdcall;
@@ -274,7 +276,7 @@ implementation
 
 procedure TglrGL.Init;
 type
-  TProcArray = array [-1..0] of Pointer;
+  TProcArray = array [-1..(SizeOf(TglrGL) - SizeOf(Lib)) div 4 - 1] of Pointer;
 const
   ProcName : array [0..(SizeOf(TglrGL) - SizeOf(Lib)) div 4 - 1] of PAnsiChar = (
     {$IFDEF WINDOWS}
@@ -435,7 +437,7 @@ begin
   Set8087CW($133F); //Предотвращает EInvalidOp при 1/0, 0/0, -1/0
 end;
 
-function TglrGL.IsExtensionSupported(const Extension: AnsiString): Boolean;
+function TglrGL.IsExtensionSupported(const Extension: String): Boolean;
 var
   extensions: PAnsiChar;
 begin

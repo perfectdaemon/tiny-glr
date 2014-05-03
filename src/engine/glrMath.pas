@@ -1182,12 +1182,12 @@ begin
 
   e02 := (Right + Left) / (Right - Left);
   e12 := (Top + Bottom) / (Top - Bottom);
-  e22 := -(ZFar + ZNear) / (ZFar - ZNear);
+  e22 := (ZFar + ZNear) / (ZNear - ZFar);
   e32 := -1;
 
   e03 := 0;
   e13 := 0;
-  e23 := -2 * ZFar * ZNear / (ZFar - ZNear);
+  e23 := 2 * ZFar * ZNear / (ZNear - ZFar);
   e33 := 0;
 end;
 

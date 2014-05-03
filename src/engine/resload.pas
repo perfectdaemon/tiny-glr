@@ -14,6 +14,8 @@ function LoadTexture(const Stream: TglrStream; ext: String;
   out pSize: Integer;
   out Width, Height: Integer): Pointer;
 
+function LoadShader(const Stream: TglrStream): PAnsiChar;
+
 implementation
 
 procedure flipSurface(chgData: Pbyte; w, h, pSize: integer);
@@ -133,9 +135,11 @@ type
      ImageDescriptor   : Byte;
   end;
 
+   PByteArray = ^TByteArray;
+   TByteArray = Array[0..32767] of Byte;
+
 function myLoadTGATexture(Stream: TglrStream; out Format: TGLConst; out Width, Height: Integer): Pointer;
 var
-  //tgaFile: File;
   tgaHeader: TTGAHeader;
   colorDepth: Integer; //число бит на пиксель
   bytesPP: Integer; //число байт на пиксель
@@ -167,7 +171,7 @@ var
       Red^ := Tmp;
     end;
   end;
-
+  (*
   procedure CopySwapPixel(const Source, Destination: Pointer);
   asm
     push ebx
@@ -180,6 +184,18 @@ var
     mov [edx+0],bl
     mov [edx+3],bh
     pop ebx
+  end;         *)
+
+  procedure CopySwapPixelPascal(const Source, Destination: Pointer);
+  var
+    s, d: PByteArray;
+  begin
+    s := PByteArray(Source);
+    d := PByteArray(Destination);
+    d[0] := s[2];
+    d[1] := s[1];
+    d[2] := s[0];
+    d[3] := s[3];
   end;
 
   procedure ReadCompressedTGA();
@@ -207,13 +223,15 @@ var
 
     //Извлекаем данные о пикселях, сжатых по RLE
     repeat
-      First := Pointer(Integer(compressedImage) + BufferIndex);
+      First := compressedImage + BufferIndex;
+//      First := Pointer(Integer(compressedImage) + BufferIndex);
       Inc(BufferIndex);
       if First^ < 128 then //Незапакованные данные
       begin
         for i := 0 to First^ do
         begin
-          CopySwapPixel(Pointer(Integer(compressedImage)+ BufferIndex + i * bytesPP), Pointer(Integer(image) + CurrentByte));
+          CopySwapPixelPascal(Pointer(LongWord(compressedImage)+ BufferIndex + i * bytesPP), Pointer(LongWord(image) + CurrentByte));
+//          CopySwapPixel(compressedImage + bufferIndex + i * bytesPP, image + currentByte);
           CurrentByte := CurrentByte + bytesPP;
           inc(CurrentPixel);
         end;
@@ -223,7 +241,8 @@ var
       begin
         for i := 0 to First^ - 128 do
         begin
-          CopySwapPixel(Pointer(Integer(compressedImage) + BufferIndex), Pointer(Integer(image) + CurrentByte));
+          CopySwapPixelPascal(Pointer(LongWord(compressedImage) + BufferIndex), Pointer(LongWord(image) + CurrentByte));
+          //CopySwapPixel(compressedImage + BufferIndex, image + CurrentByte);
           CurrentByte := CurrentByte + bytesPP;
           inc(CurrentPixel);
         end;
@@ -269,8 +288,8 @@ begin
   {$ENDREGION}
 
   case tgaHeader.ImageType of
-    2: {Несжатый tga} ReadUncompressedTGA();
-    10: {Сжатый tga} ReadCompressedTGA();
+    2: ReadUncompressedTGA();
+    10: ReadCompressedTGA();
     else
     begin
 //      logWriteError('TexLoad: Ошибка загрузки TGA из потока. Поддерживаются только несжатые и RLE-сжатые tga');
@@ -285,7 +304,7 @@ function LoadTexture(const Stream: TglrStream; ext: String; out iFormat, cFormat
   out pSize: Integer; out Width, Height: Integer): Pointer;
 begin
   Result := nil;
-  if ext = 'BMP' then
+  if ext = 'bmp' then
   begin
     Result := myLoadBMPTexture(Stream, cFormat, Width, Height);
     if cFormat = GL_BGRA then
@@ -303,7 +322,7 @@ begin
     if Height > 0 then
       flipSurface(Result, Width, Height, pSize);
   end;
-  if ext = 'TGA' then
+  if ext = 'tga' then
   begin
     Result := myLoadTGATexture(Stream, cFormat, Width, Height);
     if cFormat = GL_RGB then
@@ -321,11 +340,23 @@ begin
     flipSurface(Result, Width, Height, pSize);
   end;
 
-  if ext = 'PNG' then
+  if ext = 'png' then
   begin
-    Assert(ext <> 'PNG', 'PNG is not supported yet');
+    Assert(ext <> 'png', 'PNG is not supported yet');
     //LoadPNG(result,PWideChar(FileName),iFormat,cFormat,dType,pSize,Width,Height);
   end;
+end;
+
+function LoadShader(const Stream: TglrStream): PAnsiChar;
+var
+  bytesRead: Integer;
+  data: PAnsiChar;
+begin
+  GetMem(data, Stream.Size + 1);
+  bytesRead := Stream.Read(data^, Stream.Size);
+  data[Stream.Size] := #0;
+  Assert(bytesRead = Stream.Size, 'Count of bytes read not equal to stream size');
+  Result := data;
 end;
 
 
