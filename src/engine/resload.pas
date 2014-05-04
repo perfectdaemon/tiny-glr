@@ -111,7 +111,7 @@ begin
   begin
     Stream.Read(image^, sLength);
     Stream.Read(tmp, fLength);
-    Inc(integer(image), sLength);
+    Inc(image, sLength);
   end;
 end;
 
@@ -164,8 +164,8 @@ var
     //Флипаем bgr(a) в rgb(a)
     for i :=0 to Width * Height - 1 do
     begin
-      Blue := Pointer(Integer(image) + i * bytesPP + 0);
-      Red  := Pointer(Integer(image) + i * bytesPP + 2);
+      Blue := Pointer(image + i * bytesPP + 0);
+      Red  := Pointer(image + i * bytesPP + 2);
       Tmp := Blue^;
       Blue^ := Red^;
       Red^ := Tmp;
@@ -230,7 +230,7 @@ var
       begin
         for i := 0 to First^ do
         begin
-          CopySwapPixelPascal(Pointer(LongWord(compressedImage)+ BufferIndex + i * bytesPP), Pointer(LongWord(image) + CurrentByte));
+          CopySwapPixelPascal(compressedImage+ BufferIndex + i * bytesPP, image + CurrentByte);
 //          CopySwapPixel(compressedImage + bufferIndex + i * bytesPP, image + currentByte);
           CurrentByte := CurrentByte + bytesPP;
           inc(CurrentPixel);
@@ -241,7 +241,7 @@ var
       begin
         for i := 0 to First^ - 128 do
         begin
-          CopySwapPixelPascal(Pointer(LongWord(compressedImage) + BufferIndex), Pointer(LongWord(image) + CurrentByte));
+          CopySwapPixelPascal(compressedImage + BufferIndex, image + CurrentByte);
           //CopySwapPixel(compressedImage + BufferIndex, image + CurrentByte);
           CurrentByte := CurrentByte + bytesPP;
           inc(CurrentPixel);
