@@ -36,7 +36,7 @@ type
 implementation
 
 uses
-  ogl, glrMath;
+  glrMath;
 
 function FileExists(const FileName: AnsiString): Boolean;
 var
