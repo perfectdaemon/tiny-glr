@@ -33,6 +33,9 @@ type
 procedure TGame.OnFinish;
 begin
   WriteLn('End');
+  Tex.Free();
+  Shader.Free();
+  Scene.Free();
 end;
 
 procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -91,9 +94,9 @@ begin
       gl.Vertex3f(0, 0, 100);
     gl.Endp();
 
-  Shader.Bind();
+//  Shader.Bind();
   Render.SetTexture(Tex.Id, 0);
-  gl.Color4f(1, 1, 1, 1);
+  gl.Color4f(0.5, 1, 1, 1);
   gl.Beginp(GL_TRIANGLES);
     gl.TexCoord2f(0, 0); gl.Vertex3f(1, 0, 1);
     gl.TexCoord2f(0, 1); gl.Vertex3f(1, 0, 2);
@@ -116,8 +119,6 @@ end;
 procedure TGame.OnStart;
 var
   i: Integer;
-  data: Pointer;
-  stream: TglrStream;
 begin
   WriteLn('Start');
 
@@ -132,11 +133,11 @@ begin
   Scene.Camera.SetCamera(dfVec3f(5, 5, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
   Scene.Camera.ProjectionMode := pmPerspective;
 
-  Tex := TglrTexture.Create(FileSystem.GetResource('data\box.tga'), 'tga');
+  Tex := TglrTexture.Create(FileSystem.ReadResource('data\box.tga'), 'tga');
 
   Shader := TglrShaderProgram.Create();
-  Shader.LoadAndAttachShader(FileSystem.GetResource('data\simple.vs'), stVertex);
-  Shader.LoadAndAttachShader(FileSystem.GetResource('data\simple.fs'), stFragment);
+  Shader.LoadAndAttachShader(FileSystem.ReadResource('data\simple.vs'), stVertex);
+  Shader.LoadAndAttachShader(FileSystem.ReadResource('data\simple.fs'), stFragment);
   Shader.Link();
 end;
 
@@ -150,6 +151,7 @@ var
   InitParams: TglrInitParams;
 
 begin
+//  SetHeapTraceOutput('heaptrace.log');
   with InitParams do
   begin
     Width := 800;
@@ -164,5 +166,6 @@ begin
   Core.Init(Game, InitParams);
   Core.Loop();
   Core.DeInit();
+  Game.Free();
 end.
 
