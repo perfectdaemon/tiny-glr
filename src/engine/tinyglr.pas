@@ -71,7 +71,15 @@ type
   FileSystem = class
   protected
   public
-    class function GetResource(aFileName: AnsiString): TglrStream;
+    class function ReadResource(const aFileName: AnsiString): TglrStream;
+    class procedure WriteResource(const aFileName: AnsiString; const aStream: TglrStream); overload;
+    class procedure WriteResource(const aFileName: AnsiString; const aContent: AnsiString); overload;
+  end;
+
+  Log = class
+  protected
+  public
+//    class function Init();
   end;
 
   { Convert }
@@ -531,8 +539,7 @@ type
     class procedure Init();
     class procedure Deinit();
   public
-    class var Material: TglrMaterial;
-    class property Shader: TglrShaderProgram read Material.Shader;
+    class var SpriteMaterial: TglrMaterial;
   end;
 
   {$ENDREGION}
@@ -632,7 +639,7 @@ begin
   ShadersId[i] := gl.CreateShader(aType);
   data := LoadShader(aStream);
   gl.ShaderSource(ShadersId[i], 1, @data, nil);
-  Dispose(data);
+  FreeMem(data);
   gl.CompileShader(ShadersId[i]);
   gl.GetShaderiv(ShadersId[i], GL_COMPILE_STATUS, @param);
   if (param = Ord(GL_FALSE)) then
@@ -643,7 +650,8 @@ begin
     Assert(False, 'Shader compilation failed. Log: #13#10' + ErrorLog);
     FreeMem(ErrorLog, param);
   end;
-  aStream.Free();
+  if (aFreeStreamOnFinish) then
+    aStream.Free();
 
   gl.AttachShader(Self.Id, ShadersId[i]);
 end;
@@ -1028,7 +1036,7 @@ end;
 
 { FileSystem }
 
-class function FileSystem.GetResource(aFileName: AnsiString): TglrStream;
+class function FileSystem.ReadResource(const aFileName: AnsiString): TglrStream;
 begin
   {$IFDEF WINDOWS}
   if (FileExists(aFileName)) then
@@ -1036,6 +1044,22 @@ begin
     Result := TglrStream.Init(aFileName);
   end;
   {$ENDIF}
+end;
+
+class procedure FileSystem.WriteResource(const aFileName: AnsiString;
+  const aStream: TglrStream);
+var
+  FileStream: TglrStream;
+begin
+  FileStream := TglrStream.Init(aFileName, True);
+  FileStream.CopyFrom(aStream);
+  FileStream.Free();
+end;
+
+class procedure FileSystem.WriteResource(const aFileName: AnsiString;
+  const aContent: AnsiString);
+begin
+
 end;
 
 { Core }
@@ -1630,7 +1654,7 @@ begin
 
   //todo: combine mode ?
 
-  New(data);
+//  New(data);
   data := LoadTexture(aStream, aExt, iFormat, cFormat, dType, pSize, Self.Width, Self.Height); //TexLoad.LoadTexture(aFileName, Format, W, H);
   //FTex.FullSize := SizeOfP(Data);
   X := 0;
@@ -1642,8 +1666,9 @@ begin
   gl.BindTexture(GL_TEXTURE_2D, 0);
 //  logWriteMessage('Загрузка текстуры завершена. ID = ' + IntToStr(FTex.Id) +
 //    ' Размер текстуры: ' + IntToStr(FTex.Width) + 'x' + IntToStr(FTex.Height) + '; ' + IntToStr(FTex.FullSize) + ' байт');
-  Dispose(data);
-  aStream.Free();
+  Freemem(data);
+  if (aFreeStreamOnFinish) then
+    aStream.Free();
 end;
 
 destructor TglrTexture.Destroy();
