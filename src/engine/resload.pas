@@ -85,6 +85,7 @@ begin
 
   if InfoHeader.biClrUsed <> 0 then
   begin
+    Log.Write(lError, 'Ошибка загрузки BMP из потока: ColorMaps не поддерживаются');
 //    logWriteError('TexLoad: Ошибка загрузки BMP из потока. ColorMaps не поддерживаются');
     Exit(nil);
   end;
@@ -158,7 +159,7 @@ var
     //Считано меньше, чем необходимо
     if (bytesRead <> imageSize) then
     begin
-//      logWriteError('TexLoad: Ошибка загрузки TGA из потока. Ошибка при чтении несжатых данных');
+      Log.Write(lError, 'Ошибка загрузки TGA из потока: Ошибка при чтении несжатых данных: Количество считанных байт не равно размеру потока');
       Exit();
     end;
     //Флипаем bgr(a) в rgb(a)
@@ -217,21 +218,19 @@ var
     bytesRead := Stream.Read(compressedImage^, Stream.Size - SizeOf(tgaHeader));
     if bytesRead <> Stream.Size - SizeOf(tgaHeader) then
     begin
-//      logWriteError('TexLoad: Ошибка загрузки TGA из потока. Ошибка при чтении сжатых данных');
+      Log.Write(lError, 'Ошибка загрузки TGA из потока: Ошибка при чтении сжатых данных: Количество считанных байт не равно размеру потока');
       Exit();
     end;
 
     //Извлекаем данные о пикселях, сжатых по RLE
     repeat
       First := compressedImage + BufferIndex;
-//      First := Pointer(Integer(compressedImage) + BufferIndex);
       Inc(BufferIndex);
       if First^ < 128 then //Незапакованные данные
       begin
         for i := 0 to First^ do
         begin
           CopySwapPixelPascal(compressedImage+ BufferIndex + i * bytesPP, image + CurrentByte);
-//          CopySwapPixel(compressedImage + bufferIndex + i * bytesPP, image + currentByte);
           CurrentByte := CurrentByte + bytesPP;
           inc(CurrentPixel);
         end;
@@ -242,7 +241,6 @@ var
         for i := 0 to First^ - 128 do
         begin
           CopySwapPixelPascal(compressedImage + BufferIndex, image + CurrentByte);
-          //CopySwapPixel(compressedImage + BufferIndex, image + CurrentByte);
           CurrentByte := CurrentByte + bytesPP;
           inc(CurrentPixel);
         end;
@@ -275,13 +273,13 @@ begin
 
   if (colorDepth <> 24) and (colorDepth <> 32) then
   begin
-//    logWriteError('TexLoad: Ошибка загрузки TGA из потока. BPP отлично от 24 и 32');
+    Log.Write(lError, 'Ошибка загрузки TGA из потока: Глубина цвета отлична от 24 и 32');
     Exit(nil);
   end;
 
   if tgaHeader.ColorMapType <> 0 then
   begin
-//    logWriteError('TexLoad: Ошибка загрузки TGA из потока. ColorMap не поддерживаются');
+    Log.Write(lError, 'Ошибка загрузки TGA из потока: ColorMap не поддерживается');
     Exit(nil);
   end;
 
@@ -292,7 +290,7 @@ begin
     10: ReadCompressedTGA();
     else
     begin
-//      logWriteError('TexLoad: Ошибка загрузки TGA из потока. Поддерживаются только несжатые и RLE-сжатые tga');
+      Log.Write(lError, 'Ошибка загрузки TGA из потока: Поддерживаются RLE-сжатые и несжатые файлы');
       Exit(nil);
     end;
   end;

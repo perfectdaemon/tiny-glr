@@ -7,12 +7,17 @@
 
 unit tinyglr;
 
+{$define log}
 {$Assertions on}
 
 interface
 
 uses
   ogl, glrMath;
+
+const
+  TINYGLR_VERSION = '0.1';
+  LOG_FILE = 'tinyglr.log';
 
 type
   {$REGION 'Utils'}
@@ -76,10 +81,17 @@ type
     class procedure WriteResource(const aFileName: AnsiString; const aContent: AnsiString); overload;
   end;
 
+  TglrLogMessageType = (lInformation, lWarning, lError, lCritical);
+
+  { Log }
+
   Log = class
   protected
+    class var f: Text;
   public
-//    class function Init();
+    class procedure Init(const aFileName: AnsiString);
+    class procedure Deinit();
+    class procedure Write(aType: TglrLogMessageType; aMessage: AnsiString); inline;
   end;
 
   { Convert }
@@ -565,6 +577,40 @@ const
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
   aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
     (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
+
+{ Log }
+
+class procedure Log.Init(const aFileName: AnsiString);
+begin
+  {$ifdef log}
+  AssignFile(f, aFileName);
+  Rewrite(f);
+  CloseFile(f);
+  Self.Write(lInformation, 'Start. Tiny glr version: ' + TINYGLR_VERSION);
+  {$endif}
+end;
+
+class procedure Log.Deinit;
+begin
+  {$ifdef log}
+  Self.Write(lInformation, 'End');
+  {$endif}
+end;
+
+const
+  cLOG_MESSAGE_TYPES: array[TglrLogMessageType] of AnsiString =
+  ('Info', 'Warn', 'Erro', 'Crit');
+
+class procedure Log.Write(aType: TglrLogMessageType; aMessage: AnsiString);
+begin
+  {$ifdef log}
+  Append(f);
+  WriteLn(f, cLOG_MESSAGE_TYPES[aType] + ':'#9 + aMessage);
+  CloseFile(f);
+  if (aType = lCritical) then
+    Assert(False, 'Critical error detected: ' + aMessage);
+  {$endif}
+end;
 
 { Default }
 
@@ -1058,8 +1104,13 @@ end;
 
 class procedure FileSystem.WriteResource(const aFileName: AnsiString;
   const aContent: AnsiString);
+var
+  t: Text;
 begin
-
+  AssignFile(t, aFileName);
+  Rewrite(t);
+  Write(t, aContent);
+  CloseFile(t);
 end;
 
 { Core }
@@ -1104,6 +1155,7 @@ class procedure Core.Init(aGame: TglrGame; aInitParams: TglrInitParams);
 begin
   AssertErrorProc := @AssertErrorHandler;
   fGame := aGame;
+  Log.Init(LOG_FILE);
   Input := TglrInput.Create();
 
   fAppView :=
@@ -1149,6 +1201,7 @@ begin
   fAppView.Free();
   Render.DeInit();
   Input.Free();
+  Log.Deinit();
 end;
 
 { TglrInput }
@@ -1203,8 +1256,18 @@ end;
 { Render }
 
 class procedure Render.Init;
+var
+  aStr: AnsiString;
 begin
   gl.Init();
+  {$ifdef log}
+  aStr := 'Graphics:' + #13#10#9 +
+    'Vendor: ' + gl.GetString(TGLConst.GL_VENDOR) + #13#10#9 +
+    'Renderer: ' + gl.GetString(TGLConst.GL_RENDERER) + #13#10#9 +
+    'OpenGL: ' + gl.GetString(TGLConst.GL_VERSION) + #13#10#9 +
+    'GLSL: ' + gl.GetString(TGLConst.GL_SHADING_LANGUAGE_VERSION);
+  Log.Write(lInformation, aStr);
+  {$endif}
 end;
 
 class procedure Render.DeInit;
