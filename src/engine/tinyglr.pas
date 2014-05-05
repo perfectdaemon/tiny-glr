@@ -252,7 +252,7 @@ type
     class var fIB: TglrIndexBufferId;
     class var fFB: TglrFrameBufferId;
 
-    class var fStatTextureBind: Integer;
+    class var fStatTextureBind, fTriCount, fDIPCount: Integer;
     class var fWidth, fHeight: Integer;
   public
     class var Params: TglrRenderParams;
@@ -282,6 +282,8 @@ type
     class procedure DrawPoints(vBuffer: TglrVertexBuffer; aStart, aVertCount: Integer);
 
     class property TextureBinds: Integer read fStatTextureBind;
+    class property TriCount: Integer read fTriCount;
+    class property DipCount: Integer read fDIPCount;
     class property Width: Integer read fWidth;
     class property Height: Integer read fHeight;
   end;
@@ -1193,6 +1195,8 @@ begin
   Render.Clear(cmAll);
   Render.ResetStates();
   Render.fStatTextureBind := 0;
+  Render.fTriCount := 0;
+  Render.fDIPCount := 0;
   fGame.OnRender();
 end;
 
