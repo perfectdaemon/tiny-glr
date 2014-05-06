@@ -391,14 +391,19 @@ type
 
   //PglrInitParams = ^TglrInitParams;
 
+  { Core }
+
   Core = class
   protected
     class var fGame: TglrGame;
     class var fAppView: TglrAppView;
+    class var fFPS: Single;
+    class function GetFPSText(): AnsiString; static;
   public
     class var Input: TglrInput;
 
     class procedure Init(aGame: TglrGame; aInitParams: TglrInitParams);
+    class procedure DeInit();
 
     class procedure Resize(aNewWidth, aNewHeight: Integer);
     class procedure InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
@@ -410,7 +415,8 @@ type
     class procedure Update(const dt: Double);
     class procedure RenderAll();
 
-    class procedure DeInit();
+    class property FPS: Single read fFPS;
+    class property FPSText: AnsiString read GetFPSText; //preformatted with 1 digit after delimiter
   end;
 
   {$ENDREGION}
@@ -1153,6 +1159,11 @@ begin
     #13#10 + 'addr: ' + Convert.ToStringA(Integer(aAddr)));
 end;
 
+class function Core.GetFPSText: AnsiString;
+begin
+  Result := Convert.ToStringA(fFPS, 1);
+end;
+
 class procedure Core.Init(aGame: TglrGame; aInitParams: TglrInitParams);
 begin
   AssertErrorProc := @AssertErrorHandler;
@@ -1187,6 +1198,7 @@ end;
 
 class procedure Core.Update(const dt: Double);
 begin
+  fFPS := 1 / dt;
   fGame.OnUpdate(dt);
 end;
 
@@ -1287,6 +1299,8 @@ begin
 end;
 
 class procedure Render.ResetStates;
+var
+  i: Integer;
 begin
   SetCullMode(cmBack);
   SetBlendingMode(bmAlpha);
@@ -1294,6 +1308,14 @@ begin
   SetDepthWrite(True);
   SetDepthTest(True);
   SetAlphaTest(fcGreater, 0.0);
+
+  fActiveSampler := -1;
+  fShader := 0;
+  for i := 0 to TEXURE_SAMPLERS_MAX - 1 do
+    fTextureSampler[i] := 0;
+  fVB := 0;
+  fIB := 0;
+  fFB := 0;
 
   Params.Color := dfVec4f(1, 1, 1, 1);
   Params.ViewProj.Identity;
