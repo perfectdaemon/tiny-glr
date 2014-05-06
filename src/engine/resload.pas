@@ -85,7 +85,7 @@ begin
 
   if InfoHeader.biClrUsed <> 0 then
   begin
-    Log.Write(lError, 'Ошибка загрузки BMP из потока: ColorMaps не поддерживаются');
+    Log.Write(lError, 'BMP load: Color map is not supported');
 //    logWriteError('TexLoad: Ошибка загрузки BMP из потока. ColorMaps не поддерживаются');
     Exit(nil);
   end;
@@ -159,7 +159,7 @@ var
     //Считано меньше, чем необходимо
     if (bytesRead <> imageSize) then
     begin
-      Log.Write(lError, 'Ошибка загрузки TGA из потока: Ошибка при чтении несжатых данных: Количество считанных байт не равно размеру потока');
+      Log.Write(lError, 'TGA load: uncompressed data: count of bytes read not equal to size of stream');
       Exit();
     end;
     //Флипаем bgr(a) в rgb(a)
@@ -218,7 +218,7 @@ var
     bytesRead := Stream.Read(compressedImage^, Stream.Size - SizeOf(tgaHeader));
     if bytesRead <> Stream.Size - SizeOf(tgaHeader) then
     begin
-      Log.Write(lError, 'Ошибка загрузки TGA из потока: Ошибка при чтении сжатых данных: Количество считанных байт не равно размеру потока');
+      Log.Write(lError, 'TGA load: compressed data: count of bytes read not equal to size of stream');
       Exit();
     end;
 
@@ -273,13 +273,13 @@ begin
 
   if (colorDepth <> 24) and (colorDepth <> 32) then
   begin
-    Log.Write(lError, 'Ошибка загрузки TGA из потока: Глубина цвета отлична от 24 и 32');
+    Log.Write(lError, 'TGA load: Color depth differs from 24 or 32');
     Exit(nil);
   end;
 
   if tgaHeader.ColorMapType <> 0 then
   begin
-    Log.Write(lError, 'Ошибка загрузки TGA из потока: ColorMap не поддерживается');
+    Log.Write(lError, 'TGA load: ColorMap is not supported');
     Exit(nil);
   end;
 
@@ -290,7 +290,7 @@ begin
     10: ReadCompressedTGA();
     else
     begin
-      Log.Write(lError, 'Ошибка загрузки TGA из потока: Поддерживаются RLE-сжатые и несжатые файлы');
+      Log.Write(lError, 'TGA load: Uncompressed and RLE-compressed files are only supported');
       Exit(nil);
     end;
   end;
@@ -319,8 +319,8 @@ begin
     end;
     if Height > 0 then
       flipSurface(Result, Width, Height, pSize);
-  end;
-  if ext = 'tga' then
+  end
+  else if ext = 'tga' then
   begin
     Result := myLoadTGATexture(Stream, cFormat, Width, Height);
     if cFormat = GL_RGB then
@@ -336,12 +336,10 @@ begin
     dType := GL_UNSIGNED_BYTE;
 
     flipSurface(Result, Width, Height, pSize);
-  end;
-
-  if ext = 'png' then
+  end
+  else
   begin
-    Assert(ext <> 'png', 'PNG is not supported yet');
-    //LoadPNG(result,PWideChar(FileName),iFormat,cFormat,dType,pSize,Width,Height);
+    Log.Write(lError, '"' + ext + '" is not supported');
   end;
 end;
 
@@ -353,7 +351,9 @@ begin
   GetMem(data, Stream.Size + 1);
   bytesRead := Stream.Read(data^, Stream.Size);
   data[Stream.Size] := #0;
-  Assert(bytesRead = Stream.Size, 'Count of bytes read not equal to stream size');
+  if (bytesRead <> Stream.Size) then
+    Log.Write(lCritical, 'Shader load: Count of bytes read not equal to stream size');
+
   Result := data;
 end;
 

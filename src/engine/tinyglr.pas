@@ -512,6 +512,7 @@ type
   TglrScene = class
   protected
     fOwnCamera: Boolean;
+    fCameraAssignedLogError: Boolean;
   public
     Root: TglrNode;
     Camera: TglrCamera;
@@ -701,7 +702,7 @@ begin
     gl.GetShaderiv(ShadersId[i], GL_INFO_LOG_LENGTH, @param);
     GetMem(ErrorLog, param);
     gl.GetShaderInfoLog(ShadersId[i], param, len, ErrorLog);
-    Assert(False, 'Shader compilation failed. Log: #13#10' + ErrorLog);
+    Log.Write(lCritical, 'Shader compilation failed. Log: #13#10' + ErrorLog);
     FreeMem(ErrorLog, param);
   end;
   if (aFreeStreamOnFinish) then
@@ -723,7 +724,7 @@ begin
     gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
     GetMem(infoLog, len);
     gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
-    Assert(False, 'Shader link failed. Log: #13#10' + InfoLog);
+    Log.Write(lCritical, 'Shader link failed. Log: #13#10' + InfoLog);
     FreeMem(infoLog, len);
   end;
 end;
@@ -905,6 +906,7 @@ begin
   if (fOwnCamera) then
     Camera := TglrCamera.Create();
   Root := TglrNode.Create();
+  fCameraAssignedLogError := False;
 end;
 
 destructor TglrScene.Destroy;
@@ -917,7 +919,14 @@ end;
 
 procedure TglrScene.RenderScene;
 begin
-  Assert(Assigned(Camera), 'No camera assigned to scene');
+  if not Assigned(Camera) and not fCameraAssignedLogError then
+  begin
+    Log.Write(lError, 'No camera assigned to scene, render is impossible');
+    Exit();
+    fCameraAssignedLogError := True;
+  end
+  else
+    fCameraAssignedLogError := False;
 
   Camera.Update();
   Root.RenderSelf();
