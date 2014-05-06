@@ -133,6 +133,7 @@ type
     tex: TdfVec2f;
   end;
 
+  TglrVertexAtrib = (vaCoord = 0, vaTexCoord = 1{, ...});
 
   { TglrTexture }
 
@@ -169,6 +170,7 @@ type
 
   TglrVertexBuffer = class
     Id: TglrVertexBufferId;
+    vbFormat: TglrVertexFormat;
     procedure Bind();
     class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrVertexFormat); virtual;
@@ -709,6 +711,9 @@ begin
     aStream.Free();
 
   gl.AttachShader(Self.Id, ShadersId[i]);
+
+  //todo: gl.BindAttribLocation
+  //todo: gl.Uniform
 end;
 
 procedure TglrShaderProgram.Link;
@@ -1539,6 +1544,8 @@ end;
 procedure TglrVertexBuffer.Bind;
 begin
   gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
+
+  //todo: gl.VertexAtribPointer в зависимости от формата
 end;
 
 class procedure TglrVertexBuffer.Unbind;
@@ -1550,6 +1557,7 @@ constructor TglrVertexBuffer.Create(aData: Pointer; aCount: Integer;
   aFormat: TglrVertexFormat);
 begin
   gl.GenBuffers(1, @Self.Id);
+  Self.vbFormat := aFormat;
   Self.Bind();
   gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[aFormat] * aCount, aData, GL_STATIC_DRAW);
   Self.Unbind();
