@@ -59,7 +59,7 @@ begin
   end;
 
   if (aType = itWheel) then
-    Scene.Camera.Translate(0, 0, Sign(aOtherParam));
+    Scene.Camera.Translate(0, 0, -Sign(aOtherParam));
 end;
 
 procedure TGame.OnPause;
