@@ -133,7 +133,7 @@ type
     tex: TdfVec2f;
   end;
 
-  TglrVertexAtrib = (vaCoord = 0, vaTexCoord = 1{, ...});
+  TglrVertexAtrib = (vaCoord = 0, vaNormal = 1, vaTexCoord0 = 2, vaTexCoord1 = 3{, ...});
 
   { TglrTexture }
 
@@ -206,6 +206,7 @@ type
   TglrShaderProgram = class
   protected
     fLinkStatus: Integer;
+    class function GetVertexAtribName(const aAtrib: TglrVertexAtrib): AnsiString;
   public
     Id: TglrShaderProgramId;
     ShadersId: array of TglrShaderId;
@@ -668,6 +669,12 @@ end;
 
 { TglrShaderProgram }
 
+class function TglrShaderProgram.GetVertexAtribName(
+  const aAtrib: TglrVertexAtrib): AnsiString;
+begin
+  WriteStr(Result, aAtrib);
+end;
+
 procedure TglrShaderProgram.Bind;
 begin
   gl.UseProgram(Self.Id);
@@ -686,6 +693,7 @@ var
   param, len: Integer;
   ErrorLog: PAnsiChar;
   data: Pointer;
+  v: TglrVertexAtrib;
 begin
   case aShaderType of
     stVertex: aType := GL_VERTEX_SHADER;
@@ -712,7 +720,9 @@ begin
 
   gl.AttachShader(Self.Id, ShadersId[i]);
 
-  //todo: gl.BindAttribLocation
+  for v := Low(TglrVertexAtrib) to High(TglrVertexAtrib) do
+    gl.BindAttribLocation(Self.Id, Ord(v), PAnsiChar(GetVertexAtribName(v)));
+
   //todo: gl.Uniform
 end;
 

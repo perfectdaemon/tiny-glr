@@ -239,6 +239,7 @@ type
     EnableVertexAttribArray  : procedure (index: LongWord); stdcall;
     DisableVertexAttribArray : procedure (index: LongWord); stdcall;
     VertexAttribPointer      : procedure (index: LongWord; size: LongInt; _type: TGLConst; normalized: Boolean; stride: LongInt; const ptr: Pointer); stdcall;
+    BindAttribLocation       : procedure (_program: LongWord; index: LongWord; const name: PAnsiChar); stdcall;
   // FBO
     DrawBuffers             : procedure (n: LongInt; bufs: Pointer); stdcall;
     GenFramebuffers         : procedure (n: LongInt; framebuffers: Pointer); stdcall;
@@ -393,6 +394,7 @@ const
     'glEnableVertexAttribArray',
     'glDisableVertexAttribArray',
     'glVertexAttribPointer',
+    'glBindAttribLocation',
     'glDrawBuffers',
     'glGenFramebuffersEXT',
     'glDeleteFramebuffersEXT',
