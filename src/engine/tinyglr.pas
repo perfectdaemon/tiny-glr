@@ -75,8 +75,23 @@ type
 
   FileSystem = class
   protected
+    type
+      TglrPackFileHeader = record
+        fPackName: AnsiString;
+        fFileNames: array of AnsiString;
+      end;
+      PglrPackFileHeader = ^TglrPackFileHeader;
+
+    var
+      class var fPackFilesPath: AnsiString;
+      class var fPackFiles: array of PglrPackFileHeader;
+
+    class procedure Init(const aPackFilesPath: AnsiString);
+    class procedure DeInit();
   public
-    class function ReadResource(const aFileName: AnsiString): TglrStream;
+    class procedure LoadPack(const aPackFileName: AnsiString); //loads entire pack file into memory
+    class procedure UnloadPack(const aPackFileName: AnsiString);
+    class function ReadResource(const aFileName: AnsiString; aSearchInPackFiles: Boolean = True): TglrStream;
     class procedure WriteResource(const aFileName: AnsiString; const aStream: TglrStream); overload;
     class procedure WriteResource(const aFileName: AnsiString; const aContent: AnsiString); overload;
   end;
@@ -391,6 +406,7 @@ type
     X, Y, Width, Height: Integer;
     Caption: AnsiString;
     vSync: Boolean;
+    PackFilesPath: AnsiString;
   {$IFDEF WINDOWS}
   {$ENDIF}
   end;
@@ -614,13 +630,13 @@ end;
 
 const
   cLOG_MESSAGE_TYPES: array[TglrLogMessageType] of AnsiString =
-  ('Info', 'Warn', 'Erro', 'Crit');
+  ('    ', ' !  ', ' !! ', '!!!!');
 
 class procedure Log.Write(aType: TglrLogMessageType; aMessage: AnsiString);
 begin
   {$ifdef log}
   Append(f);
-  WriteLn(f, cLOG_MESSAGE_TYPES[aType] + ':'#9 + aMessage);
+  WriteLn(f, cLOG_MESSAGE_TYPES[aType] + '::'#9 + aMessage);
   CloseFile(f);
   if (aType = lCritical) then
     Assert(False, 'Critical error detected: ' + aMessage);
@@ -630,13 +646,17 @@ end;
 { Default }
 
 class procedure Default.Init;
+
+{$include 'shaders.inc'}
+
 begin
-  Assert(False, 'Not implemented');
+  SpriteMaterial := TglrMaterial.Create();
+  //todo: shader and everything
 end;
 
 class procedure Default.Deinit;
 begin
-  Assert(False, 'Not implemented');
+  SpriteMaterial.Free();
 end;
 
 { TglrMaterial }
@@ -644,30 +664,30 @@ end;
 constructor TglrMaterial.Create;
 begin
   inherited;
-  Assert(False, 'Not implemented');
+  Log.Write(lWarning, 'Material create is not implemented');
 end;
 
 constructor TglrMaterial.Create(aStream: TglrStream;
   aFreeStreamOnFinish: Boolean);
 begin
   Create();
-  Assert(False, 'Not implemented');
+  Log.Write(lWarning, 'Material create is not implemented');
 end;
 
 destructor TglrMaterial.Destroy;
 begin
-  Assert(False, 'Not implemented');
+  Log.Write(lWarning, 'Material destroy is not implemented');
   inherited Destroy;
 end;
 
 procedure TglrMaterial.Bind;
 begin
-  Assert(False, 'Not implemented');
+  Log.Write(lWarning, 'Material bind is not implemented');
 end;
 
 class procedure TglrMaterial.Unbind;
 begin
-  Assert(False, 'Not implemented');
+  Log.Write(lWarning, 'Material unbind is not implemented');
 end;
 
 { TglrShaderProgram }
@@ -1117,7 +1137,31 @@ end;
 
 { FileSystem }
 
-class function FileSystem.ReadResource(const aFileName: AnsiString): TglrStream;
+class procedure FileSystem.Init(const aPackFilesPath: AnsiString);
+begin
+  fPackFilesPath := aPackFilesPath;
+  Log.Write(lWarning, 'FileSystem.Init has no implementation for pack load');
+  //load headers of all pack files in path and subdirs
+end;
+
+class procedure FileSystem.DeInit;
+begin
+  Log.Write(lWarning, 'FileSystem.DeInit has no implementation for pack unload');
+  //release all opened packs
+end;
+
+class procedure FileSystem.LoadPack(const aPackFileName: AnsiString);
+begin
+  Log.Write(lCritical, 'FileSystem.LoadPack is not implemented');
+end;
+
+class procedure FileSystem.UnloadPack(const aPackFileName: AnsiString);
+begin
+  Log.Write(lCritical, 'FileSystem.UnloadPack is not implemented');
+end;
+
+class function FileSystem.ReadResource(const aFileName: AnsiString;
+  aSearchInPackFiles: Boolean): TglrStream;
 begin
   {$IFDEF WINDOWS}
   if (FileExists(aFileName)) then
@@ -1197,6 +1241,7 @@ begin
   fGame := aGame;
   Log.Init(LOG_FILE);
   Input := TglrInput.Create();
+  FileSystem.Init(aInitParams.PackFilesPath);
 
   fAppView :=
   {$IFDEF WINDOWS}TglrWindow{$ENDIF}
@@ -1246,6 +1291,7 @@ begin
   Default.Deinit();
   fAppView.Free();
   Render.DeInit();
+  FileSystem.DeInit();
   Input.Free();
   Log.Deinit();
 end;
@@ -1307,7 +1353,7 @@ var
 begin
   gl.Init();
   {$ifdef log}
-  aStr := 'Graphics:' + #13#10#9 +
+  aStr := 'Graphics information' + #13#10#9 +
     'Vendor: ' + gl.GetString(TGLConst.GL_VENDOR) + #13#10#9 +
     'Renderer: ' + gl.GetString(TGLConst.GL_RENDERER) + #13#10#9 +
     'OpenGL: ' + gl.GetString(TGLConst.GL_VERSION) + #13#10#9 +
@@ -1513,13 +1559,16 @@ begin
 
 //  gl.DrawElements(GL_TRIANGLES, aVertCount, , );
 
-  Assert(False, 'Not implemented');
+  fDipCount += 1;
+  fTriCount += aVertCount div 3;
+
+  Log.Write(lCritical, 'Render.DrawTriangles not implemented fully');
 end;
 
 class procedure Render.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
   aVertCount: Integer);
 begin
-  Assert(False, 'Not implemented');
+  Log.Write(lCritical, 'Render.DrawPoints not implemented');
 end;
 
 { TglrFrameBuffer }
@@ -1578,6 +1627,7 @@ procedure TglrVertexBuffer.Bind;
 begin
   gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
 
+  Log.Write(lCritical, 'VertexBuffer.Bind has no vertex attrib calls');
   //todo: gl.VertexAtribPointer в зависимости от формата
 end;
 
@@ -1846,7 +1896,8 @@ end;
 
 procedure TglrList.BoundsCheck(Index: LongInt);
 begin
-  Assert((Index > 0) or (Index <= FCount), 'List index out of bounds (' + Convert.ToStringA(Index) + ')');
+  if not (Index > 0) or (Index <= FCount) then
+    Log.Write(lCritical, 'List index out of bounds (' + Convert.ToStringA(Index) + ')');
 end;
 
 function TglrList.GetItem(Index: LongInt): Pointer;

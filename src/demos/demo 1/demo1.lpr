@@ -133,11 +133,11 @@ begin
   Scene.Camera.SetCamera(dfVec3f(5, 5, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
   Scene.Camera.ProjectionMode := pmPerspective;
 
-  Tex := TglrTexture.Create(FileSystem.ReadResource('data\box.tga'), 'tga');
+  Tex := TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga');
 
   Shader := TglrShaderProgram.Create();
-  Shader.LoadAndAttachShader(FileSystem.ReadResource('data\simple.vs'), stVertex);
-  Shader.LoadAndAttachShader(FileSystem.ReadResource('data\simple.fs'), stFragment);
+  Shader.LoadAndAttachShader(FileSystem.ReadResource('data/simple.vs'), stVertex);
+  Shader.LoadAndAttachShader(FileSystem.ReadResource('data/simple.fs'), stFragment);
   Shader.Link();
 end;
 
@@ -160,6 +160,7 @@ begin
     Y := 100;
     Caption := 'tiny glr ляля';
     vSync := True;
+    PackFilesPath := '/data';
   end;
 
   Game := TGame.Create();
