@@ -110,7 +110,7 @@ type
 
   {$ENDREGION}
 
-  {$REGION 'Render Basic'}
+  {$REGION 'Buffers, Shader, Texture, Render'}
 
   TglrTextureId = type LongWord;
   TglrShaderProgramId = type LongWord;
@@ -163,6 +163,9 @@ type
     //constructor CreateEmpty2D(aWidth, aHeight, aFormat: TGLConst);
     //todo 1d, 3d
     destructor Destroy(); override;
+
+    procedure Bind(const aSampler: Integer = 0);
+    class procedure Unbind();
   end;
 
 
@@ -277,7 +280,7 @@ type
     class procedure SetDepthFunc(aComparison: TglrFuncComparison);
     class procedure SetAlphaTest(aComparison: TglrFuncComparison; aValue: Single);
     class procedure SetVerticalSync(aEnabled: Boolean);
-    class procedure SetShader(aShader: TglrShaderId);
+    class procedure SetShader(aShader: TglrShaderProgramId);
     class procedure SetTexture(aTexture: TglrTextureId; aSampler: Integer);
 
     class procedure DrawTriangles(vBuffer: TglrVertexBuffer; iBuffer: TglrIndexBuffer;
@@ -677,12 +680,12 @@ end;
 
 procedure TglrShaderProgram.Bind;
 begin
-  gl.UseProgram(Self.Id);
+  Render.SetShader(Self.Id);
 end;
 
 class procedure TglrShaderProgram.Unbind;
 begin
-  gl.UseProgram(0);
+  Render.SetShader(0);
 end;
 
 procedure TglrShaderProgram.LoadAndAttachShader(aStream: TglrStream;
@@ -1201,6 +1204,8 @@ begin
   Render.Init();
   Render.SetClearColor(0.2, 0.21, 0.25);
   Render.SetViewPort(0, 0, aInitParams.Width, aInitParams.Height);
+
+  Default.Init();
 end;
 
 class procedure Core.Loop();
@@ -1238,6 +1243,7 @@ end;
 
 class procedure Core.DeInit();
 begin
+  Default.Deinit();
   fAppView.Free();
   Render.DeInit();
   Input.Free();
@@ -1467,9 +1473,13 @@ begin
   gl.SwapInterval(LongInt(aEnabled));
 end;
 
-class procedure Render.SetShader(aShader: TglrShaderId);
+class procedure Render.SetShader(aShader: TglrShaderProgramId);
 begin
-  Assert(False, 'Not implemented');
+  if (fShader <> aShader) then
+  begin
+    fShader := aShader;
+    gl.UseProgram(fShader);
+  end;
 end;
 
 class procedure Render.SetTexture(aTexture: TglrTextureId; aSampler: Integer);
@@ -1490,6 +1500,19 @@ end;
 class procedure Render.DrawTriangles(vBuffer: TglrVertexBuffer;
   iBuffer: TglrIndexBuffer; aStart, aVertCount: Integer);
 begin
+  if (fVB <> vBuffer.Id) then
+  begin
+    fVB := vBuffer.Id;
+    vBuffer.Bind();
+  end;
+  if (fIB <> iBuffer.Id) then
+  begin
+    fIB := iBuffer.Id;
+    iBuffer.Bind();
+  end;
+
+//  gl.DrawElements(GL_TRIANGLES, aVertCount, , );
+
   Assert(False, 'Not implemented');
 end;
 
@@ -1757,31 +1780,31 @@ var
 begin
   gl.GenTextures(1, @Self.Id);
   Target := GL_TEXTURE_2D;
+
+  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToStringA(Integer(Self.Id)) + ') load started');
+
   gl.BindTexture(Target, Self.Id);
 
   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Ord(GL_LINEAR));
   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Ord(GL_LINEAR));
-
   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, Ord(GL_REPEAT));
   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, Ord(GL_REPEAT));
-
   gl.GetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, @anisotropy);
   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
+  gl.TexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-  //todo: combine mode ?
+  data := LoadTexture(aStream, aExt, iFormat, cFormat, dType, pSize, Self.Width, Self.Height);
+  gl.TexImage2D(GL_TEXTURE_2D, 0, iFormat, Width, Height, 0, cFormat, dType, data);
 
-//  New(data);
-  data := LoadTexture(aStream, aExt, iFormat, cFormat, dType, pSize, Self.Width, Self.Height); //TexLoad.LoadTexture(aFileName, Format, W, H);
-  //FTex.FullSize := SizeOfP(Data);
+  gl.BindTexture(GL_TEXTURE_2D, 0);
+
+  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToStringA(Integer(Self.Id)) + ') load completed');
+
   X := 0;
   Y := 0;
   RegionWidth := Width;
   RegionHeight := Height;
-  gl.TexImage2D(GL_TEXTURE_2D, 0, iFormat, Width, Height, 0, cFormat, dType, data);
 
-  gl.BindTexture(GL_TEXTURE_2D, 0);
-//  logWriteMessage('Загрузка текстуры завершена. ID = ' + IntToStr(FTex.Id) +
-//    ' Размер текстуры: ' + IntToStr(FTex.Width) + 'x' + IntToStr(FTex.Height) + '; ' + IntToStr(FTex.FullSize) + ' байт');
   Freemem(data);
   if (aFreeStreamOnFinish) then
     aStream.Free();
@@ -1791,6 +1814,16 @@ destructor TglrTexture.Destroy();
 begin
   gl.DeleteTextures(1, @Self.Id);
   inherited Destroy;
+end;
+
+procedure TglrTexture.Bind(const aSampler: Integer);
+begin
+  Render.SetTexture(Self.Id, aSampler);
+end;
+
+class procedure TglrTexture.Unbind;
+begin
+  Render.SetTexture(0, 0);
 end;
 
 procedure TglrList.Init(Capacity: LongInt);
