@@ -31,7 +31,8 @@ type
   end;
   PglrWindow = ^TglrWindow;
 
-  function FileExists(const FileName: String): Boolean;
+  function FileExists(const FileName: AnsiString): Boolean;
+  procedure FindFiles(const aPath, aExt: AnsiString; var aList: TglrStringList);
 
 implementation
 
@@ -62,6 +63,122 @@ begin
     Result := wnd.WndProc(hWnd, message, wParam, lParam)
   else
     Result := DefWindowProcA(hWnd, message, wParam, lParam);
+end;
+
+
+type
+  TSearchRec = Record
+    Time : Longint;
+    Size : Int64;
+    Attr : Longint;
+    Name : String;
+    ExcludeAttr : Longint;
+    FindHandle : THandle;
+    FindData : TWin32FindData;
+  end;
+
+const
+  { File attributes }
+  faReadOnly  = $00000001;
+  faHidden    = $00000002;
+  faSysFile   = $00000004;
+  faVolumeId  = $00000008;
+  faDirectory = $00000010;
+  faArchive   = $00000020;
+  faSymLink   = $00000040;
+  faAnyFile   = $0000003f;
+
+  Invalid_Handle_value = HANDLE(-1);
+
+
+function FindFirstFileA(lpFileName: LPCSTR; var lpFindFileData: TWIN32FindDataA): THandle; external 'kernel32' name 'FindFirstFileA';
+function GetLastError:DWORD; external 'kernel32' name 'GetLastError';
+
+Function FindMatch(var f: TSearchRec) : Longint;
+begin
+  { Find file with correct attribute }
+  While (F.FindData.dwFileAttributes and cardinal(F.ExcludeAttr))<>0 do
+   begin
+     if not FindNextFile (F.FindHandle,F.FindData) then
+      begin
+        Result:=GetLastError;
+        exit;
+      end;
+   end;
+  { Convert some attributes back }
+//  WinToDosTime(F.FindData.ftLastWriteTime,F.Time);
+  f.size:=F.FindData.NFileSizeLow+(qword(maxdword)+1)*F.FindData.NFileSizeHigh;
+  f.attr:=F.FindData.dwFileAttributes;
+  f.Name:=StrPas(@F.FindData.cFileName[0]);
+  Result:=0;
+end;
+
+
+Function FindFirst (Const Path : String; Attr : Longint; out Rslt : TSearchRec) : Longint;
+begin
+  Rslt.Name:=Path;
+  Rslt.Attr:=attr;
+  Rslt.ExcludeAttr:=(not Attr) and ($1e);
+                 { $1e = faHidden or faSysFile or faVolumeID or faDirectory }
+  { FindFirstFile is a Win32 Call }
+  Rslt.FindHandle:=FindFirstFile (PChar(Path),Rslt.FindData);
+  If Rslt.FindHandle=Invalid_Handle_value then
+   begin
+     Result:=GetLastError;
+     exit;
+   end;
+  { Find file with correct attribute }
+  Result:=FindMatch(Rslt);
+end;
+
+
+Function FindNext (Var Rslt : TSearchRec) : Longint;
+begin
+  if FindNextFile(Rslt.FindHandle, Rslt.FindData) then
+    Result := FindMatch(Rslt)
+  else
+    Result := GetLastError;
+end;
+
+
+Procedure FindClose (Var F : TSearchrec);
+begin
+   if F.FindHandle <> INVALID_HANDLE_VALUE then
+    Windows.FindClose(F.FindHandle);
+end;
+
+function ExtractFileExt(const aFileName: AnsiString): AnsiString;
+var
+  i: Integer;
+begin
+  i := Length(aFileName) - 1;
+  while ((i > 0) and (not (aFileName[i] in ['.', '/', '\', ':']))) do
+    i -= 1;
+
+  if (aFileName[i] = '.') and (i > 0) then
+    Result := Copy(aFileName, i, MaxInt);
+end;
+
+procedure FindFiles(const aPath, aExt: AnsiString; var aList: TglrStringList);
+var
+  searchResult: TSearchRec;
+begin
+  if (FindFirst(aPath + '/*', faAnyFile, searchResult) = 0) then
+    try
+      repeat
+        if (searchResult.Attr and faDirectory) = 0 then
+        begin
+          if (ExtractFileExt(searchResult.Name) = aExt) then
+            aList.Add((aPath + '/' + searchResult.Name));
+        end
+        else if (searchResult.Name <> '.') and (searchResult.Name <> '..') then
+        begin
+          FindFiles(aPath + '/' + searchResult.Name, aExt, aList);
+        end;
+      until FindNext(searchResult) <> 0
+    finally
+      FindClose(searchResult);
+    end;
 end;
 
 function TglrWindow.GetTime(): Integer;

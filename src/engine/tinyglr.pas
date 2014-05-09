@@ -50,26 +50,31 @@ type
 
   { TglrList }
 
-  TglrList = class
-    procedure Init(Capacity: LongInt = 1);
+  TglrList<T> = class
+    procedure Init(Capacity: LongInt);
     procedure Free(FreeItems: Boolean = False);
   private
-    FItems    : array of Pointer;
+    FItems    : array of T;
     FCount    : LongInt;
     FCapacity : LongInt;
     procedure BoundsCheck(Index: LongInt);
-    function GetItem(Index: LongInt): Pointer; inline;
-    procedure SetItem(Index: LongInt; Value: Pointer); inline;
+    function GetItem(Index: LongInt): T; inline;
+    procedure SetItem(Index: LongInt; Value: T); inline;
+    procedure SortFragment(CompareFunc: TglrListCompareFunc; L, R: LongInt);
   public
-    function IndexOf(Item: Pointer): LongInt;
-    function Add(Item: Pointer): LongInt;
-    procedure Delete(Index: LongInt; FreeItem: Boolean = False); overload;
-    procedure Delete(Item: Pointer; FreeItem: Boolean = False); overload;
-    procedure Insert(Index: LongInt; Item: Pointer);
+    constructor Create(aCapacity: LongInt = 1); virtual;
+
+    function IndexOf(Item: T): LongInt;
+    function Add(Item: T): LongInt;
+    procedure DeleteByIndex(Index: LongInt; FreeItem: Boolean = False);
+    procedure Delete(Item: T; FreeItem: Boolean = False);
+    procedure Insert(Index: LongInt; Item: T);
     procedure Sort(CompareFunc: TglrListCompareFunc);
     property Count: LongInt read FCount;
-    property Items[Index: LongInt]: Pointer read GetItem write SetItem; default;
+    property Items[Index: LongInt]: T read GetItem write SetItem; default;
   end;
+
+  TglrStringList = TglrList<AnsiString>;
 
   { FileSystem }
 
@@ -447,6 +452,9 @@ type
 
   { TglrNode }
 
+  TglrNode = class;
+  TglrNodeList = TglrList<TglrNode>;
+
   TglrNode = class
   protected
     fDir, fRight, fUp, fPos,
@@ -466,7 +474,7 @@ type
   public
     Visible: Boolean;
     Matrix: TdfMat4f;
-    Childs: TglrList;
+    Childs: TglrNodeList;
 
     constructor Create; virtual;
     destructor Destroy; override;
@@ -1105,7 +1113,7 @@ end;
 constructor TglrNode.Create;
 begin
   inherited Create();
-  Childs := TglrList.Create();
+  Childs := TglrNodeList.Create();
   Matrix.Identity;
   Visible := True;
   Parent := nil;
@@ -1138,10 +1146,21 @@ end;
 { FileSystem }
 
 class procedure FileSystem.Init(const aPackFilesPath: AnsiString);
+var
+  packFilesList: TglrStringList;
+  i: Integer;
 begin
   fPackFilesPath := aPackFilesPath;
-  Log.Write(lWarning, 'FileSystem.Init has no implementation for pack load');
-  //load headers of all pack files in path and subdirs
+  if (fPackFilesPath[Length(fPackFilesPath) - 1] in ['/', '\']) then
+    fPackFilesPath := Copy(fPackFilesPath, 0, Length(fPackFilesPath) - 2);
+  packFilesList := TglrStringList.Create();
+  FindFiles(fPackFilesPath, '.glrpack', packFilesList);
+  for i := 0 to packFilesList.Count - 1 do
+    //todo: load headers
+    Log.Write(lInformation, PAnsiChar(packFilesList[i]));
+  packFilesList.Free();
+
+  Log.Write(lWarning, 'FileSystem.Init has no full implementation for pack load');
 end;
 
 class procedure FileSystem.DeInit;
@@ -1876,14 +1895,14 @@ begin
   Render.SetTexture(0, 0);
 end;
 
-procedure TglrList.Init(Capacity: LongInt);
+procedure TglrList<T>.Init(Capacity: LongInt);
 begin
   FItems := nil;
   FCount := 0;
   FCapacity := Capacity;
 end;
 
-procedure TglrList.Free(FreeItems: Boolean);
+procedure TglrList<T>.Free(FreeItems: Boolean);
 var
   i : LongInt;
 begin
@@ -1894,25 +1913,60 @@ begin
   FCount := 0;
 end;
 
-procedure TglrList.BoundsCheck(Index: LongInt);
+procedure TglrList<T>.BoundsCheck(Index: LongInt);
 begin
-  if not (Index > 0) or (Index <= FCount) then
+  if (Index < 0) or (Index >= FCount) then
     Log.Write(lCritical, 'List index out of bounds (' + Convert.ToStringA(Index) + ')');
 end;
 
-function TglrList.GetItem(Index: LongInt): Pointer;
+function TglrList<T>.GetItem(Index: LongInt): T;
 begin
   BoundsCheck(Index);
   Result := FItems[Index];
 end;
 
-procedure TglrList.SetItem(Index: LongInt; Value: Pointer);
+procedure TglrList<T>.SetItem(Index: LongInt; Value: T);
 begin
   BoundsCheck(Index);
   FItems[Index] := Value;
 end;
 
-function TglrList.IndexOf(Item: Pointer): LongInt;
+procedure TglrList<T>.SortFragment(CompareFunc: TglrListCompareFunc; L, R: LongInt);
+var
+  i, j : Integer;
+  P, tm : T;
+begin
+  repeat
+    i := L;
+    j := R;
+    P := FItems[(L + R) div 2];
+    repeat
+      while CompareFunc(@FItems[i], @P) < 0 do
+        Inc(i);
+      while CompareFunc(@FItems[j], @P) > 0 do
+        Dec(j);
+      if i <= j then
+      begin
+        tm := FItems[i];
+        FItems[i] := FItems[j];
+        FItems[j] := tm;
+        Inc(i);
+        Dec(j);
+      end;
+    until i > j;
+    if L < j then
+      SortFragment(CompareFunc, L, j);
+    L := i;
+  until i >= R;
+end;
+
+constructor TglrList<T>.Create(aCapacity: LongInt);
+begin
+  inherited Create();
+  Init(aCapacity);
+end;
+
+function TglrList<T>.IndexOf(Item: T): LongInt;
 var
   i : LongInt;
 begin
@@ -1925,7 +1979,7 @@ begin
   Result := -1;
 end;
 
-function TglrList.Add(Item: Pointer): LongInt;
+function TglrList<T>.Add(Item: T): LongInt;
 begin
   if FCount mod FCapacity = 0 then
     SetLength(FItems, Length(FItems) + FCapacity);
@@ -1934,7 +1988,7 @@ begin
   Inc(FCount);
 end;
 
-procedure TglrList.Delete(Index: LongInt; FreeItem: Boolean);
+procedure TglrList<T>.DeleteByIndex(Index: LongInt; FreeItem: Boolean);
 begin
   BoundsCheck(Index);
   if FreeItem then
@@ -1945,53 +1999,23 @@ begin
     SetLength(FItems, Length(FItems) - FCapacity);
 end;
 
-procedure TglrList.Delete(Item: Pointer; FreeItem: Boolean);
+procedure TglrList<T>.Delete(Item: T; FreeItem: Boolean);
 begin
-  Delete(IndexOf(Item), FreeItem);
+  DeleteByIndex(IndexOf(Item), FreeItem);
 end;
 
-procedure TglrList.Insert(Index: LongInt; Item: Pointer);
+procedure TglrList<T>.Insert(Index: LongInt; Item: T);
 begin
   BoundsCheck(Index);
-  Add(nil);
+  Add(Item); //can't add nil
   Move(FItems[Index], FItems[Index + 1], (FCount - Index - 1) * SizeOf(FItems[0]));
   FItems[Index] := Item;
 end;
 
-procedure TglrList.Sort(CompareFunc: TglrListCompareFunc);
-
-  procedure SortFragment(L, R: LongInt);
-  var
-    i, j : Integer;
-    P, T : Pointer;
-  begin
-    repeat
-      i := L;
-      j := R;
-      P := FItems[(L + R) div 2];
-      repeat
-        while CompareFunc(FItems[i], P) < 0 do
-          Inc(i);
-        while CompareFunc(FItems[j], P) > 0 do
-          Dec(j);
-        if i <= j then
-        begin
-          T := FItems[i];
-          FItems[i] := FItems[j];
-          FItems[j] := T;
-          Inc(i);
-          Dec(j);
-        end;
-      until i > j;
-      if L < j then
-        SortFragment(L, j);
-      L := i;
-    until i >= R;
-  end;
-
+procedure TglrList<T>.Sort(CompareFunc: TglrListCompareFunc);
 begin
   if FCount > 1 then
-    SortFragment(0, FCount - 1);
+    SortFragment(CompareFunc, 0, FCount - 1);
 end;
 
 end.
