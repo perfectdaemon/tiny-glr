@@ -160,7 +160,7 @@ begin
     Y := 100;
     Caption := 'tiny glr ляля';
     vSync := True;
-    PackFilesPath := '/data';
+    PackFilesPath := 'data';
   end;
 
   Game := TGame.Create();
