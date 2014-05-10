@@ -33,11 +33,9 @@ type
 
   function FileExists(const FileName: AnsiString): Boolean;
   procedure FindFiles(const aPath, aExt: AnsiString; var aList: TglrStringList);
+  function ExtractFileExt(const aFileName: AnsiString): AnsiString;
 
 implementation
-
-uses
-  glrMath;
 
 function FileExists(const FileName: AnsiString): Boolean;
 var
@@ -168,7 +166,7 @@ begin
       repeat
         if (searchResult.Attr and faDirectory) = 0 then
         begin
-          if (ExtractFileExt(searchResult.Name) = aExt) then
+          if (aExt = '') or (ExtractFileExt(searchResult.Name) = aExt) then
             aList.Add((aPath + '/' + searchResult.Name));
         end
         else if (searchResult.Name <> '.') and (searchResult.Name <> '..') then
@@ -232,9 +230,9 @@ begin
 
     WM_MOUSEWHEEL:
       if (wParam > 0) then
-        Core.InputReceived(itWheel, kWheelUp, LOWORD(lParam), HIWORD(lParam), Sign(wParam) * (HIWORD(wParam) div WHEEL_DELTA))
+        Core.InputReceived(itWheel, kWheelUp, LOWORD(lParam), HIWORD(lParam), 1 * (HIWORD(wParam) div WHEEL_DELTA))
       else
-        Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), Sign(wParam) * (HIWORD(wParam) div WHEEL_DELTA));
+        Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), -1 * (HIWORD(wParam) div WHEEL_DELTA));
 
     else
       Result := DefWindowProcA(hWnd, message, wParam, lParam);
@@ -249,7 +247,6 @@ var
   wStyle: LongWord;
   wClass: TWndClass;
 begin
-  inherited;
   p := TglrInitParams(aData^);
   ZeroMemory(@wClass, SizeOf(wClass));
   with wClass do
