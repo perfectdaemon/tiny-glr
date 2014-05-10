@@ -68,6 +68,8 @@ type
     function Add(Item: T): LongInt;
     procedure DeleteByIndex(Index: LongInt; FreeItem: Boolean = False);
     procedure Delete(Item: T; FreeItem: Boolean = False);
+    procedure DeleteSafe(Item: T; FreeItem: Boolean = False);
+    procedure DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean = False);
     procedure Insert(Index: LongInt; Item: T);
     procedure Sort(CompareFunc: TglrListCompareFunc);
     property Count: LongInt read FCount;
@@ -78,18 +80,28 @@ type
 
   { FileSystem }
 
+const
+  PACK_FILE_MAGIC: Word = $0F86;
+type
+  NameString = String[255];
+
+  TglrPackFileResource = packed record
+    fFileName: NameString;
+    fStride, fSize: LongWord;
+  end;
+
   FileSystem = class
   protected
     type
-      TglrPackFileHeader = record
+      TglrPackFile = packed record
         fPackName: AnsiString;
-        fFileNames: array of AnsiString;
+        fFiles: array of TglrPackFileResource;
+        fLoaded: Boolean;
       end;
-      PglrPackFileHeader = ^TglrPackFileHeader;
 
     var
       class var fPackFilesPath: AnsiString;
-      class var fPackFiles: array of PglrPackFileHeader;
+      class var fPackFiles: array of TglrPackFile;
 
     class procedure Init(const aPackFilesPath: AnsiString);
     class procedure DeInit();
@@ -1148,25 +1160,78 @@ end;
 class procedure FileSystem.Init(const aPackFilesPath: AnsiString);
 var
   packFilesList: TglrStringList;
-  i: Integer;
+  i, l, j: Integer;
+  stream: TglrStream;
+  WordBuf, bytesRead: Word;
 begin
   fPackFilesPath := aPackFilesPath;
   if (fPackFilesPath[Length(fPackFilesPath) - 1] in ['/', '\']) then
     fPackFilesPath := Copy(fPackFilesPath, 0, Length(fPackFilesPath) - 2);
   packFilesList := TglrStringList.Create();
   FindFiles(fPackFilesPath, '.glrpack', packFilesList);
+  Log.Write(lInformation, 'FileSystem: pack files found at "' + fPackFilesPath + '": ' + Convert.ToStringA(packFilesList.Count));
+  SetLength(fPackFiles, packFilesList.Count);
+  l := 0;
   for i := 0 to packFilesList.Count - 1 do
-    //todo: load headers
-    Log.Write(lInformation, PAnsiChar(packFilesList[i]));
+  begin
+    stream := FileSystem.ReadResource(packFilesList[i], False);
+    bytesRead := stream.Read(WordBuf, SizeOf(Word));
+    if (WordBuf <> PACK_FILE_MAGIC) or (bytesRead < SizeOf(Word)) then
+    begin
+      Log.Write(lError, #9 + packFilesList[i] + ': not a correct pack file');
+      SetLength(fPackFiles, Length(fPackFiles) - 1);
+      stream.Free();
+      continue;
+    end;
+    bytesRead := stream.Read(WordBuf, SizeOf(Word));
+    if (bytesRead <> SizeOf(Word)) then
+    begin
+      log.Write(lError, #9 + packFilesList[i] + ': error while read file count');
+      SetLength(fPackFiles, Length(fPackFiles) - 1);
+      stream.Free();
+      continue;
+    end;
+    fPackFiles[l].fPackName := packFilesList[i];
+    fPackFiles[l].fLoaded := False;
+
+    SetLength(fPackFiles[l].fFiles, WordBuf);
+    for j := 0 to WordBuf - 1 do
+    begin
+      fPackFiles[l].fFiles[j].fFileName := stream.ReadAnsi();
+      stream.Read(fPackFiles[l].fFiles[j].fStride, SizeOf(LongWord));
+      stream.Read(fPackFiles[l].fFiles[j].fSize, SizeOf(LongWord));
+    end;
+    (*
+    bytesRead := stream.Read(fPackFiles[l].fFiles[0], SizeOf(TglrPackFileResource) * WordBuf);
+    if (bytesRead <> SizeOf(TglrPackFileResource) * WordBuf) then
+    begin
+      log.Write(lError, #9 + packFilesList[i] + ': error while read file headers');
+      SetLength(fPackFiles, Length(fPackFiles) - 1);
+      stream.Free();
+      continue;
+    end;
+    *)
+    Log.Write(lInformation, #9 + packFilesList[i] + ': loaded. Files inside: ' + Convert.ToStringA(WordBuf));
+    //debug
+    for j := 0 to Length(fPackFiles[l].fFiles) - 1 do
+      Log.Write(lInformation, #9 + fPackFiles[l].fFiles[j].fFileName + ' - ' + Convert.ToStringA(Integer(fPackFiles[l].fFiles[j].fSize)));
+    stream.Free();
+    l += 1;
+  end;
   packFilesList.Free();
 
-  Log.Write(lWarning, 'FileSystem.Init has no full implementation for pack load');
+  //Log.Write(lWarning, 'FileSystem.Init has no full implementation for pack load');
 end;
 
 class procedure FileSystem.DeInit;
+var
+  i: Integer;
 begin
-  Log.Write(lWarning, 'FileSystem.DeInit has no implementation for pack unload');
-  //release all opened packs
+  for i := 0 to High(fPackFiles) do
+    if (fPackFiles[i].fLoaded) then
+      UnloadPack(fPackFiles[i].fPackName);
+  SetLength(fPackFiles, 0);
+//  Log.Write(lWarning, 'FileSystem.DeInit has no implementation for pack unload');
 end;
 
 class procedure FileSystem.LoadPack(const aPackFileName: AnsiString);
@@ -1372,10 +1437,10 @@ var
 begin
   gl.Init();
   {$ifdef log}
-  aStr := 'Graphics information' + #13#10#9 +
-    'Vendor: ' + gl.GetString(TGLConst.GL_VENDOR) + #13#10#9 +
-    'Renderer: ' + gl.GetString(TGLConst.GL_RENDERER) + #13#10#9 +
-    'OpenGL: ' + gl.GetString(TGLConst.GL_VERSION) + #13#10#9 +
+  aStr := 'Graphics information' + #13#10#9#9 +
+    'Vendor: ' + gl.GetString(TGLConst.GL_VENDOR) + #13#10#9#9 +
+    'Renderer: ' + gl.GetString(TGLConst.GL_RENDERER) + #13#10#9#9 +
+    'OpenGL: ' + gl.GetString(TGLConst.GL_VERSION) + #13#10#9#9 +
     'GLSL: ' + gl.GetString(TGLConst.GL_SHADING_LANGUAGE_VERSION);
   Log.Write(lInformation, aStr);
   {$endif}
@@ -1993,7 +2058,7 @@ begin
   BoundsCheck(Index);
   if FreeItem then
     TObject(FItems[Index]).Free;
-  Move(FItems[Index + 1], FItems[Index], (FCount - Index - 1) * SizeOf(FItems[0]));
+  Move(FItems[Index + 1], FItems[Index], (FCount - Index - 1) * SizeOf(T));
   Dec(FCount);
   if Length(FItems) - FCount + 1 > FCapacity then
     SetLength(FItems, Length(FItems) - FCapacity);
@@ -2002,6 +2067,26 @@ end;
 procedure TglrList<T>.Delete(Item: T; FreeItem: Boolean);
 begin
   DeleteByIndex(IndexOf(Item), FreeItem);
+end;
+
+procedure TglrList<T>.DeleteSafe(Item: T; FreeItem: Boolean);
+begin
+  DeleteSafeByIndex(IndexOf(Item), FreeItem);
+end;
+
+procedure TglrList<T>.DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean);
+var
+  i: Integer;
+begin
+  BoundsCheck(Index);
+  if FreeItem then
+    TObject(FItems[Index]).Free;
+  for i := Index to FCount - 2 do
+    FItems[i] := FItems[i + 1];
+
+  Dec(FCount);
+  if Length(FItems) - FCount + 1 > FCapacity then
+    SetLength(FItems, Length(FItems) - FCapacity);
 end;
 
 procedure TglrList<T>.Insert(Index: LongInt; Item: T);
