@@ -1211,10 +1211,9 @@ begin
       continue;
     end;
     *)
-    Log.Write(lInformation, #9 + packFilesList[i] + ': loaded. Files inside: ' + Convert.ToStringA(WordBuf));
-    //debug
+    Log.Write(lInformation, #9 + packFilesList[i] + ': header loaded. Files inside: ' + Convert.ToStringA(WordBuf));
     for j := 0 to Length(fPackFiles[l].fFiles) - 1 do
-      Log.Write(lInformation, #9 + fPackFiles[l].fFiles[j].fFileName + ' - ' + Convert.ToStringA(Integer(fPackFiles[l].fFiles[j].fSize)));
+      Log.Write(lInformation, #9#9 + fPackFiles[l].fFiles[j].fFileName + ' - ' + Convert.ToStringA(Integer(fPackFiles[l].fFiles[j].fSize)));
     stream.Free();
     l += 1;
   end;
@@ -1331,6 +1330,7 @@ begin
   {$IFDEF WINDOWS}TglrWindow{$ENDIF}
     .Create(@aInitParams);
   Render.Init();
+  Render.SetVerticalSync(aInitParams.vSync);
   Render.SetClearColor(0.2, 0.21, 0.25);
   Render.SetViewPort(0, 0, aInitParams.Width, aInitParams.Height);
 

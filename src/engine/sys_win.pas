@@ -160,18 +160,25 @@ end;
 procedure FindFiles(const aPath, aExt: AnsiString; var aList: TglrStringList);
 var
   searchResult: TSearchRec;
+  fPath: AnsiString;
 begin
-  if (FindFirst(aPath + '/*', faAnyFile, searchResult) = 0) then
+  fPath := aPath;
+  if (fPath[Length(fPath)] = '\') then
+    fPath[Length(fPath)] := '/'
+  else if (fPath[Length(fPath)] <> '/') then
+    fPath += '/';
+
+  if (FindFirst(fPath + '*', faAnyFile, searchResult) = 0) then
     try
       repeat
         if (searchResult.Attr and faDirectory) = 0 then
         begin
           if (aExt = '') or (ExtractFileExt(searchResult.Name) = aExt) then
-            aList.Add((aPath + '/' + searchResult.Name));
+            aList.Add((fPath + searchResult.Name));
         end
         else if (searchResult.Name <> '.') and (searchResult.Name <> '..') then
         begin
-          FindFiles(aPath + '/' + searchResult.Name, aExt, aList);
+          FindFiles(fPath + searchResult.Name, aExt, aList);
         end;
       until FindNext(searchResult) <> 0
     finally
