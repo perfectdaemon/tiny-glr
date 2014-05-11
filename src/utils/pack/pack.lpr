@@ -17,7 +17,6 @@ uses
     Log.Write(lInformation, 'Start packing dir "' + aPackDir + '" into pack file "' + aOutputFileName + '"');
     files := TglrStringList.Create(1);
     FindFiles(aPackDir, '', files);
-    Log.Write(lInformation, Convert.ToStringA(SizeOf(NameString)));
     i := 0;
     while (i < files.Count) do
     begin
@@ -40,6 +39,7 @@ uses
 
     for i := 0 to count - 1 do
     begin
+      Log.Write(lInformation, 'Start packing "' + files[i] + '"...');
       FileStream := TglrStream.Init(files[i]);
 
       GetMem(buffer, FileStream.Size);
@@ -55,8 +55,10 @@ uses
 
       stride += LongWord(FileStream.Size);
       FileStream.Free();
+      Log.Write(lInformation, '... success!');
     end;
 
+    Log.Write(lInformation, 'Start writing headers...');
     PackStream.Pos := 2 * SizeOf(Word);
     for i := 0 to count - 1 do
     begin
@@ -64,6 +66,7 @@ uses
       PackStream.Write(headers[i].fStride, SizeOf(LongWord));
       PackStream.Write(headers[i].fSize, SizeOf(LongWord));
     end;
+    Log.Write(lInformation, '... success!');
 //    PackStream.Write(headers, SizeOf(TglrPackFileResource) * count);
     PackStream.Free();
   end;
