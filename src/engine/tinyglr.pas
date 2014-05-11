@@ -424,6 +424,7 @@ type
     Caption: AnsiString;
     vSync: Boolean;
     PackFilesPath: AnsiString;
+    UseDefaultAssets: Boolean;
   {$IFDEF WINDOWS}
   {$ENDIF}
   end;
@@ -599,6 +600,7 @@ type
 
   Default = class
   protected
+    class var fInited: Boolean;
     class procedure Init();
     class procedure Deinit();
   public
@@ -666,16 +668,22 @@ end;
 { Default }
 
 class procedure Default.Init;
-
-{$include 'shaders.inc'}
-
 begin
   SpriteMaterial := TglrMaterial.Create();
+  SpriteMaterial.Shader := TglrShaderProgram.Create();
+  SpriteMaterial.Shader.LoadAndAttachShader(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
+  SpriteMaterial.Shader.LoadAndAttachShader(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
+  SpriteMaterial.Shader.Link();
   //todo: shader and everything
+  //do it via pack file (default.glrpack for example)
+  fInited := True;
 end;
 
 class procedure Default.Deinit;
 begin
+  if (not fInited) then
+    Exit();
+
   SpriteMaterial.Free();
 end;
 
@@ -1333,8 +1341,8 @@ begin
   Render.SetVerticalSync(aInitParams.vSync);
   Render.SetClearColor(0.2, 0.21, 0.25);
   Render.SetViewPort(0, 0, aInitParams.Width, aInitParams.Height);
-
-  Default.Init();
+  if (aInitParams.UseDefaultAssets) then
+    Default.Init();
 end;
 
 class procedure Core.Loop();
