@@ -1,1 +1,1 @@
-pack -pack data\p1.glrpack data
+pack -pack data\p1.glrpack data\
