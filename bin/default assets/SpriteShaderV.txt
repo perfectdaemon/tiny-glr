@@ -1,13 +1,13 @@
-varying vec2 texCoord0, texCoord1;
+//varying vec2 texCoord0, texCoord1;
 attribute vec3 vaCoord;
-attribute vec2 vaTexCoord0;
-attribute vec2 vaTexCoord1;
+//attribute vec2 vaTexCoord0;
+//attribute vec2 vaTexCoord1;
 uniform mat4 uModelViewProj;
 
 void main(void)
 {
   //texCoord0 = vaTexCoord0;
   //texCoord1 = vaTexCoord1;
-  //gl_Position = uModelViewProj * vec4(vaCoord, 1.0);
-  gl_Position = ftransform();
+  gl_Position = uModelViewProj * vec4(vaCoord, 1.0);
+//  gl_Position = ftransform();
 }
