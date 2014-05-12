@@ -131,6 +131,7 @@ type
     GetIntegerv    : procedure (pname: TGLConst; params: Pointer); stdcall;
     GetFloatv      : procedure (pname: TGLConst; params: Pointer); stdcall;
     GetString      : function (name: TGLConst): PAnsiChar; stdcall;
+    GetError       : function (): LongWord; stdcall;
     Flush          : procedure;
     PolygonMode    : procedure (face, mode: TGLConst); stdcall;
     PixelStorei    : procedure (pname: TGLConst; param: LongInt); stdcall;
@@ -288,6 +289,7 @@ const
     'glGetIntegerv',
     'glGetFloatv',
     'glGetString',
+    'glGetError',
     'glFlush',
     'glPolygonMode',
     'glPixelStorei',
