@@ -10,4 +10,4 @@ void main(void)
   //texCoord1 = vaTexCoord1;
   //gl_Position = uModelViewProj * vec4(vaCoord, 1.0);
   gl_Position = ftransform();
-};         
+}
