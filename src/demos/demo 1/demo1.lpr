@@ -15,6 +15,12 @@ type
     Scene: TglrScene;
     Points: array of TdfVec3f;
     Tex: TglrTexture;
+
+    meshData: array of TglrVertexP3T2;
+    meshBuffer: TglrVertexBuffer;
+    meshIBuffer: TglrIndexBuffer;
+    procedure PrepareMesh();
+    procedure RenderMesh();
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -28,6 +34,68 @@ type
   end;
 
 { TGame }
+
+procedure TGame.PrepareMesh;
+const
+  CubeSize = 4;
+
+  indices: array[0..35] of byte = (0, 1, 3, //back
+                                   0, 3, 2,
+
+                                   4, 6, 7, //front
+                                   7, 5, 4,
+
+                                   9, 8, 10, //right
+                                   8, 11, 10,
+
+                                   15, 12, 14, //left
+                                   15, 13, 12,
+
+                                   19, 17, 16, //top
+                                   19, 16, 18,
+
+                                   23, 20, 21, //bottom
+                                   23, 22, 20);
+begin
+  SetLength(meshData, 24);
+  meshData[0].vec := dfVec3f(CubeSize/2, CubeSize/2, CubeSize/2);
+  meshData[1].vec := dfVec3f(-CubeSize/2, CubeSize/2, CubeSize/2);
+  meshData[2].vec := dfVec3f(CubeSize/2, -CubeSize/2, CubeSize/2);
+  meshData[3].vec := dfVec3f(-CubeSize/2, -CubeSize/2, CubeSize/2);
+
+  meshData[4].vec := dfVec3f(CubeSize/2, CubeSize/2, -CubeSize/2);
+  meshData[5].vec := dfVec3f(-CubeSize/2, CubeSize/2, -CubeSize/2);
+  meshData[6].vec := dfVec3f(CubeSize/2, -CubeSize/2, -CubeSize/2);
+  meshData[7].vec := dfVec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2);
+
+  meshData[8].vec := dfVec3f(CubeSize/2, CubeSize/2, CubeSize/2); //0
+  meshData[9].vec := dfVec3f(CubeSize/2, CubeSize/2, -CubeSize/2); //4
+  meshData[10].vec := dfVec3f(CubeSize/2, -CubeSize/2, -CubeSize/2); //6
+  meshData[11].vec := dfVec3f(CubeSize/2, -CubeSize/2, CubeSize/2); //2
+
+  meshData[12].vec := dfVec3f(-CubeSize/2, CubeSize/2, CubeSize/2); //1
+  meshData[13].vec := dfVec3f(-CubeSize/2, -CubeSize/2, CubeSize/2); //3
+  meshData[14].vec := dfVec3f(-CubeSize/2, CubeSize/2, -CubeSize/2); //5
+  meshData[15].vec := dfVec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2); //7
+
+  meshData[16].vec := dfVec3f(CubeSize/2, CubeSize/2, CubeSize/2); //0
+  meshData[17].vec := dfVec3f(-CubeSize/2, CubeSize/2, CubeSize/2); //1
+  meshData[18].vec := dfVec3f(CubeSize/2, CubeSize/2, -CubeSize/2); //4
+  meshData[19].vec := dfVec3f(-CubeSize/2, CubeSize/2, -CubeSize/2); //5
+
+  meshData[20].vec := dfVec3f(CubeSize/2, -CubeSize/2, CubeSize/2); //2
+  meshData[21].vec := dfVec3f(-CubeSize/2, -CubeSize/2, CubeSize/2); //3
+  meshData[22].vec := dfVec3f(CubeSize/2, -CubeSize/2, -CubeSize/2); //6
+  meshData[23].vec := dfVec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2); //7
+
+  meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2);
+  meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
+end;
+
+procedure TGame.RenderMesh;
+begin
+  Render.DrawTriangles(meshBuffer, meshIBuffer, 0, 36);
+end;
 
 procedure TGame.OnFinish;
 begin
@@ -55,6 +123,9 @@ begin
 
   if (aType = itWheel) then
     Scene.Camera.Translate(0, 0, -Sign(aOtherParam));
+
+  if (aType = itKeyDown) and (aKey = kL) then
+    Log.Write(lInformation, Convert.ToStringA(Render.Params.ModelViewProj));
 end;
 
 procedure TGame.OnPause;
@@ -90,13 +161,15 @@ begin
     gl.Endp();
 
   Default.SpriteMaterial.Shader.Bind();
-  Render.SetTexture(Tex.Id, 0);
+  //Render.SetTexture(Tex.Id, 0);
   gl.Beginp(GL_TRIANGLES);
     gl.TexCoord2f(0, 0); gl.Vertex3f(1, 0, 1);
     gl.TexCoord2f(0, 1); gl.Vertex3f(1, 0, 2);
     gl.TexCoord2f(1, 1); gl.Vertex3f(2, 0, 2);
   gl.Endp();
-  Render.SetTexture(0, 0);
+  //Render.SetTexture(0, 0);
+  RenderMesh();
+  //TglrVertexBuffer.Unbind();
   TglrShaderProgram.Unbind();
 end;
 
@@ -127,6 +200,8 @@ begin
   Scene.Camera.ProjectionMode := pmPerspective;
 
   Tex := TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga');
+
+  PrepareMesh();
 end;
 
 procedure TGame.OnUpdate(const dt: Double);

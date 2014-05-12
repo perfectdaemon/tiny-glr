@@ -132,6 +132,7 @@ type
   public
     class function ToStringA(aVal: Integer): AnsiString; overload;
     class function ToStringA(aVal: Single; Digits: Integer = 5): AnsiString; overload;
+    class function ToStringA(aVal: TdfMat4f): AnsiString; overload;
 //    class function ToStringW(aVal: Integer): UnicodeString; overload;
 //    class function ToStringW(aVal: Single): UnicodeString; overload;
     class function ToInt(aStr: AnsiString; aDefault: Integer = -1): Integer; overload;
@@ -216,6 +217,7 @@ type
 
   TglrIndexBuffer = class
     Id: TglrIndexBufferId;
+    iFormat: TglrIndexFormat;
     procedure Bind();
     class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrIndexFormat); virtual;
@@ -267,7 +269,7 @@ type
   { Render }
 
   TglrRenderParams = record
-    ViewProj, Model: TdfMat4f;
+    ViewProj, Model, ModelViewProj: TdfMat4f;
     Color: TdfVec4f;
   end;
 
@@ -621,7 +623,9 @@ const
   VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2));
   IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
-    (SizeOf(Byte), SizeOf(ShortInt), SizeOf(Integer));
+    (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
+  IF_FORMAT: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of TGLConst =
+  (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INT);
 
   comparison: array[Low(TglrFuncComparison)..High(TglrFuncComparison)] of TGLConst =
     (GL_NEVER, GL_LESS, GL_EQUAL, GL_LEQUAL, GL_GREATER, GL_NOTEQUAL, GL_GEQUAL, GL_ALWAYS);
@@ -727,8 +731,26 @@ begin
 end;
 
 procedure TglrShaderProgram.Bind;
+var
+  param: TGLConst;
+  len: LongInt;
+  infoLog: PAnsiChar;
 begin
   Render.SetShader(Self.Id);
+
+  //gl.GetProgramiv(Self.Id, GL_VALIDATE_STATUS, @param);
+  //if (param = GL_FALSE) then
+  //begin
+  //  gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
+  //  GetMem(infoLog, len);
+  //  gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
+  //  Log.Write(lCritical, 'Shader validate failed. Log: #13#10' + InfoLog);
+  //  FreeMem(infoLog, len);
+  //end;
+
+  with Render.Params do
+    ModelViewProj := ViewProj * Model;
+  gl.UniformMatrix4fv(gl.GetUniformLocation(Self.Id, 'uModelViewProj'), 1, True, @(Render.Params.ModelViewProj));
 end;
 
 class procedure TglrShaderProgram.Unbind;
@@ -772,7 +794,10 @@ begin
   gl.AttachShader(Self.Id, ShadersId[i]);
 
   for v := Low(TglrVertexAtrib) to High(TglrVertexAtrib) do
+  begin
+    gl.EnableVertexAttribArray(Ord(v));
     gl.BindAttribLocation(Self.Id, Ord(v), PAnsiChar(GetVertexAtribName(v)));
+  end;
 
   //todo: gl.Uniform
 end;
@@ -918,7 +943,7 @@ end;
 
 procedure TglrCamera.Update;
 begin
-//  UpdateVectorsFromMatrix();
+  //UpdateVectorsFromMatrix();
   Matrix.Pos := dfVec3f(0, 0, 0);
   Matrix.Pos := Matrix * fPos.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
@@ -1008,6 +1033,14 @@ end;
 class function Convert.ToStringA(aVal: Single; Digits: Integer = 5): AnsiString;
 begin
   Str(aVal:0:Digits, Result);
+end;
+
+class function Convert.ToStringA(aVal: TdfMat4f): AnsiString;
+var
+  f: PSingle;
+begin
+  f := @aVal;
+  log.Write(lCritical, 'Convert mat to string is not implemented');
 end;
 
 class function Convert.ToInt(aStr: AnsiString; aDefault: Integer): Integer;
@@ -1649,12 +1682,12 @@ begin
     iBuffer.Bind();
   end;
 
-//  gl.DrawElements(GL_TRIANGLES, aVertCount, , );
+  gl.DrawElements(GL_TRIANGLES, aVertCount, IF_FORMAT[iBuffer.iFormat], Pointer(aStart * IF_STRIDE[iBuffer.iFormat]));
 
   fDipCount += 1;
   fTriCount += aVertCount div 3;
 
-  Log.Write(lCritical, 'Render.DrawTriangles not implemented fully');
+  //Log.Write(lCritical, 'Render.DrawTriangles not implemented fully');
 end;
 
 class procedure Render.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
@@ -1702,8 +1735,9 @@ constructor TglrIndexBuffer.Create(aData: Pointer; aCount: Integer;
   aFormat: TglrIndexFormat);
 begin
   gl.GenBuffers(1, @Self.Id);
+  iFormat := aFormat;
   Self.Bind();
-  gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[aFormat] * aCount, aData, GL_STATIC_DRAW);
+  gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[iFormat] * aCount, aData, GL_STATIC_DRAW);
   Self.Unbind();
 end;
 
@@ -1719,12 +1753,29 @@ procedure TglrVertexBuffer.Bind;
 begin
   gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
 
-  Log.Write(lCritical, 'VertexBuffer.Bind has no vertex attrib calls');
+  //gl.EnableClientState(GL_VERTEX_ARRAY);
+  //gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
+  //gl.VertexPointer(3, GL_FLOAT, SizeOf(TdfVec2f), nil);
+  //Log.Write(lCritical, 'VertexBuffer.Bind has no vertex attrib calls');
+
   //todo: gl.VertexAtribPointer в зависимости от формата
+  case vbFormat of
+    vfPos3Tex2:
+    begin
+      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
+			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
+    end;
+    vfPos2Tex2:
+    begin
+			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec2f)));
+			gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
+    end;
+  end;
 end;
 
 class procedure TglrVertexBuffer.Unbind;
 begin
+  gl.DisableClientState(GL_VERTEX_ARRAY);
   gl.BindBuffer(GL_ARRAY_BUFFER, 0);
 end;
 
