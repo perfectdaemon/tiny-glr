@@ -14,7 +14,7 @@ type
     dx, dy: Integer;
     Scene: TglrScene;
     Points: array of TdfVec3f;
-    Tex: TglrTexture;
+    //Tex: TglrTexture;
 
     meshData: array of TglrVertexP3T2;
     meshBuffer: TglrVertexBuffer;
@@ -100,7 +100,7 @@ end;
 procedure TGame.OnFinish;
 begin
   WriteLn('End');
-  Tex.Free();
+  //Tex.Free();
   Scene.Free();
 end;
 
@@ -199,7 +199,7 @@ begin
   Scene.Camera.SetCamera(dfVec3f(5, 5, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
   Scene.Camera.ProjectionMode := pmPerspective;
 
-  Tex := TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga');
+  //Tex := TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga');
 
   PrepareMesh();
 end;
@@ -222,7 +222,7 @@ begin
     Y := 100;
     Caption := 'tiny glr ляля';
     vSync := True;
-    PackFilesPath := 'data/';
+    PackFilesPath := '';
     UseDefaultAssets := True;
   end;
 

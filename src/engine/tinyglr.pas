@@ -97,6 +97,8 @@ type
         fPackName: AnsiString;
         fFiles: array of TglrPackFileResource;
         fLoaded: Boolean;
+        fPackData: TglrStream;
+        fPackDataPointer: Pointer;
       end;
 
     var
@@ -105,6 +107,9 @@ type
 
     class procedure Init(const aPackFilesPath: AnsiString);
     class procedure DeInit();
+
+    class function IsPackContainsFile(packIndex: Integer; aFileName: AnsiString): Boolean;
+    class function GetPackIndexByPackName(const aPackName: AnsiString): Integer;
   public
     class procedure LoadPack(const aPackFileName: AnsiString); //loads entire pack file into memory
     class procedure UnloadPack(const aPackFileName: AnsiString);
@@ -1274,25 +1279,95 @@ begin
 //  Log.Write(lWarning, 'FileSystem.DeInit has no implementation for pack unload');
 end;
 
-class procedure FileSystem.LoadPack(const aPackFileName: AnsiString);
+class function FileSystem.IsPackContainsFile(packIndex: Integer;
+  aFileName: AnsiString): Boolean;
+var
+  i: Integer;
 begin
-  Log.Write(lCritical, 'FileSystem.LoadPack is not implemented');
+  Result := False;
+  if (packIndex < 0) or (packIndex > High(fPackFiles)) then
+  begin
+    Log.Write(lError, 'Wrong pack index provided: ' + Convert.ToStringA(packIndex)
+      + '. Bounds: 0..' + Convert.ToStringA(High(fPackFiles)));
+    Exit();
+  end;
+
+  for i := 0 to High(fPackFiles[packIndex].fFiles) do
+    if (fPackFiles[packIndex].fFiles[i].fFileName = aFileName) then
+      Exit(True);
+end;
+
+class function FileSystem.GetPackIndexByPackName(const aPackName: AnsiString): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+  for i := 0 to Length(fPackFiles) - 1 do
+    if (fPackFiles[i].fPackName = aPackName) then
+      Exit(i);
+  //Log.Write(lError, 'FileSystem: Pack "' + aPackName + '" was not found');
+end;
+
+class procedure FileSystem.LoadPack(const aPackFileName: AnsiString);
+var
+  i: Integer;
+  FileStream: TglrStream;
+begin
+  i := GetPackIndexByPackName(aPackFileName);
+  if (i = -1) then
+    Log.Write(lError, 'FileSystem: Unable to load pack "' + aPackFileName + '". No pack was found.')
+  else
+  begin
+    FileStream := TglrStream.Init(aPackFileName);
+    GetMem(fPackFiles[i].fPackDataPointer, FileStream.Size);
+    fPackFiles[i].fPackData := TglrStream.Init(fPackFiles[i].fPackDataPointer, FileStream.Size);
+    fPackFiles[i].fPackData.CopyFrom(FileStream);
+    fPackFiles[i].fLoaded := True;
+    FileStream.Free();
+    Log.Write(lInformation, 'FileSystem: Load pack "' + aPackFileName + '" is completed');
+  end;
 end;
 
 class procedure FileSystem.UnloadPack(const aPackFileName: AnsiString);
+var
+  i: Integer;
+  FileStream: TglrStream;
 begin
-  Log.Write(lCritical, 'FileSystem.UnloadPack is not implemented');
+  i := GetPackIndexByPackName(aPackFileName);
+  if (i = -1) then
+    Log.Write(lError, 'FileSystem: Unable to unload pack "' + aPackFileName + '". No pack was found.')
+  else
+  begin
+    FreeMem(fPackFiles[i].fPackDataPointer, fPackFiles[i].fPackData.Size);
+    fPackFiles[i].fPackData.Free();
+    fPackFiles[i].fLoaded := False;
+    Log.Write(lInformation, 'FileSystem: Unload pack "' + aPackFileName + '" is completed');
+  end;
 end;
 
 class function FileSystem.ReadResource(const aFileName: AnsiString;
   aSearchInPackFiles: Boolean): TglrStream;
+var
+  i: Integer;
+  PackFile: TglrStream;
 begin
-  {$IFDEF WINDOWS}
   if (FileExists(aFileName)) then
-  begin
-    Result := TglrStream.Init(aFileName);
-  end;
-  {$ENDIF}
+    Exit(TglrStream.Init(aFileName))
+  else if (aSearchInPackFiles) then;
+    for i := 0 to Length(fPackFiles) - 1 do
+      if IsPackContainsFile(i, aFileName) then
+      begin
+        if (not fPackFiles[i].fLoaded) then
+        begin
+          PackFile := TglrStream.Init(aFileName);
+          //load pack file from file directly
+          Log.Write(lError, 'FileSystem.ReadResource from pack file directly is not implemented');
+          PackFile.Free();
+        end;
+        Log.Write(lError, 'FileSystem.ReadResource from pack file memory is not implemented');
+        //load pack file from fPackData (memory)
+      end;
+  Log.Write(lError, 'FileSystem: requested resource "' + aFileName + '" was not found');
 end;
 
 class procedure FileSystem.WriteResource(const aFileName: AnsiString;
