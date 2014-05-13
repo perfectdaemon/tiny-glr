@@ -1,0 +1,1 @@
+pack -pack "default.glrpack" "default assets/"
