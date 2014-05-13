@@ -46,7 +46,7 @@ uses
       bytesRead := FileStream.Read(buffer^, FileStream.Size);
       if (bytesRead <> LongWord(FileStream.Size)) then
         Log.Write(lCritical, 'Error while read file "' + files[i] + '". Number of total bytes read not equal to file size');
-      PackStream.Write(buffer, FileStream.Size);
+      PackStream.Write(buffer^, FileStream.Size);
       FreeMem(buffer, FileStream.Size);
 
       headers[i].fFileName := files[i];
