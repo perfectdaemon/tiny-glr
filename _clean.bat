@@ -1,5 +1,4 @@
-del *.compiled /s
-del *.dbg /s
-del *.o /s
-del *.ppu /s
+del *.dbg /s /q
+del *.bak /s /q
+del dcu\*.* /q
 exit /b
