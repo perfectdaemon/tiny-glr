@@ -163,10 +163,11 @@ var
   fPath: AnsiString;
 begin
   fPath := aPath;
-  if (fPath[Length(fPath)] = '\') then
-    fPath[Length(fPath)] := '/'
-  else if (fPath[Length(fPath)] <> '/') then
-    fPath += '/';
+  if (fPath <> '') then
+    if (fPath[Length(fPath)] = '\') then
+      fPath[Length(fPath)] := '/'
+    else if (fPath[Length(fPath)] <> '/') then
+      fPath += '/';
 
   if (FindFirst(fPath + '*', faAnyFile, searchResult) = 0) then
     try

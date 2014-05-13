@@ -1206,8 +1206,8 @@ var
   WordBuf, bytesRead: Word;
 begin
   fPackFilesPath := aPackFilesPath;
-  if (fPackFilesPath[Length(fPackFilesPath) - 1] in ['/', '\']) then
-    fPackFilesPath := Copy(fPackFilesPath, 0, Length(fPackFilesPath) - 2);
+//  if (fPackFilesPath[Length(fPackFilesPath)] in ['/', '\']) then
+//    fPackFilesPath := Copy(fPackFilesPath, 0, Length(fPackFilesPath) - 1);
   packFilesList := TglrStringList.Create();
   FindFiles(fPackFilesPath, '.glrpack', packFilesList);
   Log.Write(lInformation, 'FileSystem: pack files found at "' + fPackFilesPath + '": ' + Convert.ToStringA(packFilesList.Count));
