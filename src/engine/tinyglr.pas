@@ -750,7 +750,7 @@ begin
 
   with Render.Params do
     ModelViewProj := ViewProj * Model;
-  gl.UniformMatrix4fv(gl.GetUniformLocation(Self.Id, 'uModelViewProj'), 1, True, @(Render.Params.ModelViewProj));
+  gl.UniformMatrix4fv(gl.GetUniformLocation(Self.Id, 'uModelViewProj'), 1, false, @(Render.Params.ModelViewProj));
 end;
 
 class procedure TglrShaderProgram.Unbind;

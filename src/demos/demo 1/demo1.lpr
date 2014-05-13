@@ -162,11 +162,11 @@ begin
 
   Default.SpriteMaterial.Shader.Bind();
   //Render.SetTexture(Tex.Id, 0);
-  gl.Beginp(GL_TRIANGLES);
-    gl.TexCoord2f(0, 0); gl.Vertex3f(1, 0, 1);
-    gl.TexCoord2f(0, 1); gl.Vertex3f(1, 0, 2);
-    gl.TexCoord2f(1, 1); gl.Vertex3f(2, 0, 2);
-  gl.Endp();
+  //gl.Beginp(GL_TRIANGLES);
+  //  gl.TexCoord2f(0, 0); gl.Vertex3f(1, 0, 1);
+  //  gl.TexCoord2f(0, 1); gl.Vertex3f(1, 0, 2);
+  //  gl.TexCoord2f(1, 1); gl.Vertex3f(2, 0, 2);
+  //gl.Endp();
   //Render.SetTexture(0, 0);
   RenderMesh();
   //TglrVertexBuffer.Unbind();
@@ -191,7 +191,7 @@ begin
 
   SetLength(Points, 1024);
   Randomize();
-  Render.SetCullMode(cmNone);
+  Render.SetCullMode(cmFront);
   for i := 0 to Length(Points) - 1 do
     Points[i] := dfVec3f(15 - Random(30), 10 - Random(20), 15 - Random(30));
 
