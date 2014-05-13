@@ -798,11 +798,15 @@ begin
 
   gl.AttachShader(Self.Id, ShadersId[i]);
 
-  for v := Low(TglrVertexAtrib) to High(TglrVertexAtrib) do
+  //Quick fix of nvidia bug - they don't like unused / unprovided attribs enabled and binded
+
+  (*for v := Low(TglrVertexAtrib) to High(TglrVertexAtrib) do
   begin
     gl.EnableVertexAttribArray(Ord(v));
     gl.BindAttribLocation(Self.Id, Ord(v), PAnsiChar(GetVertexAtribName(v)));
-  end;
+  end; *)
+  gl.EnableVertexAttribArray(Ord(vaCoord));
+  gl.BindAttribLocation(Self.Id, Ord(vaCoord), 'vaCoord');
 
   //todo: gl.Uniform
 end;
@@ -1837,7 +1841,7 @@ begin
   case vbFormat of
     vfPos3Tex2:
     begin
-      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
+      //gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
 			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
     end;
     vfPos2Tex2:
