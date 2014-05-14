@@ -10,7 +10,7 @@
       </Flags>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
-      <Title Value="My Application"/>
+      <Title Value="tiny glr demo 1"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
     </General>

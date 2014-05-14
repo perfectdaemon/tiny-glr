@@ -21,11 +21,15 @@ const
 
 type
   {$REGION 'Utils'}
+
+  { TglrStream }
+
   TglrStream = class
-    class function Init(Memory: Pointer; MemSize: LongInt): TglrStream; overload;
+    class function Init(Memory: Pointer; MemSize: LongInt; MemoryOwner: Boolean = False): TglrStream; overload;
     class function Init(const FileName: AnsiString; RW: Boolean = False): TglrStream; overload;
     destructor Destroy; override;
   private
+    fMemoryOwner: Boolean;
     SType  : (stMemory, stFile);
     FSize  : LongInt;
     FPos   : LongInt;
@@ -108,7 +112,7 @@ type
     class procedure Init(const aPackFilesPath: AnsiString);
     class procedure DeInit();
 
-    class function IsPackContainsFile(packIndex: Integer; aFileName: AnsiString): Boolean;
+    class function GetFileIndexInPackFile(packIndex: Integer; aFileName: AnsiString): Integer;
     class function GetPackIndexByPackName(const aPackName: AnsiString): Integer;
   public
     class procedure LoadPack(const aPackFileName: AnsiString); //loads entire pack file into memory
@@ -1283,12 +1287,12 @@ begin
 //  Log.Write(lWarning, 'FileSystem.DeInit has no implementation for pack unload');
 end;
 
-class function FileSystem.IsPackContainsFile(packIndex: Integer;
-  aFileName: AnsiString): Boolean;
+class function FileSystem.GetFileIndexInPackFile(packIndex: Integer;
+  aFileName: AnsiString): Integer;
 var
   i: Integer;
 begin
-  Result := False;
+  Result := -1;
   if (packIndex < 0) or (packIndex > High(fPackFiles)) then
   begin
     Log.Write(lError, 'Wrong pack index provided: ' + Convert.ToStringA(packIndex)
@@ -1298,7 +1302,7 @@ begin
 
   for i := 0 to High(fPackFiles[packIndex].fFiles) do
     if (fPackFiles[packIndex].fFiles[i].fFileName = aFileName) then
-      Exit(True);
+      Exit(i);
 end;
 
 class function FileSystem.GetPackIndexByPackName(const aPackName: AnsiString): Integer;
@@ -1352,25 +1356,52 @@ end;
 class function FileSystem.ReadResource(const aFileName: AnsiString;
   aSearchInPackFiles: Boolean): TglrStream;
 var
-  i: Integer;
+  i, f: Integer;
   PackFile: TglrStream;
+  m: Pointer;
+  bytesRead: LongInt;
 begin
   if (FileExists(aFileName)) then
-    Exit(TglrStream.Init(aFileName))
-  else if (aSearchInPackFiles) then;
+  begin
+    //todo: load directly into memory?
+    Log.Write(lInformation, 'FileSystem: start reading resource "' + aFileName + '" directly from file');
+    Result := TglrStream.Init(aFileName);
+    Log.Write(lInformation, 'FileSystem: read successfully');
+    Exit();
+  end
+
+  //Try read from pack files
+  else if (aSearchInPackFiles) then
     for i := 0 to Length(fPackFiles) - 1 do
-      if IsPackContainsFile(i, aFileName) then
+    begin
+      f := GetFileIndexInPackFile(i, aFileName);
+      if (f <> -1) then //found requested file at pack file with index 'f'
       begin
+        Log.Write(lInformation, 'FileSystem: start reading resource "' + aFileName + '" from pack file "' + fPackFiles[i].fPackName + '"');
         if (not fPackFiles[i].fLoaded) then
         begin
-          PackFile := TglrStream.Init(aFileName);
-          //load pack file from file directly
-          Log.Write(lError, 'FileSystem.ReadResource from pack file directly is not implemented');
+          //Read pack file, seek to requested file's stride, read it into new Stream
+          PackFile := TglrStream.Init(fPackFiles[i].fPackName);
+          PackFile.Pos := fPackFiles[i].fFiles[f].fStride;
+          GetMem(m, fPackFiles[i].fFiles[f].fSize);
+          Result := TglrStream.Init(m, fPackFiles[i].fFiles[f].fSize, True); //True means that FreeMem will be executed at Stream.Free()
+          bytesRead := PackFile.Read(m^, Result.FSize); //write directly, no need of Write (Read);
           PackFile.Free();
+
+          if (bytesRead <> Result.FSize) then
+            Log.Write(lCritical, 'FileSystem: resource "' + aFileName + '" read from packfile "' + fPackFiles[i].fPackName + '" failed');
+        end
+        else
+        begin
+          //load pack file from fPackData (memory)
+          Result := TglrStream.Init(fPackFiles[i].fPackDataPointer + fPackFiles[i].fFiles[f].fStride, fPackFiles[i].fFiles[f].fSize);
+          //Log.Write(lError, 'FileSystem.ReadResource from pack file memory is not implemented');
         end;
-        Log.Write(lError, 'FileSystem.ReadResource from pack file memory is not implemented');
-        //load pack file from fPackData (memory)
+        Log.Write(lInformation, 'FileSystem: read successfully');
+        Exit();
       end;
+    end;
+
   Log.Write(lError, 'FileSystem: requested resource "' + aFileName + '" was not found');
 end;
 
@@ -1875,7 +1906,8 @@ begin
 end;
 
 { TglrStream }
-class function TglrStream.Init(Memory: Pointer; MemSize: LongInt): TglrStream;
+class function TglrStream.Init(Memory: Pointer; MemSize: LongInt;
+  MemoryOwner: Boolean): TglrStream;
 begin
   Result := TglrStream.Create;
   with Result do
@@ -1885,6 +1917,9 @@ begin
     FSize := MemSize;
     FPos  := 0;
     FBPos := 0;
+    fMemoryOwner := MemoryOwner;
+    //if fMemoryOwner then
+    //  GetMem(Mem, FSize);
   end;
 end;
 
@@ -1916,7 +1951,9 @@ end;
 destructor TglrStream.Destroy;
 begin
   if SType = stFile then
-    CloseFile(F);
+    CloseFile(F)
+  else if (SType = stMemory) and fMemoryOwner then
+    FreeMem(Mem);
 end;
 
 procedure TglrStream.SetPos(Value: LongInt);
