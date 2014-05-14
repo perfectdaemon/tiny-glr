@@ -6,3 +6,4 @@
 
 backup
 bin/*.exe
+/misc
