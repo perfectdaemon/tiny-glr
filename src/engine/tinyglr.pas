@@ -86,6 +86,7 @@ type
 
 const
   PACK_FILE_MAGIC: Word = $0F86;
+  PACK_FILE_EXT = '.glrpack';
 type
   NameString = String[255];
 
@@ -129,10 +130,11 @@ type
   Log = class
   protected
     class var f: Text;
+    class var fTotalErrors, fTotalWarnings: Word;
   public
     class procedure Init(const aFileName: AnsiString);
     class procedure Deinit();
-    class procedure Write(aType: TglrLogMessageType; aMessage: AnsiString); inline;
+    class procedure Write(aType: TglrLogMessageType; aMessage: AnsiString);
   end;
 
   { Convert }
@@ -247,6 +249,8 @@ type
 
   TglrShaderType = (stVertex, stFragment);
 
+  TglrUniformType = (utVec2, utVec3, utVec4, utMat4, utSampler);
+
   { TglrShaderProgram }
 
   TglrShaderProgram = class
@@ -263,6 +267,9 @@ type
     procedure LoadAndAttachShader(aStream: TglrStream; aShaderType: TglrShaderType;
       aFreeStreamOnFinish: Boolean = True);
     procedure Link();
+
+    procedure SetUniform(aUniformType: TglrUniformType; aCount: Integer;
+      aValue: Pointer; aName: PAnsiChar; aIndex: Integer = -1);
 
     constructor Create(); virtual;
     destructor Destroy(); override;
@@ -586,11 +593,12 @@ type
   TglrMaterial = class
     Shader: TglrShaderProgram;
     Textures: array of TglrTexture;
+    TextureUniformNames: array of AnsiString;
     Color: TdfVec4f;
   	Blend: TglrBlendingMode;
   	DepthWrite: Boolean;
     DepthTest: Boolean;
-    AlphaTest: TglrFuncComparison;
+    AlphaTestFunc, DepthTestFunc: TglrFuncComparison;
     AlphaTestValue: Single;
   	Cull: TglrCullMode;
 
@@ -598,6 +606,8 @@ type
     constructor Create(aStream: TglrStream;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
     destructor Destroy(); override;
+
+    procedure AddTexture(aTexture: TglrTexture; aUniformName: AnsiString);
 
     procedure Bind();
     class procedure Unbind();
@@ -659,7 +669,7 @@ end;
 class procedure Log.Deinit;
 begin
   {$ifdef log}
-  Self.Write(lInformation, 'End');
+  Self.Write(lInformation, 'End. Errors: ' + Convert.ToStringA(fTotalErrors) + ', warnings: ' + Convert.ToStringA(fTotalWarnings));
   {$endif}
 end;
 
@@ -673,7 +683,11 @@ begin
   Append(f);
   WriteLn(f, cLOG_MESSAGE_TYPES[aType] + '::'#9 + aMessage);
   CloseFile(f);
-  if (aType = lCritical) then
+  if (aType = lWarning) then
+    fTotalWarnings += 1
+  else if (aType = lError) then
+    fTotalErrors += 1
+  else if (aType = lCritical) then
     Assert(False, 'Critical error detected: ' + aMessage);
   {$endif}
 end;
@@ -705,25 +719,63 @@ end;
 constructor TglrMaterial.Create;
 begin
   inherited;
-  Log.Write(lWarning, 'Material create is not implemented');
+  Shader := TglrShaderProgram.Create();
+  SetLength(Textures, 0);
+  SetLength(TextureUniformNames, 0);
+
+  AlphaTestFunc := fcGreater;
+  AlphaTestValue := 0.0;
+  Blend := bmAlpha;
+  Color := dfVec4f(1, 1, 1, 1);
+  Cull := cmBack;
+  DepthTest := True;
+  DepthWrite := True;
+  DepthTestFunc := fcLess;
+//  Log.Write(lWarning, 'Material create is not implemented');
 end;
 
 constructor TglrMaterial.Create(aStream: TglrStream;
   aFreeStreamOnFinish: Boolean);
 begin
   Create();
-  Log.Write(lWarning, 'Material create is not implemented');
+  Log.Write(lWarning, 'Material create from stream is not implemented');
 end;
 
 destructor TglrMaterial.Destroy;
+var
+  i: Integer;
 begin
-  Log.Write(lWarning, 'Material destroy is not implemented');
+  for i := 0 to Length(Textures) - 1 do
+    Textures[i].Free();
+  SetLength(Textures, 0);
+  SetLength(TextureUniformNames, 0);
+  Shader.Free();
   inherited Destroy;
 end;
 
-procedure TglrMaterial.Bind;
+procedure TglrMaterial.AddTexture(aTexture: TglrTexture;
+  aUniformName: AnsiString);
 begin
-  Log.Write(lWarning, 'Material bind is not implemented');
+  Log.Write(lError, 'Material.AddTexture is not implemented');
+end;
+
+procedure TglrMaterial.Bind;
+var
+  i: Integer;
+begin
+  Render.SetAlphaTest(AlphaTestFunc, AlphaTestValue);
+  Render.SetBlendingMode(Blend);
+  Render.SetCullMode(Cull);
+  Render.SetDepthWrite(DepthWrite);
+  Render.SetDepthTest(DepthTest);
+  Render.SetDepthFunc(DepthTestFunc);
+  for i := 0 to Length(Textures) - 1 do
+  begin
+    Textures[i].Bind(i);
+    //todo Shader.SetSamplerUniform()
+  end;
+  Shader.Bind();
+  Log.Write(lWarning, 'Material bind is not fully implemented');
 end;
 
 class procedure TglrMaterial.Unbind;
@@ -747,16 +799,17 @@ var
 begin
   Render.SetShader(Self.Id);
 
-  //gl.GetProgramiv(Self.Id, GL_VALIDATE_STATUS, @param);
-  //if (param = GL_FALSE) then
-  //begin
-  //  gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
-  //  GetMem(infoLog, len);
-  //  gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
-  //  Log.Write(lCritical, 'Shader validate failed. Log: #13#10' + InfoLog);
-  //  FreeMem(infoLog, len);
-  //end;
+  gl.GetProgramiv(Self.Id, GL_VALIDATE_STATUS, @param);
+  if (param = GL_FALSE) then
+  begin
+    gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
+    GetMem(infoLog, len);
+    gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
+    Log.Write(lError, 'Shader validate failed. Log:'#13#10 + InfoLog); //sometimes it is not critical
+    FreeMem(infoLog, len);
+  end;
 
+  //fixme - used for debug purposes
   with Render.Params do
     ModelViewProj := ViewProj * Model;
   gl.UniformMatrix4fv(gl.GetUniformLocation(Self.Id, 'uModelViewProj'), 1, false, @(Render.Params.ModelViewProj));
@@ -794,7 +847,7 @@ begin
     gl.GetShaderiv(ShadersId[i], GL_INFO_LOG_LENGTH, @param);
     GetMem(ErrorLog, param);
     gl.GetShaderInfoLog(ShadersId[i], param, len, ErrorLog);
-    Log.Write(lCritical, 'Shader compilation failed. Log: #13#10' + ErrorLog);
+    Log.Write(lCritical, 'Shader compilation failed. Log:'#13#10 + ErrorLog);
     FreeMem(ErrorLog, param);
   end;
   if (aFreeStreamOnFinish) then
@@ -809,10 +862,14 @@ begin
     gl.EnableVertexAttribArray(Ord(v));
     gl.BindAttribLocation(Self.Id, Ord(v), PAnsiChar(GetVertexAtribName(v)));
   end; *)
-  gl.EnableVertexAttribArray(Ord(vaCoord));
-  gl.BindAttribLocation(Self.Id, Ord(vaCoord), 'vaCoord');
+  if (aShaderType = stVertex) then
+  begin
+    gl.EnableVertexAttribArray(Ord(vaCoord));
+    gl.BindAttribLocation(Self.Id, Ord(vaCoord), 'vaCoord');
+  end;
 
-  //todo: gl.Uniform
+  Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for bind used vertex attribs');
+  Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for get shared uniforms locations');
 end;
 
 procedure TglrShaderProgram.Link;
@@ -828,9 +885,15 @@ begin
     gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
     GetMem(infoLog, len);
     gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
-    Log.Write(lCritical, 'Shader link failed. Log: #13#10' + InfoLog);
+    Log.Write(lCritical, 'Shader link failed. Log:'#13#10 + InfoLog);
     FreeMem(infoLog, len);
   end;
+end;
+
+procedure TglrShaderProgram.SetUniform(aUniformType: TglrUniformType;
+  aCount: Integer; aValue: Pointer; aName: PAnsiChar; aIndex: Integer);
+begin
+  Log.Write(lError, 'Shader.SetUniform is not implemented');
 end;
 
 constructor TglrShaderProgram.Create;
@@ -1219,12 +1282,11 @@ var
   WordBuf, bytesRead: Word;
 begin
   fPackFilesPath := aPackFilesPath;
-//  if (fPackFilesPath[Length(fPackFilesPath)] in ['/', '\']) then
-//    fPackFilesPath := Copy(fPackFilesPath, 0, Length(fPackFilesPath) - 1);
   packFilesList := TglrStringList.Create();
-  FindFiles(fPackFilesPath, '.glrpack', packFilesList);
+  FindFiles(fPackFilesPath, PACK_FILE_EXT, packFilesList);
   Log.Write(lInformation, 'FileSystem: pack files found at "' + fPackFilesPath + '": ' + Convert.ToStringA(packFilesList.Count));
   SetLength(fPackFiles, packFilesList.Count);
+
   l := 0;
   for i := 0 to packFilesList.Count - 1 do
   begin
@@ -1237,6 +1299,7 @@ begin
       stream.Free();
       continue;
     end;
+
     bytesRead := stream.Read(WordBuf, SizeOf(Word));
     if (bytesRead <> SizeOf(Word)) then
     begin
@@ -1245,6 +1308,7 @@ begin
       stream.Free();
       continue;
     end;
+
     fPackFiles[l].fPackName := packFilesList[i];
     fPackFiles[l].fLoaded := False;
 
@@ -1255,25 +1319,14 @@ begin
       stream.Read(fPackFiles[l].fFiles[j].fStride, SizeOf(LongWord));
       stream.Read(fPackFiles[l].fFiles[j].fSize, SizeOf(LongWord));
     end;
-    (*
-    bytesRead := stream.Read(fPackFiles[l].fFiles[0], SizeOf(TglrPackFileResource) * WordBuf);
-    if (bytesRead <> SizeOf(TglrPackFileResource) * WordBuf) then
-    begin
-      log.Write(lError, #9 + packFilesList[i] + ': error while read file headers');
-      SetLength(fPackFiles, Length(fPackFiles) - 1);
-      stream.Free();
-      continue;
-    end;
-    *)
+
     Log.Write(lInformation, #9 + packFilesList[i] + ': header loaded. Files inside: ' + Convert.ToStringA(WordBuf));
     for j := 0 to Length(fPackFiles[l].fFiles) - 1 do
-      Log.Write(lInformation, #9#9 + fPackFiles[l].fFiles[j].fFileName + ' - ' + Convert.ToStringA(Integer(fPackFiles[l].fFiles[j].fSize)));
+      Log.Write(lInformation, #9#9 + fPackFiles[l].fFiles[j].fFileName + ' - ' + Convert.ToStringA(Integer(fPackFiles[l].fFiles[j].fSize)) + ' bytes');
     stream.Free();
     l += 1;
   end;
   packFilesList.Free();
-
-  //Log.Write(lWarning, 'FileSystem.Init has no full implementation for pack load');
 end;
 
 class procedure FileSystem.DeInit;
@@ -1284,7 +1337,6 @@ begin
     if (fPackFiles[i].fLoaded) then
       UnloadPack(fPackFiles[i].fPackName);
   SetLength(fPackFiles, 0);
-//  Log.Write(lWarning, 'FileSystem.DeInit has no implementation for pack unload');
 end;
 
 class function FileSystem.GetFileIndexInPackFile(packIndex: Integer;
@@ -1862,17 +1914,10 @@ end;
 procedure TglrVertexBuffer.Bind;
 begin
   gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
-
-  //gl.EnableClientState(GL_VERTEX_ARRAY);
-  //gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
-  //gl.VertexPointer(3, GL_FLOAT, SizeOf(TdfVec2f), nil);
-  //Log.Write(lCritical, 'VertexBuffer.Bind has no vertex attrib calls');
-
-  //todo: gl.VertexAtribPointer в зависимости от формата
   case vbFormat of
     vfPos3Tex2:
     begin
-      //gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
+      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
 			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
     end;
     vfPos2Tex2:

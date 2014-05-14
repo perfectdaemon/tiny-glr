@@ -20,7 +20,7 @@ uses
     i := 0;
     while (i < files.Count) do
     begin
-      if ExtractFileExt(files[i]) = '.glrpack' then
+      if ExtractFileExt(files[i]) = PACK_FILE_EXT then
         files.DeleteSafeByIndex(i)
       else
         i += 1;
