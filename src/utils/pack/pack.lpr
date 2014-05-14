@@ -35,7 +35,7 @@ uses
     SetLength(headers, count);
     //Skip header data - we will write it later
     PackStream.Pos := 2 * SizeOf(Word) + SizeOf(TglrPackFileResource) * count;
-    stride := 0;
+    stride := PackStream.Pos;
 
     for i := 0 to count - 1 do
     begin
