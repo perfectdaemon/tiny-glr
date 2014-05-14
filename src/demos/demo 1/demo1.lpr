@@ -191,7 +191,7 @@ begin
 
   SetLength(Points, 1024);
   Randomize();
-  Render.SetCullMode(cmFront);
+  Render.SetCullMode(cmBack);
   for i := 0 to Length(Points) - 1 do
     Points[i] := dfVec3f(15 - Random(30), 10 - Random(20), 15 - Random(30));
 
