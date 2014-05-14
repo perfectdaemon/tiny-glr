@@ -1,6 +1,12 @@
-tiny glr
+**Status**: nothing to use right now, it's in deep development, come back later.
+
+Introduction
 ========
 
-Tiny crossplatform (Win, Mac, Linux, Android, iOS) game development framework built with Free Pascal Compiler.
+Tiny crossplatform (Win, Mac, Linux, Android, iOS) game development framework built with (and for) Free Pascal.
 
-**Status**: nothing to use right now, it's deep development, come back later.
+Features
+========
+
+Tutorials
+========
