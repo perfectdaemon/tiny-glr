@@ -254,8 +254,14 @@ type
   end;
 
   TglrShaderType = (stVertex, stFragment);
+  TglrUniformType = (utVec1, utVec2, utVec3, utVec4, utMat4, utSampler);
 
-  TglrUniformType = (utVec2, utVec3, utVec4, utMat4, utSampler);
+  TglrUniformInfo = record
+  	fType: TglrUniformType;
+	  fName: AnsiString;
+	  fCount, fIndex: Integer;
+    fData: Pointer;
+  end;
 
   { TglrShaderProgram }
 
@@ -266,16 +272,22 @@ type
   public
     Id: TglrShaderProgramId;
     ShadersId: array of TglrShaderId;
+    Uniforms: array of TglrUniformInfo;
 
     procedure Bind();
     class procedure Unbind();
 
-    procedure LoadAndAttachShader(aStream: TglrStream; aShaderType: TglrShaderType;
+    procedure AddShader(aStream: TglrStream; aShaderType: TglrShaderType;
       aFreeStreamOnFinish: Boolean = True);
     procedure Link();
 
+    function AddUniform(aUniformType: TglrUniformType; aCount: Integer;
+      aName: AnsiString): Integer;
+    function GetUniformIndexByName(aName: AnsiString): Integer;
+
     procedure SetUniform(aUniformType: TglrUniformType; aCount: Integer;
-      aValue: Pointer; aName: PAnsiChar; aIndex: Integer = -1);
+      aValue: Pointer; aName: PAnsiChar; aIndex: Integer = -1); overload;
+    procedure SetUniform(aInternalIndex: Integer; aValue: Pointer); overload;
 
     constructor Create(); virtual;
     destructor Destroy(); override;
@@ -596,10 +608,15 @@ type
 
   { TglrMaterial }
 
+  TglrTextureMaterialInfo = record
+    Texture: TglrTexture;
+    UniformName: AnsiString;
+    ShaderInternalIndex: Integer;
+  end;
+
   TglrMaterial = class
     Shader: TglrShaderProgram;
-    Textures: array of TglrTexture;
-    TextureUniformNames: array of AnsiString;
+    Textures: array of TglrTextureMaterialInfo;
     Color: TdfVec4f;
   	Blend: TglrBlendingMode;
   	DepthWrite: Boolean;
@@ -704,8 +721,8 @@ class procedure Default.Init;
 begin
   SpriteMaterial := TglrMaterial.Create();
   SpriteMaterial.Shader := TglrShaderProgram.Create();
-  SpriteMaterial.Shader.LoadAndAttachShader(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
-  SpriteMaterial.Shader.LoadAndAttachShader(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
+  SpriteMaterial.Shader.AddShader(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
+  SpriteMaterial.Shader.AddShader(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
   SpriteMaterial.Shader.Link();
   //todo: shader and everything
   //do it via pack file (default.glrpack for example)
@@ -727,7 +744,6 @@ begin
   inherited;
   Shader := TglrShaderProgram.Create();
   SetLength(Textures, 0);
-  SetLength(TextureUniformNames, 0);
 
   AlphaTestFunc := fcGreater;
   AlphaTestValue := 0.0;
@@ -737,7 +753,6 @@ begin
   DepthTest := True;
   DepthWrite := True;
   DepthTestFunc := fcLess;
-//  Log.Write(lWarning, 'Material create is not implemented');
 end;
 
 constructor TglrMaterial.Create(aStream: TglrStream;
@@ -752,17 +767,31 @@ var
   i: Integer;
 begin
   for i := 0 to Length(Textures) - 1 do
-    Textures[i].Free();
+    Textures[i].Texture.Free();
   SetLength(Textures, 0);
-  SetLength(TextureUniformNames, 0);
   Shader.Free();
   inherited Destroy;
 end;
 
 procedure TglrMaterial.AddTexture(aTexture: TglrTexture;
   aUniformName: AnsiString);
+var
+  l, ind: Integer;
 begin
-  Log.Write(lError, 'Material.AddTexture is not implemented');
+  ind := Shader.AddUniform(utSampler, 1, aUniformName);
+  if ind = -1 then
+    Log.Write(lError, 'Can not add texture to material - no such uniform name ("' + aUniformName + '") at shader')
+  else
+  begin
+    l := Length(Textures);
+    SetLength(Textures, l + 1);
+    with Textures[l] do
+    begin
+      Texture := aTexture;
+      UniformName := aUniformName;
+      ShaderInternalIndex := ind;
+    end;
+  end;
 end;
 
 procedure TglrMaterial.Bind;
@@ -777,7 +806,7 @@ begin
   Render.SetDepthFunc(DepthTestFunc);
   for i := 0 to Length(Textures) - 1 do
   begin
-    Textures[i].Bind(i);
+    Textures[i].Texture.Bind(i);
     //todo Shader.SetSamplerUniform()
   end;
   Shader.Bind();
@@ -799,21 +828,13 @@ end;
 
 procedure TglrShaderProgram.Bind;
 var
-  param: TGLConst;
-  len: LongInt;
-  infoLog: PAnsiChar;
+  i: Integer;
 begin
   Render.SetShader(Self.Id);
 
-  gl.GetProgramiv(Self.Id, GL_VALIDATE_STATUS, @param);
-  if (param = GL_FALSE) then
-  begin
-    gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
-    GetMem(infoLog, len);
-    gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
-    Log.Write(lError, 'Shader validate failed. Log:'#13#10 + InfoLog); //sometimes it is not critical
-    FreeMem(infoLog, len);
-  end;
+  for i := 0 to Length(Uniforms) - 1 do
+    if Uniforms[i].fData <> nil then
+      SetUniform(i, Uniforms[i].fData);
 
   //fixme - used for debug purposes
   with Render.Params do
@@ -826,7 +847,7 @@ begin
   Render.SetShader(0);
 end;
 
-procedure TglrShaderProgram.LoadAndAttachShader(aStream: TglrStream;
+procedure TglrShaderProgram.AddShader(aStream: TglrStream;
   aShaderType: TglrShaderType; aFreeStreamOnFinish: Boolean);
 var
   aType: TGLConst;
@@ -853,7 +874,7 @@ begin
     gl.GetShaderiv(ShadersId[i], GL_INFO_LOG_LENGTH, @param);
     GetMem(ErrorLog, param);
     gl.GetShaderInfoLog(ShadersId[i], param, len, ErrorLog);
-    Log.Write(lCritical, 'Shader compilation failed. Log:'#13#10 + ErrorLog);
+    Log.Write(lCritical, 'Shader compilation failed. Log:'#13#10#9 + ErrorLog);
     FreeMem(ErrorLog, param);
   end;
   if (aFreeStreamOnFinish) then
@@ -871,9 +892,9 @@ begin
   if (aShaderType = stVertex) then
   begin
     gl.BindAttribLocation(Self.Id, Ord(vaCoord), 'vaCoord');
+    Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for bind used vertex attribs');
   end;
 
-  Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for bind used vertex attribs');
   Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for get shared uniforms locations');
 end;
 
@@ -890,15 +911,86 @@ begin
     gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
     GetMem(infoLog, len);
     gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
-    Log.Write(lCritical, 'Shader link failed. Log:'#13#10 + InfoLog);
+    Log.Write(lCritical, 'Shader link failed. Log:'#13#10#9 + InfoLog);
     FreeMem(infoLog, len);
   end;
+
+  gl.ValidateProgram(Id);
+  gl.GetProgramiv(Self.Id, GL_VALIDATE_STATUS, @param);
+  if (param = GL_FALSE) then
+  begin
+    gl.GetProgramiv(Self.Id, GL_INFO_LOG_LENGTH, @len);
+    GetMem(infoLog, len);
+    gl.GetProgramInfoLog(Self.Id, len, len, infoLog);
+    Log.Write(lError, 'Shader validate failed. Log:'#13#10#9 + InfoLog); //sometimes it is not critical
+    FreeMem(infoLog, len);
+  end;
+end;
+
+function TglrShaderProgram.AddUniform(aUniformType: TglrUniformType;
+  aCount: Integer; aName: AnsiString): Integer;
+var
+  l: Integer;
+  index: Integer;
+begin
+  index := gl.GetUniformLocation(Id, PAnsiChar(aName));
+  if (index = -1) then
+    Log.Write(lError, 'Uniform "' + aName + '" was not found in shader')
+  else
+  begin
+    l := Length(Uniforms);
+    SetLength(Uniforms, l + 1);
+    with Uniforms[l] do
+    begin
+      fType := aUniformType;
+      fName := aName;
+      fCount := aCount;
+      fIndex := index;
+      fData := nil;
+    end;
+  end;
+end;
+
+function TglrShaderProgram.GetUniformIndexByName(aName: AnsiString): Integer;
+var
+  i: Integer;
+begin
+  for i := 0 to Length(Uniforms) - 1 do
+    if Uniforms[i].fName = aName then
+      Exit(i);
+  Exit(-1);
 end;
 
 procedure TglrShaderProgram.SetUniform(aUniformType: TglrUniformType;
   aCount: Integer; aValue: Pointer; aName: PAnsiChar; aIndex: Integer);
 begin
-  Log.Write(lError, 'Shader.SetUniform is not implemented');
+  if (aIndex = -1) then
+    aIndex := gl.GetUniformLocation(Id, aName);
+  if (aIndex = -1) then
+    Log.Write(lError, 'Uniform "' + aName + '" was not found in shader')
+  else
+    case aUniformType of
+      utVec1: gl.Uniform1fv(aIndex, aCount, aValue);
+      utVec2: gl.Uniform2fv(aIndex, aCount, aValue);
+      utVec3: gl.Uniform3fv(aIndex, aCount, aValue);
+      utVec4: gl.Uniform4fv(aIndex, aCount, aValue);
+      utMat4: gl.UniformMatrix4fv(aIndex, aCount, False, aValue);
+      utSampler: gl.Uniform1iv(aIndex, aCount, aValue);
+    end;
+end;
+
+procedure TglrShaderProgram.SetUniform(aInternalIndex: Integer; aValue: Pointer);
+begin
+  if (aInternalIndex < 0) or (aInternalIndex > High(Uniforms)) then
+    Log.Write(lError,
+      'Internal index of uniform ('+ Convert.ToStringA(aInternalIndex) +
+      ') is out of range (0-' + Convert.ToStringA(High(Uniforms)))
+  else
+    with Uniforms[aInternalIndex] do
+    begin
+      fData := aValue;
+      SetUniform(fType, fCount, fData, PAnsiChar(fName), fIndex);
+    end;
 end;
 
 constructor TglrShaderProgram.Create;
