@@ -213,14 +213,20 @@ type
   end;
 
 
+  TglrVertexBufferMapAccess = (maRead, maWrite, maReadWrite);
+
   { TglrVertexBuffer }
 
   TglrVertexBuffer = class
     Id: TglrVertexBufferId;
     vbFormat: TglrVertexFormat;
+    Count: Integer;
     procedure Bind();
     class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrVertexFormat); virtual;
+    procedure Update(aData: Pointer; aStart, aCount: Integer); virtual;
+    function Map(aAccess: TglrVertexBufferMapAccess = maReadWrite): Pointer;
+    procedure Unmap();
     destructor Destroy(); override;
   end;
 
@@ -864,7 +870,6 @@ begin
   end; *)
   if (aShaderType = stVertex) then
   begin
-    gl.EnableVertexAttribArray(Ord(vaCoord));
     gl.BindAttribLocation(Self.Id, Ord(vaCoord), 'vaCoord');
   end;
 
@@ -1917,20 +1922,23 @@ begin
   case vbFormat of
     vfPos3Tex2:
     begin
-      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
+      gl.EnableVertexAttribArray(Ord(vaCoord));
+      gl.EnableVertexAttribArray(Ord(vaTexCoord0));
 			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
+      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
     end;
     vfPos2Tex2:
     begin
-			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec2f)));
+      gl.EnableVertexAttribArray(Ord(vaCoord));
+      gl.EnableVertexAttribArray(Ord(vaTexCoord0));
 			gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
+			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec2f)));
     end;
   end;
 end;
 
 class procedure TglrVertexBuffer.Unbind;
 begin
-  gl.DisableClientState(GL_VERTEX_ARRAY);
   gl.BindBuffer(GL_ARRAY_BUFFER, 0);
 end;
 
@@ -1939,9 +1947,38 @@ constructor TglrVertexBuffer.Create(aData: Pointer; aCount: Integer;
 begin
   gl.GenBuffers(1, @Self.Id);
   Self.vbFormat := aFormat;
-  Self.Bind();
+  Self.Count := aCount;
+  gl.BindBuffer(GL_ARRAY_BUFFER, Id);
   gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[aFormat] * aCount, aData, GL_STATIC_DRAW);
-  Self.Unbind();
+  gl.BindBuffer(GL_ARRAY_BUFFER, 0);
+end;
+
+procedure TglrVertexBuffer.Update(aData: Pointer; aStart, aCount: Integer);
+begin
+  gl.BindBuffer(GL_ARRAY_BUFFER, Id);
+  gl.BufferSubData(GL_ARRAY_BUFFER, aStart, aCount * VF_STRIDE[vbFormat], aData);
+  gl.BindBuffer(GL_ARRAY_BUFFER, 0);
+end;
+
+function TglrVertexBuffer.Map(aAccess: TglrVertexBufferMapAccess): Pointer;
+var
+  glAccess: TGLConst;
+begin
+  gl.BindBuffer(GL_ARRAY_BUFFER, Id);
+  case aAccess of
+    maReadWrite: glAccess := GL_READ_WRITE;
+    maRead: glAccess := GL_READ_ONLY;
+    maWrite: glAccess := GL_WRITE_ONLY;
+  end;
+  Result := gl.MapBuffer(GL_ARRAY_BUFFER, glAccess);
+  gl.BindBuffer(GL_ARRAY_BUFFER, 0);
+end;
+
+procedure TglrVertexBuffer.Unmap;
+begin
+  gl.BindBuffer(GL_ARRAY_BUFFER, Id);
+  gl.UnmapBuffer(GL_ARRAY_BUFFER);
+  gl.BindBuffer(GL_ARRAY_BUFFER, 0);
 end;
 
 destructor TglrVertexBuffer.Destroy;
