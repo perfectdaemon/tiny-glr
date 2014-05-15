@@ -218,8 +218,8 @@ type
     CreateProgram     : function: LongWord;
     DeleteProgram     : procedure (_program: LongWord); stdcall;
     LinkProgram       : procedure (_program: LongWord); stdcall;
+    ValidateProgram   : procedure (_program: LongWord); stdcall;
     UseProgram        : procedure (_program: LongWord); stdcall;
-    ProgramParameteri : procedure (_program: LongWord; pname: TGLConst; Value: LongInt); stdcall;
     GetProgramInfoLog : procedure (_program: LongWord; maxLength: LongInt; var length: LongInt; infoLog: PAnsiChar); stdcall;
     GetShaderiv       : procedure (_shader: LongWord; pname: TGLConst; params: Pointer); stdcall;
     CreateShader      : function  (shaderType: TGLConst): LongWord; stdcall;
@@ -275,6 +275,8 @@ var
 
 implementation
 
+uses
+  tinyglr;
 
 procedure TglrGL.Init;
 type
@@ -374,8 +376,8 @@ const
     'glCreateProgram',
     'glDeleteProgram',
     'glLinkProgram',
+    'glValidateProgram',
     'glUseProgram',
-    'glProgramParameteriEXT',
     'glGetProgramInfoLog',
     'glGetShaderiv',
     'glCreateShader',
@@ -436,6 +438,8 @@ begin
       Proc^[i] := GetProc(ProcName[i]);
       if Proc^[i] = nil then
         Proc^[i] := GetProcAddress(Lib, ProcName[i]);
+      if Proc^[i] = nil then
+        Log.Write(lWarning, 'Pointer for "' + ProcName[i] + '" is nil');
     end;
   end;
   Set8087CW($133F); //Предотвращает EInvalidOp при 1/0, 0/0, -1/0
