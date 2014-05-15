@@ -183,14 +183,14 @@ type
     Normal3fv      : procedure (const xyz: TdfVec3f); stdcall;
     TexCoord2f     : procedure (s, t: Single); stdcall;
     TexCoord2fv    : procedure (const st: TdfVec2f); stdcall;
-    EnableClientState  : procedure (_array: TGLConst); stdcall;
-    DisableClientState : procedure (_array: TGLConst); stdcall;
+//    EnableClientState  : procedure (_array: TGLConst); stdcall;
+//    DisableClientState : procedure (_array: TGLConst); stdcall;
     DrawElements    : procedure (mode: TGLConst; count: LongInt; _type: TGLConst; const indices: Pointer); stdcall;
-    DrawArrays      : procedure (mode: TGLConst; first, count: LongInt); stdcall;
-    ColorPointer    : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
-    VertexPointer   : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
-    TexCoordPointer : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
-    NormalPointer   : procedure (type_: TGLConst; stride: LongWord; const P: Pointer); stdcall;
+//    DrawArrays      : procedure (mode: TGLConst; first, count: LongInt); stdcall;
+//    ColorPointer    : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
+//    VertexPointer   : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
+//    TexCoordPointer : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
+//    NormalPointer   : procedure (type_: TGLConst; stride: LongWord; const P: Pointer); stdcall;
     MatrixMode      : procedure (mode: TGLConst); stdcall;
     LoadIdentity    : procedure;
     LoadMatrixf     : procedure (const m: TdfMat4f); stdcall;
@@ -256,8 +256,8 @@ type
   // Multisample
     SampleCoverage          : procedure (value: Single; invert: Boolean); stdcall;
 
-    PushAttrib              : procedure (mask: TGLConst); stdcall;
-    PopAttrib               : procedure; stdcall;
+//    PushAttrib              : procedure (mask: TGLConst); stdcall;
+//    PopAttrib               : procedure; stdcall;
 
     PointParameterfv        : procedure (pname: TGLConst; const params: Pointer); stdcall;
     PointParameterf         : procedure (pname: TGLConst; param: Single); stdcall;
@@ -343,14 +343,14 @@ const
     'glNormal3fv',
     'glTexCoord2f',
     'glTexCoord2fv',
-    'glEnableClientState',
-    'glDisableClientState',
+//    'glEnableClientState',
+//    'glDisableClientState',
     'glDrawElements',
-    'glDrawArrays',
-    'glColorPointer',
-    'glVertexPointer',
-    'glTexCoordPointer',
-    'glNormalPointer',
+//    'glDrawArrays',
+//    'glColorPointer',
+//    'glVertexPointer',
+//    'glTexCoordPointer',
+//    'glNormalPointer',
     'glMatrixMode',
     'glLoadIdentity',
     'glLoadMatrixf',
@@ -411,8 +411,8 @@ const
     'glBindRenderbufferEXT',
     'glRenderbufferStorageEXT',
     'glSampleCoverage',
-    'glPushAttrib',
-    'glPopAttrib',
+//    'glPushAttrib',
+//    'glPopAttrib',
     'glPointParameterfv',
     'glPointParameterf',
     'glTexEnvf',
