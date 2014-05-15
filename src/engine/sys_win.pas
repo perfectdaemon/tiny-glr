@@ -77,13 +77,7 @@ type
 
 const
   { File attributes }
-  faReadOnly  = $00000001;
-  faHidden    = $00000002;
-  faSysFile   = $00000004;
-  faVolumeId  = $00000008;
   faDirectory = $00000010;
-  faArchive   = $00000020;
-  faSymLink   = $00000040;
   faAnyFile   = $0000003f;
 
   Invalid_Handle_value = HANDLE(-1);
