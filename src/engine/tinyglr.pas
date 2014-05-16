@@ -141,15 +141,11 @@ type
 
   Convert = class
   public
-    class function ToStringA(aVal: Integer): AnsiString; overload;
-    class function ToStringA(aVal: Single; Digits: Integer = 5): AnsiString; overload;
-    class function ToStringA(aVal: TdfMat4f): AnsiString; overload;
-//    class function ToStringW(aVal: Integer): UnicodeString; overload;
-//    class function ToStringW(aVal: Single): UnicodeString; overload;
+    class function ToString(aVal: Integer): AnsiString; overload;
+    class function ToString(aVal: Single; Digits: Integer = 5): AnsiString; overload;
+    class function ToString(aVal: TdfMat4f): AnsiString; overload;
     class function ToInt(aStr: AnsiString; aDefault: Integer = -1): Integer; overload;
-//    class function ToInt(aStr: WideString): Integer; overload;
     class function ToFloat(aStr: AnsiString; aDefault: Single = -1.0): Single; overload;
-//    class function ToFloat(aStr: WideString): Single; overload;
   end;
 
   {$ENDREGION}
@@ -182,13 +178,11 @@ type
   { TglrTexture }
 
   TglrTexWrap = (wClamp, wRepeat, wClampToEdge, wClampToBorder, wMirrorRepeat);
-  TglrTexCombineMode = (cmDecal, cmModulate, cmBlend, cmReplace, cmAdd);
 
   TglrTexture = class
   protected
     Target: TGLConst;
     WrapS, WrapT, WrapR: TglrTexWrap;
-    CombineMode: TglrTexCombineMode;
   public
     Id: TglrTextureId;
 
@@ -198,8 +192,6 @@ type
     procedure SetWrapS(aWrap: TglrTexWrap);
     procedure SetWrapT(aWrap: TglrTexWrap);
     procedure SetWrapR(aWrap: TglrTexWrap);
-
-    procedure SetCombineMode(aCombineMode: TglrTexCombineMode);
 
     //constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
     constructor Create(aStream: TglrStream; aExt: AnsiString;
@@ -316,7 +308,7 @@ type
   protected
     class var fBlendingMode: TglrBlendingMode;
     class var fCullMode: TglrCullMode;
-    class var fDepthWrite, fDepthTest, fLight: Boolean;
+    class var fDepthWrite, fDepthTest: Boolean;
     class var fDepthFunc, fAlphaFunc: TglrFuncComparison;
     class var fAlphaTest: Single;
     class var fShader: TglrShaderId;
@@ -342,7 +334,6 @@ type
     class procedure SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
     class procedure SetCullMode(aCullMode: TglrCullMode);
     class procedure SetBlendingMode(aBlendingMode: TglrBlendingMode);
-    class procedure SetLighting(aEnabled: Boolean); deprecated;
     class procedure SetDepthWrite(aEnabled: Boolean);
     class procedure SetDepthTest(aEnabled: Boolean);
     class procedure SetDepthFunc(aComparison: TglrFuncComparison);
@@ -674,8 +665,8 @@ const
 
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
-  aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
-    (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
+//  aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
+//    (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
 
 { Log }
 
@@ -692,7 +683,7 @@ end;
 class procedure Log.Deinit;
 begin
   {$ifdef log}
-  Self.Write(lInformation, 'End. Errors: ' + Convert.ToStringA(fTotalErrors) + ', warnings: ' + Convert.ToStringA(fTotalWarnings));
+  Self.Write(lInformation, 'End. Errors: ' + Convert.ToString(fTotalErrors) + ', warnings: ' + Convert.ToString(fTotalWarnings));
   {$endif}
 end;
 
@@ -985,8 +976,8 @@ procedure TglrShaderProgram.SetUniform(aInternalIndex: Integer; aValue: Pointer)
 begin
   if (aInternalIndex < 0) or (aInternalIndex > High(Uniforms)) then
     Log.Write(lError,
-      'Internal index of uniform ('+ Convert.ToStringA(aInternalIndex) +
-      ') is out of range (0-' + Convert.ToStringA(High(Uniforms)))
+      'Internal index of uniform ('+ Convert.ToString(aInternalIndex) +
+      ') is out of range (0-' + Convert.ToString(High(Uniforms)))
   else
     with Uniforms[aInternalIndex] do
     begin
@@ -1200,17 +1191,17 @@ end;
 
 { Convert }
 
-class function Convert.ToStringA(aVal: Integer): AnsiString;
+class function Convert.ToString(aVal: Integer): AnsiString;
 begin
   Str(aVal, Result);
 end;
 
-class function Convert.ToStringA(aVal: Single; Digits: Integer = 5): AnsiString;
+class function Convert.ToString(aVal: Single; Digits: Integer = 5): AnsiString;
 begin
   Str(aVal:0:Digits, Result);
 end;
 
-class function Convert.ToStringA(aVal: TdfMat4f): AnsiString;
+class function Convert.ToString(aVal: TdfMat4f): AnsiString;
 var
   f: PSingle;
 begin
@@ -1383,7 +1374,7 @@ begin
   fPackFilesPath := aPackFilesPath;
   packFilesList := TglrStringList.Create();
   FindFiles(fPackFilesPath, PACK_FILE_EXT, packFilesList);
-  Log.Write(lInformation, 'FileSystem: pack files found at "' + fPackFilesPath + '": ' + Convert.ToStringA(packFilesList.Count));
+  Log.Write(lInformation, 'FileSystem: pack files found at "' + fPackFilesPath + '": ' + Convert.ToString(packFilesList.Count));
   SetLength(fPackFiles, packFilesList.Count);
 
   l := 0;
@@ -1419,9 +1410,9 @@ begin
       stream.Read(fPackFiles[l].fFiles[j].fSize, SizeOf(LongWord));
     end;
 
-    Log.Write(lInformation, #9 + packFilesList[i] + ': header loaded. Files inside: ' + Convert.ToStringA(WordBuf));
+    Log.Write(lInformation, #9 + packFilesList[i] + ': header loaded. Files inside: ' + Convert.ToString(WordBuf));
     for j := 0 to Length(fPackFiles[l].fFiles) - 1 do
-      Log.Write(lInformation, #9#9 + fPackFiles[l].fFiles[j].fFileName + ' - ' + Convert.ToStringA(Integer(fPackFiles[l].fFiles[j].fSize)) + ' bytes');
+      Log.Write(lInformation, #9#9 + fPackFiles[l].fFiles[j].fFileName + ' - ' + Convert.ToString(Integer(fPackFiles[l].fFiles[j].fSize)) + ' bytes');
     stream.Free();
     l += 1;
   end;
@@ -1446,8 +1437,8 @@ begin
   Result := -1;
   if (packIndex < 0) or (packIndex > High(fPackFiles)) then
   begin
-    Log.Write(lError, 'Wrong pack index provided: ' + Convert.ToStringA(packIndex)
-      + '. Bounds: 0..' + Convert.ToStringA(High(fPackFiles)));
+    Log.Write(lError, 'Wrong pack index provided: ' + Convert.ToString(packIndex)
+      + '. Bounds: 0..' + Convert.ToString(High(fPackFiles)));
     Exit();
   end;
 
@@ -1611,13 +1602,13 @@ begin
   raise EAssertationFailed.Create(
     #13#10 + aMessage +
     #13#10 + 'file: ' + aFileName +
-    #13#10 + 'line: ' + Convert.ToStringA(aLineNo) +
-    #13#10 + 'addr: ' + Convert.ToStringA(Integer(aAddr)));
+    #13#10 + 'line: ' + Convert.ToString(aLineNo) +
+    #13#10 + 'addr: ' + Convert.ToString(Integer(aAddr)));
 end;
 
 class function Core.GetFPSText: AnsiString;
 begin
-  Result := Convert.ToStringA(fFPS, 1);
+  Result := Convert.ToString(fFPS, 1);
 end;
 
 class procedure Core.Init(aGame: TglrGame; aInitParams: TglrInitParams);
@@ -1782,9 +1773,6 @@ begin
   Params.Color := dfVec4f(1, 1, 1, 1);
   Params.ViewProj.Identity;
   Params.Model.Identity;
-
-  gl.Enable(GL_COLOR_MATERIAL);
-  gl.Enable(GL_TEXTURE_2D);
 end;
 
 class procedure Render.Clear(aClearMask: TglrClearMask);
@@ -1851,16 +1839,6 @@ begin
     gl.Enable(GL_BLEND);
 
   fBlendingMode := aBlendingMode;
-end;
-
-class procedure Render.SetLighting(aEnabled: Boolean);
-begin
-  if (fLight = aEnabled) then
-    Exit();
-  if (aEnabled) then
-    gl.Enable(GL_LIGHTING)
-  else
-    gl.Disable(GL_LIGHTING);
 end;
 
 class procedure Render.SetDepthWrite(aEnabled: Boolean);
@@ -1947,8 +1925,6 @@ begin
 
   fDipCount += 1;
   fTriCount += aVertCount div 3;
-
-  //Log.Write(lCritical, 'Render.DrawTriangles not implemented fully');
 end;
 
 class procedure Render.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
@@ -2094,8 +2070,6 @@ begin
     FPos  := 0;
     FBPos := 0;
     fMemoryOwner := MemoryOwner;
-    //if fMemoryOwner then
-    //  GetMem(Mem, FSize);
   end;
 end;
 
@@ -2248,13 +2222,6 @@ begin
   gl.BindTexture(Target, 0);
 end;
 
-procedure TglrTexture.SetCombineMode(aCombineMode: TglrTexCombineMode);
-begin
-  gl.BindTexture(Target, Self.Id);
-  gl.TexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, aTextureMode[aCombineMode]);
-  gl.BindTexture(Target, 0);
-end;
-
 constructor TglrTexture.Create(aStream: TglrStream; aExt: AnsiString;
   aFreeStreamOnFinish: Boolean);
 var
@@ -2266,7 +2233,7 @@ begin
   gl.GenTextures(1, @Self.Id);
   Target := GL_TEXTURE_2D;
 
-  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToStringA(Integer(Self.Id)) + ') load started');
+  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load started');
 
   gl.BindTexture(Target, Self.Id);
 
@@ -2276,14 +2243,13 @@ begin
   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, Ord(GL_REPEAT));
   gl.GetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, @anisotropy);
   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
-  gl.TexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
   data := LoadTexture(aStream, aExt, iFormat, cFormat, dType, pSize, Self.Width, Self.Height);
   gl.TexImage2D(GL_TEXTURE_2D, 0, iFormat, Width, Height, 0, cFormat, dType, data);
 
   gl.BindTexture(GL_TEXTURE_2D, 0);
 
-  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToStringA(Integer(Self.Id)) + ') load completed');
+  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load completed');
 
   X := 0;
   Y := 0;
@@ -2332,7 +2298,7 @@ end;
 procedure TglrList<T>.BoundsCheck(Index: LongInt);
 begin
   if (Index < 0) or (Index >= FCount) then
-    Log.Write(lCritical, 'List index out of bounds (' + Convert.ToStringA(Index) + ')');
+    Log.Write(lCritical, 'List index out of bounds (' + Convert.ToString(Index) + ')');
 end;
 
 function TglrList<T>.GetItem(Index: LongInt): T;
