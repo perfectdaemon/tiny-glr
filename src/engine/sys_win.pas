@@ -82,49 +82,41 @@ const
 
   Invalid_Handle_value = HANDLE(-1);
 
-
 function FindFirstFileA(lpFileName: LPCSTR; var lpFindFileData: TWIN32FindDataA): THandle; external 'kernel32' name 'FindFirstFileA';
 function GetLastError:DWORD; external 'kernel32' name 'GetLastError';
 
-Function FindMatch(var f: TSearchRec) : Longint;
+function FindMatch(var f: TSearchRec): Longint;
 begin
   { Find file with correct attribute }
-  While (F.FindData.dwFileAttributes and cardinal(F.ExcludeAttr))<>0 do
-   begin
-     if not FindNextFile (F.FindHandle,F.FindData) then
-      begin
-        Result:=GetLastError;
-        exit;
-      end;
-   end;
+  while (F.FindData.dwFileAttributes and Cardinal(F.ExcludeAttr)) <> 0 do
+    if not FindNextFile (F.FindHandle, F.FindData) then
+      Exit(GetLastError);
+
   { Convert some attributes back }
 //  WinToDosTime(F.FindData.ftLastWriteTime,F.Time);
-  f.size:=F.FindData.NFileSizeLow+(qword(maxdword)+1)*F.FindData.NFileSizeHigh;
-  f.attr:=F.FindData.dwFileAttributes;
-  f.Name:=StrPas(@F.FindData.cFileName[0]);
-  Result:=0;
+  f.size := F.FindData.NFileSizeLow + (QWord(MaxDWord) + 1) * F.FindData.NFileSizeHigh;
+  f.attr := F.FindData.dwFileAttributes;
+  f.Name := StrPas(@F.FindData.cFileName[0]);
+  Result := 0;
 end;
 
 
-Function FindFirst (Const Path : String; Attr : Longint; out Rslt : TSearchRec) : Longint;
+function FindFirst(const Path: String; Attr: Longint; out Rslt: TSearchRec): Longint;
 begin
-  Rslt.Name:=Path;
-  Rslt.Attr:=attr;
-  Rslt.ExcludeAttr:=(not Attr) and ($1e);
-                 { $1e = faHidden or faSysFile or faVolumeID or faDirectory }
+  Rslt.Name := Path;
+  Rslt.Attr := attr;
+  Rslt.ExcludeAttr := (not Attr) and ($1e); { $1e = faHidden or faSysFile or faVolumeID or faDirectory }
   { FindFirstFile is a Win32 Call }
-  Rslt.FindHandle:=FindFirstFile (PChar(Path),Rslt.FindData);
-  If Rslt.FindHandle=Invalid_Handle_value then
-   begin
-     Result:=GetLastError;
-     exit;
-   end;
+  Rslt.FindHandle := FindFirstFile (PChar(Path), Rslt.FindData);
+  if (Rslt.FindHandle = Invalid_Handle_value) then
+    Exit(GetLastError);
+
   { Find file with correct attribute }
-  Result:=FindMatch(Rslt);
+  Result := FindMatch(Rslt);
 end;
 
 
-Function FindNext (Var Rslt : TSearchRec) : Longint;
+function FindNext(var Rslt: TSearchRec): Longint;
 begin
   if FindNextFile(Rslt.FindHandle, Rslt.FindData) then
     Result := FindMatch(Rslt)
@@ -133,9 +125,9 @@ begin
 end;
 
 
-Procedure FindClose (Var F : TSearchrec);
+procedure FindClose(var F: TSearchrec);
 begin
-   if F.FindHandle <> INVALID_HANDLE_VALUE then
+  if (F.FindHandle <> INVALID_HANDLE_VALUE) then
     Windows.FindClose(F.FindHandle);
 end;
 
