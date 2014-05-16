@@ -14,7 +14,7 @@ type
     Points: array of TdfVec3f;
     Tex: TglrTexture;
 
-    meshData: array of TglrVertexP3T2;
+    meshData: array of TglrVertexP3T2N3;
     meshBuffer: TglrVertexBuffer;
     meshIBuffer: TglrIndexBuffer;
     procedure PrepareMesh();
@@ -116,7 +116,7 @@ begin
   meshData[22].tex := dfVec2f(1, 0);
   meshData[23].tex := dfVec2f(0, 0);
 
-  meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2);
+  meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2Nor3);
   meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
 
   Default.SpriteMaterial.Color := dfVec4f(1, 0, 1, 0.5);
