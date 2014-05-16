@@ -274,7 +274,7 @@ type
     procedure Link();
 
     function AddUniform(aUniformType: TglrUniformType; aCount: Integer;
-      aName: AnsiString): Integer;
+      aName: AnsiString; aData: Pointer = nil): Integer;
     function GetUniformIndexByName(aName: AnsiString): Integer;
 
     procedure SetUniform(aUniformType: TglrUniformType; aCount: Integer;
@@ -309,8 +309,7 @@ type
     class var fBlendingMode: TglrBlendingMode;
     class var fCullMode: TglrCullMode;
     class var fDepthWrite, fDepthTest: Boolean;
-    class var fDepthFunc, fAlphaFunc: TglrFuncComparison;
-    class var fAlphaTest: Single;
+    class var fDepthFunc: TglrFuncComparison;
     class var fShader: TglrShaderId;
     class var fTextureSampler: array[0..TEXURE_SAMPLERS_MAX - 1] of TglrTextureId;
     class var fActiveSampler: Integer;
@@ -337,7 +336,6 @@ type
     class procedure SetDepthWrite(aEnabled: Boolean);
     class procedure SetDepthTest(aEnabled: Boolean);
     class procedure SetDepthFunc(aComparison: TglrFuncComparison);
-    class procedure SetAlphaTest(aComparison: TglrFuncComparison; aValue: Single);
     class procedure SetVerticalSync(aEnabled: Boolean);
     class procedure SetShader(aShader: TglrShaderProgramId);
     class procedure SetTexture(aTexture: TglrTextureId; aSampler: Integer);
@@ -612,8 +610,7 @@ type
   	Blend: TglrBlendingMode;
   	DepthWrite: Boolean;
     DepthTest: Boolean;
-    AlphaTestFunc, DepthTestFunc: TglrFuncComparison;
-    AlphaTestValue: Single;
+    DepthTestFunc: TglrFuncComparison;
   	Cull: TglrCullMode;
 
     constructor Create(); virtual; overload;
@@ -736,8 +733,6 @@ begin
   Shader := TglrShaderProgram.Create();
   SetLength(Textures, 0);
 
-  AlphaTestFunc := fcGreater;
-  AlphaTestValue := 0.0;
   Blend := bmAlpha;
   Color := dfVec4f(1, 1, 1, 1);
   Cull := cmBack;
@@ -769,12 +764,12 @@ procedure TglrMaterial.AddTexture(aTexture: TglrTexture;
 var
   l, ind: Integer;
 begin
-  ind := Shader.AddUniform(utSampler, 1, aUniformName);
+  l := Length(Textures);
+  ind := Shader.AddUniform(utSampler, 1, aUniformName, Pointer(l));
   if ind = -1 then
     Log.Write(lError, 'Can not add texture to material - no such uniform name ("' + aUniformName + '") at shader')
   else
   begin
-    l := Length(Textures);
     SetLength(Textures, l + 1);
     with Textures[l] do
     begin
@@ -789,25 +784,22 @@ procedure TglrMaterial.Bind;
 var
   i: Integer;
 begin
-  Render.SetAlphaTest(AlphaTestFunc, AlphaTestValue);
   Render.SetBlendingMode(Blend);
   Render.SetCullMode(Cull);
   Render.SetDepthWrite(DepthWrite);
   Render.SetDepthTest(DepthTest);
   Render.SetDepthFunc(DepthTestFunc);
+
+  Render.Params.Color := Color;
   for i := 0 to Length(Textures) - 1 do
-  begin
     Textures[i].Texture.Bind(i);
-    //todo Shader.SetSamplerUniform()
-  end;
+
   Shader.Bind();
-  Log.Write(lWarning, 'Material bind is not fully implemented');
 end;
 
 procedure TglrMaterial.Unbind;
 begin
   Shader.Unbind();
-  Log.Write(lWarning, 'Material unbind is not implemented');
 end;
 
 { TglrShaderProgram }
@@ -829,9 +821,9 @@ begin
       SetUniform(i, Uniforms[i].fData);
 
   //fixme - used for debug purposes
-  with Render.Params do
-    ModelViewProj := ViewProj * Model;
-  gl.UniformMatrix4fv(gl.GetUniformLocation(Self.Id, 'uModelViewProj'), 1, false, @(Render.Params.ModelViewProj));
+  //with Render.Params do
+  //  ModelViewProj := ViewProj * Model;
+//  gl.UniformMatrix4fv(gl.GetUniformLocation(Self.Id, 'uModelViewProj'), 1, false, @(Render.Params.ModelViewProj));
 end;
 
 class procedure TglrShaderProgram.Unbind;
@@ -887,8 +879,6 @@ begin
     gl.BindAttribLocation(Self.Id, Ord(vaTexCoord0), 'vaTexCoord0');
     Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for bind used vertex attribs');
   end;
-
-  Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for get shared uniforms locations');
 end;
 
 procedure TglrShaderProgram.Link;
@@ -897,6 +887,7 @@ var
   len: LongInt;
   infoLog: PAnsiChar;
 begin
+  //Link
   gl.LinkProgram(Self.Id);
   gl.GetProgramiv(Self.Id, GL_LINK_STATUS, @param);
   if (param = GL_FALSE) then
@@ -908,6 +899,7 @@ begin
     FreeMem(infoLog, len);
   end;
 
+  //Validate
   gl.ValidateProgram(Id);
   gl.GetProgramiv(Self.Id, GL_VALIDATE_STATUS, @param);
   if (param = GL_FALSE) then
@@ -918,10 +910,14 @@ begin
     Log.Write(lError, 'Shader validate failed. Log:'#13#10#9 + InfoLog); //sometimes it is not critical
     FreeMem(infoLog, len);
   end;
+
+  //Set shared uniforms
+  AddUniform(utMat4, 1, 'uModelViewProj', @Render.Params.ModelViewProj);
+  AddUniform(utVec4, 1, 'uColor', @Render.Params.Color);
 end;
 
 function TglrShaderProgram.AddUniform(aUniformType: TglrUniformType;
-  aCount: Integer; aName: AnsiString): Integer;
+  aCount: Integer; aName: AnsiString; aData: Pointer = nil): Integer;
 var
   l: Integer;
   index: Integer;
@@ -939,7 +935,7 @@ begin
       fName := aName;
       fCount := aCount;
       fIndex := index;
-      fData := nil;
+      fData := aData;
     end;
   end;
 end;
@@ -1113,6 +1109,8 @@ begin
   Matrix.Pos := dfVec3f(0, 0, 0);
   Matrix.Pos := Matrix * fPos.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
+  Render.Params.ModelViewProj := Render.Params.ViewProj;
+
   if (Render.Width <> fW) or (Render.Height <> fH) then
     ViewportOnly(0, 0, Render.Width, Render.Height);
 
@@ -1353,6 +1351,8 @@ procedure TglrNode.RenderSelf();
 begin
   Matrix.Pos := fPos;
   Render.Params.Model := GetAbsMatrix;
+  with Render.Params do
+    ModelViewProj := ViewProj * Model;
 
   UpdateVectorsFromMatrix();
 
@@ -1628,13 +1628,17 @@ begin
   Render.SetViewPort(0, 0, aInitParams.Width, aInitParams.Height);
   if (aInitParams.UseDefaultAssets) then
     Default.Init();
+
+  Log.Write(lInformation, 'Initialize completed'#13#10);
 end;
 
 class procedure Core.Loop();
 begin
   fGame.OnStart();
-  fAppView.Loop(); //main loop is here
+  Log.Write(lInformation, 'Appication loop started');
+  fAppView.Loop();
   fGame.OnFinish();
+  Log.Write(lInformation, 'Appication loop finished');
 end;
 
 class procedure Core.Pause();
@@ -1760,7 +1764,6 @@ begin
   SetDepthFunc(fcLessOrEqual);
   SetDepthWrite(True);
   SetDepthTest(True);
-  SetAlphaTest(fcGreater, 0.0);
 
   fActiveSampler := -1;
   fShader := 0;
@@ -1866,16 +1869,6 @@ begin
     Exit();
   gl.DepthFunc(comparison[aComparison]);
   fDepthFunc := aComparison;
-end;
-
-class procedure Render.SetAlphaTest(aComparison: TglrFuncComparison;
-  aValue: Single);
-begin
-  if (fAlphaFunc = aComparison) or (Abs(fAlphaTest - aValue) < cEPS) then
-    Exit();
-  gl.AlphaFunc(comparison[aComparison], aValue);
-  fAlphaFunc := aComparison;
-  fAlphaTest := aValue;
 end;
 
 class procedure Render.SetVerticalSync(aEnabled: Boolean);
