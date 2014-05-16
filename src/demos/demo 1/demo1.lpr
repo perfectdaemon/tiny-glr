@@ -1,6 +1,4 @@
 program demo1;
-  //{$mode delphi}
-//  {$apptype console}
 
 uses
   tinyglr, glrMath, ogl, sys_win;
@@ -14,7 +12,7 @@ type
     dx, dy: Integer;
     Scene: TglrScene;
     Points: array of TdfVec3f;
-    //Tex: TglrTexture;
+    Tex: TglrTexture;
 
     meshData: array of TglrVertexP3T2;
     meshBuffer: TglrVertexBuffer;
@@ -88,12 +86,46 @@ begin
   meshData[22].vec := dfVec3f(CubeSize/2, -CubeSize/2, -CubeSize/2); //6
   meshData[23].vec := dfVec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2); //7
 
+  meshData[0].tex := dfVec2f(1, 1);
+  meshData[1].tex := dfVec2f(0, 1);
+  meshData[2].tex := dfVec2f(1, 0);
+  meshData[3].tex := dfVec2f(0, 0);
+
+  meshData[4].tex := dfVec2f(0, 1);
+  meshData[5].tex := dfVec2f(1, 1);
+  meshData[6].tex := dfVec2f(0, 0);
+  meshData[7].tex := dfVec2f(1, 0);
+
+  meshData[8].tex := dfVec2f(0, 1);
+  meshData[9].tex := dfVec2f(1, 1);
+  meshData[10].tex := dfVec2f(1, 0);
+  meshData[11].tex := dfVec2f(0, 0);
+
+  meshData[12].tex := dfVec2f(1, 1);
+  meshData[13].tex := dfVec2f(1, 0);
+  meshData[14].tex := dfVec2f(0, 1);
+  meshData[15].tex := dfVec2f(0, 0);
+
+  meshData[16].tex := dfVec2f(1, 0);
+  meshData[17].tex := dfVec2f(0, 0);
+  meshData[18].tex := dfVec2f(1, 1);
+  meshData[19].tex := dfVec2f(0, 1);
+
+  meshData[20].tex := dfVec2f(1, 1);
+  meshData[21].tex := dfVec2f(0, 1);
+  meshData[22].tex := dfVec2f(1, 0);
+  meshData[23].tex := dfVec2f(0, 0);
+
   meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2);
   meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
+
+  Default.SpriteMaterial.Color := dfVec4f(1, 1, 1, 1.0);
+  Default.SpriteMaterial.AddTexture(Tex, 'uTexture');
 end;
 
 procedure TGame.RenderMesh;
 begin
+  Default.SpriteMaterial.Shader.SetUniform(utVec4, 1, @Default.SpriteMaterial.Color, 'uColor', -1);
   Render.DrawTriangles(meshBuffer, meshIBuffer, 0, 36);
 end;
 
@@ -160,17 +192,9 @@ begin
       gl.Vertex3f(0, 0, 100);
     gl.Endp();
 
-  Default.SpriteMaterial.Shader.Bind();
-  //Render.SetTexture(Tex.Id, 0);
-  //gl.Beginp(GL_TRIANGLES);
-  //  gl.TexCoord2f(0, 0); gl.Vertex3f(1, 0, 1);
-  //  gl.TexCoord2f(0, 1); gl.Vertex3f(1, 0, 2);
-  //  gl.TexCoord2f(1, 1); gl.Vertex3f(2, 0, 2);
-  //gl.Endp();
-  //Render.SetTexture(0, 0);
+  Default.SpriteMaterial.Bind();
   RenderMesh();
-  //TglrVertexBuffer.Unbind();
-  TglrShaderProgram.Unbind();
+  Default.SpriteMaterial.Unbind();
 end;
 
 procedure TGame.OnResume;
@@ -199,7 +223,7 @@ begin
   Scene.Camera.SetCamera(dfVec3f(5, 5, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
   Scene.Camera.ProjectionMode := pmPerspective;
 
-  //Tex := TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga');
+  Tex := TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga');
 
   PrepareMesh();
 end;

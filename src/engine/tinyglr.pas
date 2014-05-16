@@ -633,7 +633,7 @@ type
     procedure AddTexture(aTexture: TglrTexture; aUniformName: AnsiString);
 
     procedure Bind();
-    class procedure Unbind();
+    procedure Unbind();
   end;
 
   {$ENDREGION}
@@ -813,8 +813,9 @@ begin
   Log.Write(lWarning, 'Material bind is not fully implemented');
 end;
 
-class procedure TglrMaterial.Unbind;
+procedure TglrMaterial.Unbind;
 begin
+  Shader.Unbind();
   Log.Write(lWarning, 'Material unbind is not implemented');
 end;
 
@@ -892,6 +893,7 @@ begin
   if (aShaderType = stVertex) then
   begin
     gl.BindAttribLocation(Self.Id, Ord(vaCoord), 'vaCoord');
+    gl.BindAttribLocation(Self.Id, Ord(vaTexCoord0), 'vaTexCoord0');
     Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for bind used vertex attribs');
   end;
 
