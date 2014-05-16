@@ -157,7 +157,7 @@ begin
     Scene.Camera.Translate(0, 0, -Sign(aOtherParam));
 
   if (aType = itKeyDown) and (aKey = kL) then
-    Log.Write(lInformation, Convert.ToStringA(Render.Params.ModelViewProj));
+    Log.Write(lInformation, Convert.ToString(Render.Params.ModelViewProj));
 end;
 
 procedure TGame.OnPause;
