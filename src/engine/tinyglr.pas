@@ -160,8 +160,8 @@ type
   TglrFrameBufferId = type LongWord;
   TglrIndex = type Word;
 
-  TglrTextureFormat = (tfFuck);
-  TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2);
+  //TglrTextureFormat = (tfFuck);
+  TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2, vfPos3Tex2Nor3);
   TglrIndexFormat = (ifByte, ifShort, ifInt);
 
   TglrVertexP2T2 = record
@@ -171,6 +171,12 @@ type
   TglrVertexP3T2 = record
     vec: TdfVec3f;
     tex: TdfVec2f;
+  end;
+
+  TglrVertexP3T2N3 = record
+    vec: TdfVec3f;
+    tex: TdfVec2f;
+    nor: TdfVec3f;
   end;
 
   TglrVertexAtrib = (vaCoord = 0, vaNormal = 1, vaTexCoord0 = 2, vaTexCoord1 = 3{, ...});
@@ -260,7 +266,7 @@ type
   TglrShaderProgram = class
   protected
     fLinkStatus: Integer;
-    class function GetVertexAtribName(const aAtrib: TglrVertexAtrib): AnsiString;
+    function GetVertexAtribName(const aAtrib: TglrVertexAtrib): AnsiString;
   public
     Id: TglrShaderProgramId;
     ShadersId: array of TglrShaderId;
@@ -269,7 +275,7 @@ type
     procedure Bind();
     class procedure Unbind();
 
-    procedure AddShader(aStream: TglrStream; aShaderType: TglrShaderType;
+    procedure Attach(aStream: TglrStream; aShaderType: TglrShaderType;
       aFreeStreamOnFinish: Boolean = True);
     procedure Link();
 
@@ -651,7 +657,7 @@ uses
 
 const
   VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
-    (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2));
+    (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3));
   IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
     (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
   IF_FORMAT: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of TGLConst =
@@ -662,8 +668,6 @@ const
 
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
-//  aTextureMode: array[Low(TglrTexCombineMode)..High(TglrTexCombineMode)] of TGLConst =
-//    (GL_DECAL, GL_MODULATE, GL_BLEND, GL_REPLACE, GL_ADD);
 
 { Log }
 
@@ -709,8 +713,8 @@ class procedure Default.Init;
 begin
   SpriteMaterial := TglrMaterial.Create();
   SpriteMaterial.Shader := TglrShaderProgram.Create();
-  SpriteMaterial.Shader.AddShader(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
-  SpriteMaterial.Shader.AddShader(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
+  SpriteMaterial.Shader.Attach(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
+  SpriteMaterial.Shader.Attach(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
   SpriteMaterial.Shader.Link();
   //todo: shader and everything
   //do it via pack file (default.glrpack for example)
@@ -804,8 +808,8 @@ end;
 
 { TglrShaderProgram }
 
-class function TglrShaderProgram.GetVertexAtribName(
-  const aAtrib: TglrVertexAtrib): AnsiString;
+function TglrShaderProgram.GetVertexAtribName(const aAtrib: TglrVertexAtrib
+  ): AnsiString;
 begin
   WriteStr(Result, aAtrib);
 end;
@@ -819,11 +823,6 @@ begin
   for i := 0 to Length(Uniforms) - 1 do
     if Uniforms[i].fData <> nil then
       SetUniform(i, Uniforms[i].fData);
-
-  //fixme - used for debug purposes
-  //with Render.Params do
-  //  ModelViewProj := ViewProj * Model;
-//  gl.UniformMatrix4fv(gl.GetUniformLocation(Self.Id, 'uModelViewProj'), 1, false, @(Render.Params.ModelViewProj));
 end;
 
 class procedure TglrShaderProgram.Unbind;
@@ -831,7 +830,7 @@ begin
   Render.SetShader(0);
 end;
 
-procedure TglrShaderProgram.AddShader(aStream: TglrStream;
+procedure TglrShaderProgram.Attach(aStream: TglrStream;
   aShaderType: TglrShaderType; aFreeStreamOnFinish: Boolean);
 var
   aType: TGLConst;
@@ -864,21 +863,11 @@ begin
   if (aFreeStreamOnFinish) then
     aStream.Free();
 
-  gl.AttachShader(Self.Id, ShadersId[i]);
-
-  //Quick fix of nvidia bug - they don't like unused / unprovided attribs enabled and binded
-
-  (*for v := Low(TglrVertexAtrib) to High(TglrVertexAtrib) do
-  begin
-    gl.EnableVertexAttribArray(Ord(v));
-    gl.BindAttribLocation(Self.Id, Ord(v), PAnsiChar(GetVertexAtribName(v)));
-  end; *)
   if (aShaderType = stVertex) then
-  begin
-    gl.BindAttribLocation(Self.Id, Ord(vaCoord), 'vaCoord');
-    gl.BindAttribLocation(Self.Id, Ord(vaTexCoord0), 'vaTexCoord0');
-    Log.Write(lWarning, 'Shader.LoadAndAttach has no implementation for bind used vertex attribs');
-  end;
+    for v := Low(TglrVertexAtrib) to High(TglrVertexAtrib) do
+      gl.BindAttribLocation(Self.Id, Ord(v), PAnsiChar(GetVertexAtribName(v)));
+
+  gl.AttachShader(Self.Id, ShadersId[i]);
 end;
 
 procedure TglrShaderProgram.Link;
@@ -1997,7 +1986,19 @@ begin
 			gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
 			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec2f)));
     end;
-  end;
+    vfPos3Tex2Nor3:
+    begin
+      gl.EnableVertexAttribArray(Ord(vaCoord));
+      gl.EnableVertexAttribArray(Ord(vaTexCoord0));
+      gl.EnableVertexAttribArray(Ord(vaNormal));
+			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
+      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
+      gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
+    end
+    else
+      Log.Write(lCritical, 'Unsupported type of vertexbuffer format. Tinyglr developer is an asshole');
+  end
+
 end;
 
 class procedure TglrVertexBuffer.Unbind;
