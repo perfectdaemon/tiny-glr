@@ -119,13 +119,12 @@ begin
   meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2);
   meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
 
-  Default.SpriteMaterial.Color := dfVec4f(1, 1, 1, 1.0);
-  Default.SpriteMaterial.AddTexture(Tex, 'uTexture');
+  Default.SpriteMaterial.Color := dfVec4f(1, 0, 1, 0.5);
+  Default.SpriteMaterial.AddTexture(Tex, 'uDiffuse');
 end;
 
 procedure TGame.RenderMesh;
 begin
-  Default.SpriteMaterial.Shader.SetUniform(utVec4, 1, @Default.SpriteMaterial.Color, 'uColor', -1);
   Render.DrawTriangles(meshBuffer, meshIBuffer, 0, 36);
 end;
 
