@@ -26,7 +26,7 @@ uses
         i += 1;
     end;
     count := files.Count;
-    Log.Write(lInformation, 'Files found: ' + Convert.ToStringA(count));
+    Log.Write(lInformation, 'Files found: ' + Convert.ToString(count));
 
     PackStream := TglrStream.Init(aOutputFileName, True);
     PackStream.Write(PACK_FILE_MAGIC, SizeOf(Word));
