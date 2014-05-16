@@ -96,7 +96,7 @@ type
     GL_POINT_FADE_THRESHOLD_SIZE = $8128,
 
 
-    GL_MODULATE = $2100, GL_DECAL = $2101, GL_ADD = $0104,
+    //GL_MODULATE = $2100, GL_DECAL = $2101, GL_ADD = $0104,
 
     GL_MULTISAMPLE = $809D
 
@@ -133,7 +133,7 @@ type
     GetString      : function (name: TGLConst): PAnsiChar; stdcall;
     GetError       : function (): LongWord; stdcall;
     Flush          : procedure;
-    PolygonMode    : procedure (face, mode: TGLConst); stdcall;
+    //PolygonMode    : procedure (face, mode: TGLConst); stdcall;
     PixelStorei    : procedure (pname: TGLConst; param: LongInt); stdcall;
     GenTextures    : procedure (n: LongInt; textures: Pointer); stdcall;
     DeleteTextures : procedure (n: LongInt; textures: Pointer); stdcall;
@@ -161,14 +161,14 @@ type
     StencilFunc    : procedure (func: TGLConst; ref: LongInt; mask: LongWord); stdcall;
     DepthFunc      : procedure (func: TGLConst); stdcall;
     StencilOp      : procedure (fail, zfail, zpass: TGLConst); stdcall;
-    Lightfv        : procedure (light, pname: TGLConst; params: Pointer); stdcall;
-    Materialfv     : procedure (face, pname: TGLConst; params: Pointer); stdcall;
+    //Lightfv        : procedure (light, pname: TGLConst; params: Pointer); stdcall;
+    //Materialfv     : procedure (face, pname: TGLConst; params: Pointer); stdcall;
     Viewport       : procedure (x, y, width, height: LongInt); stdcall;
     Scissor        : procedure (x, y, width, height: LongInt); stdcall;
     Beginp         : procedure (mode: TGLConst); stdcall;
     Endp           : procedure;
     PointSize      : procedure (size: Single); stdcall;
-    LineWidth      : procedure (width: Single); stdcall;
+    //LineWidth      : procedure (width: Single); stdcall;
     Color3f        : procedure (r, g, b: Single); stdcall;
     Color3fv       : procedure (const rgb: TdfVec3f); stdcall;
     Color4ub       : procedure (r, g, b, a: Byte); stdcall;
@@ -197,9 +197,9 @@ type
     MultMatrixf     : procedure (const m: TdfMat4f); stdcall;
     PushMatrix      : procedure;
     PopMatrix       : procedure;
-    Scalef          : procedure (x, y, z: Single); stdcall;
-    Translatef      : procedure (x, y, z: Single); stdcall;
-    Rotatef         : procedure (Angle, x, y, z: Single); stdcall;
+    //Scalef          : procedure (x, y, z: Single); stdcall;
+    //Translatef      : procedure (x, y, z: Single); stdcall;
+    //Rotatef         : procedure (Angle, x, y, z: Single); stdcall;
     Ortho           : procedure (left, right, bottom, top, zNear, zFar: Double); stdcall;
     Frustum         : procedure (left, right, bottom, top, zNear, zFar: Double); stdcall;
     ReadPixels      : procedure (x, y, width, height: LongInt; format, _type: TGLConst; pixels: Pointer); stdcall;
@@ -293,7 +293,7 @@ const
     'glGetString',
     'glGetError',
     'glFlush',
-    'glPolygonMode',
+    //'glPolygonMode',
     'glPixelStorei',
     'glGenTextures',
     'glDeleteTextures',
@@ -321,14 +321,14 @@ const
     'glStencilFunc',
     'glDepthFunc',
     'glStencilOp',
-    'glLightfv',
-    'glMaterialfv',
+    //'glLightfv',
+    //'glMaterialfv',
     'glViewport',
     'glScissor',
     'glBegin',
     'glEnd',
     'glPointSize',
-    'glLineWidth',
+    //'glLineWidth',
     'glColor3f',
     'glColor3fv',
     'glColor4ub',
@@ -357,9 +357,9 @@ const
     'glMultMatrixf',
     'glPushMatrix',
     'glPopMatrix',
-    'glScalef',
-    'glTranslatef',
-    'glRotatef',
+    //'glScalef',
+    //'glTranslatef',
+    //'glRotatef',
     'glOrtho',
     'glFrustum',
     'glReadPixels',
