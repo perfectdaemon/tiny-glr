@@ -630,6 +630,35 @@ type
     procedure Unbind();
   end;
 
+  { TglrSprite }
+
+  TglrSprite = class (TglrNode)
+  protected
+    fRot, fWidth, fHeight: Single;
+    fPP: TdfVec2f;
+    class var VB: TglrVertexBuffer;
+    class var IB: TglrIndexBuffer;
+
+    procedure SetRot(const aRot: Single);
+    procedure SetWidth(const aWidth: Single);
+    procedure SetHeight(const aHeight: Single);
+    procedure SetPP(const aPP: TdfVec2f);
+    procedure DoRender(); override;
+  public
+    Material: TglrMaterial;
+    Vertices: array[0..3] of TglrVertexP3T2;
+    constructor Create(); override; overload;
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f); overload;
+    destructor Destroy(); override;
+
+    property Rotation: Single read fRot write SetRot;
+    property Width: Single read fWidth write SetWidth;
+    property Height: Single read fHeight write SetHeight;
+    property PivotPoint: TdfVec2f read fPP write SetPP;
+
+    procedure UpdateVertices();
+  end;
+
   {$ENDREGION}
 
   {$REGION 'Default'}
@@ -668,6 +697,69 @@ const
 
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
+
+{ TglrSprite }
+
+procedure TglrSprite.SetRot(const aRot: Single);
+begin
+  if (not Equalf(aRot, fRot)) then
+  begin
+    Matrix.Rotate((aRot - FRot) * deg2rad, dfVec3f(0, 0, 1));
+    fRot := aRot;
+  end;
+end;
+
+procedure TglrSprite.SetWidth(const aWidth: Single);
+begin
+  if (not Equalf(aWidth, fWidth)) then
+  begin
+    Log.Write(lError, 'Sprite.SetWidth is not implemented');
+  end;
+end;
+
+procedure TglrSprite.SetHeight(const aHeight: Single);
+begin
+  if (not Equalf(aHeight, fHeight)) then
+  begin
+    Log.Write(lError, 'Sprite.SetHeight is not implemented');
+  end;
+end;
+
+procedure TglrSprite.SetPP(const aPP: TdfVec2f);
+begin
+  if (aPP <> fPP) then
+  begin
+    Log.Write(lError, 'Sprite.SetPP is not implemented');
+  end;
+end;
+
+procedure TglrSprite.DoRender;
+begin
+  inherited DoRender;
+  Log.Write(lError, 'Sprite.DoRender is not implemented');
+end;
+
+constructor TglrSprite.Create;
+begin
+  inherited Create;
+  Log.Write(lError, 'Sprite.Create is not implemented');
+end;
+
+constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
+begin
+  Log.Write(lError, 'Sprite.Create is not implemented');
+end;
+
+destructor TglrSprite.Destroy;
+begin
+  Log.Write(lError, 'Sprite.Destroy is not implemented');
+  inherited Destroy;
+end;
+
+procedure TglrSprite.UpdateVertices;
+begin
+  Log.Write(lError, 'Sprite.UpdateVertices is not implemented');
+end;
 
 { Log }
 

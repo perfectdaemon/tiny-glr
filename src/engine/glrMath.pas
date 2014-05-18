@@ -189,6 +189,7 @@ function Min(x, y: Single): Single; overload; inline;
 function Max(x, y: Integer): Integer; overload; inline;
 function Min(x, y: Integer): Integer; overload; inline;
 function Sign(x: Single): Integer; inline;
+function Equalf(x, y: Single): Boolean; inline;
 
 function IsPointInBox(aPoint: TdfVec2f; aMin, aMax: TdfVec2f): Boolean;
 function LineCircleIntersect(aLineStart, aLineVec: TdfVec2f;
@@ -267,6 +268,11 @@ begin
       Result := -1
     else
       Result := 0;
+end;
+
+function Equalf(x, y: Single): Boolean;
+begin
+  Result := Abs(x - y) < cEPS;
 end;
 
 function IsPointInBox(aPoint: TdfVec2f; aMin, aMax: TdfVec2f): Boolean;
