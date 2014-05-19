@@ -632,18 +632,28 @@ type
 
   { TglrSprite }
 
+const
+  SPRITE_IBUFFER_SIZE = 65532; // Maximum of 10922 sprites at scene (multiply by 6 indices)
+  SPRITE_VBUFFER_SIZE = 43688; // 10922 * 4 vertices
+
+type
   TglrSprite = class (TglrNode)
   protected
+    fVBOffset, fIBOffset: Word;
     fRot, fWidth, fHeight: Single;
     fPP: TdfVec2f;
     class var VB: TglrVertexBuffer;
     class var IB: TglrIndexBuffer;
+    class var VBLastOffset, IBLastOffset: Word;
 
     procedure SetRot(const aRot: Single);
     procedure SetWidth(const aWidth: Single);
     procedure SetHeight(const aHeight: Single);
     procedure SetPP(const aPP: TdfVec2f);
     procedure DoRender(); override;
+
+    class procedure Init();
+    class procedure DeInit();
   public
     Material: TglrMaterial;
     Vertices: array[0..3] of TglrVertexP3T2;
@@ -671,7 +681,7 @@ type
     class procedure Init();
     class procedure Deinit();
   public
-    class var SpriteMaterial: TglrMaterial;
+    class var SpriteShader: TglrShaderProgram;
   end;
 
   {$ENDREGION}
@@ -739,25 +749,66 @@ begin
   Log.Write(lError, 'Sprite.DoRender is not implemented');
 end;
 
+class procedure TglrSprite.Init;
+begin
+  VB := TglrVertexBuffer.Create(nil, SPRITE_VBUFFER_SIZE, vfPos3Tex2);
+  IB := TglrIndexBuffer.Create(nil, SPRITE_IBUFFER_SIZE, ifShort);
+  VBLastOffset := 0;
+  IBLastOffset := 0;
+end;
+
+class procedure TglrSprite.DeInit;
+begin
+  VB.Free();
+  IB.Free();
+end;
+
 constructor TglrSprite.Create;
 begin
   inherited Create;
-  Log.Write(lError, 'Sprite.Create is not implemented');
+  Create(1, 1, dfVec2f(0.5, 0.5));
+//  Log.Write(lError, 'Sprite.Create is not implemented');
 end;
 
 constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
 begin
-  Log.Write(lError, 'Sprite.Create is not implemented');
+  inherited Create();
+  if Default.fInited then
+    //dfdf
+  fWidth := aWidth;
+  fHeight := aHeight;
+  fPP := aPivotPoint;
+  Vertices[0].vec := dfVec3f((dfVec2f(1, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
+  Vertices[1].vec := dfVec3f((dfVec2f(1, 0) - fPP) * dfVec2f(fWidth, fHeight), 0);
+  Vertices[2].vec := dfVec3f((fPP.NegateVector) * dfVec2f(fWidth, fHeight), 0);
+  Vertices[3].vec := dfVec3f((dfVec2f(0, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
+
+  Vertices[0].tex := dfVec2f(1, 1);
+  Vertices[1].tex := dfVec2f(1, 0);
+  Vertices[2].tex := dfVec2f(0, 0);
+  Vertices[3].tex := dfVec2f(0, 1);
+
+  fVBOffset := VBLastOffset;
+  fIBOffset := IBLastOffset;
+
+  VBLastOffset += 4;
+  IBLastOffset += 6;
+
+  Self.UpdateVertices();
+  //IB.Update()
 end;
 
 destructor TglrSprite.Destroy;
 begin
+  //VB.Update()
+  //IB.Update()
   Log.Write(lError, 'Sprite.Destroy is not implemented');
   inherited Destroy;
 end;
 
 procedure TglrSprite.UpdateVertices;
 begin
+  VB.Update(@Vertices[0], fVBOffset, 4);
   Log.Write(lError, 'Sprite.UpdateVertices is not implemented');
 end;
 
@@ -803,13 +854,11 @@ end;
 
 class procedure Default.Init;
 begin
-  SpriteMaterial := TglrMaterial.Create();
-  SpriteMaterial.Shader := TglrShaderProgram.Create();
-  SpriteMaterial.Shader.Attach(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
-  SpriteMaterial.Shader.Attach(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
-  SpriteMaterial.Shader.Link();
-  //todo: shader and everything
-  //do it via pack file (default.glrpack for example)
+  SpriteShader := TglrShaderProgram.Create();
+  SpriteShader.Attach(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
+  SpriteShader.Attach(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
+  SpriteShader.Link();
+
   fInited := True;
 end;
 
@@ -818,7 +867,7 @@ begin
   if (not fInited) then
     Exit();
 
-  SpriteMaterial.Free();
+  SpriteShader.Free();
 end;
 
 { TglrMaterial }
@@ -1822,11 +1871,14 @@ begin
     'GLSL: ' + gl.GetString(TGLConst.GL_SHADING_LANGUAGE_VERSION);
   Log.Write(lInformation, aStr);
   {$endif}
+
+  TglrSprite.Init();
 end;
 
 class procedure Render.DeInit;
 begin
   gl.Free();
+  TglrSprite.DeInit();
 end;
 
 class procedure Render.Resize(aWidth, aHeight: Integer);
