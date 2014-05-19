@@ -118,9 +118,8 @@ begin
 
   meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2Nor3);
   meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
-
-  Default.SpriteMaterial.Color := dfVec4f(1, 0, 1, 0.5);
-  Default.SpriteMaterial.AddTexture(Tex, 'uDiffuse');
+//  Default.SpriteMaterial.Color := dfVec4f(1, 0, 1, 0.5);
+//  Default.SpriteMaterial.AddTexture(Tex, 'uDiffuse');
 end;
 
 procedure TGame.RenderMesh;
@@ -191,9 +190,9 @@ begin
       gl.Vertex3f(0, 0, 100);
     gl.Endp();
 
-  Default.SpriteMaterial.Bind();
+//  Default.SpriteMaterial.Bind();
   RenderMesh();
-  Default.SpriteMaterial.Unbind();
+//  Default.SpriteMaterial.Unbind();
 end;
 
 procedure TGame.OnResume;
