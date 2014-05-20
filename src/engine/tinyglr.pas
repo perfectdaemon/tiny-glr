@@ -770,6 +770,7 @@ begin
   inherited DoRender;
   Material.Bind();
   Render.DrawTriangles(VB, IB, fIBOffset, 6);
+  Material.Unbind();
 //  Log.Write(lError, 'Sprite.DoRender is not implemented');
 end;
 
@@ -1302,8 +1303,8 @@ end;
 procedure TglrCamera.Update;
 begin
   //UpdateVectorsFromMatrix();
-  Matrix.Pos := dfVec3f(0, 0, 0);
-  Matrix.Pos := Matrix * fPos.NegateVector;
+//  Matrix.Pos := dfVec3f(0, 0, 0);
+//  Matrix.Pos := Matrix * fPos.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
   Render.Params.ModelViewProj := Render.Params.ViewProj;
 
