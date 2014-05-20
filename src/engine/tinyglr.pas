@@ -81,6 +81,7 @@ type
   end;
 
   TglrStringList = TglrList<AnsiString>;
+  TglrWordList = TglrList<Word>;
 
   { FileSystem }
 
@@ -222,10 +223,11 @@ type
     procedure Bind();
     class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrVertexFormat); virtual;
+    destructor Destroy(); override;
+
     procedure Update(aData: Pointer; aStart, aCount: Integer); virtual;
     function Map(aAccess: TglrVertexBufferMapAccess = maReadWrite): Pointer;
     procedure Unmap();
-    destructor Destroy(); override;
   end;
 
   { TglrIndexBuffer }
@@ -237,6 +239,8 @@ type
     class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrIndexFormat); virtual;
     destructor Destroy(); override;
+
+    procedure Update(aData: Pointer; aStart, aCount: Integer); virtual;
   end;
 
   { TglrFrameBuffer }
@@ -347,7 +351,7 @@ type
     class procedure SetTexture(aTexture: TglrTextureId; aSampler: Integer);
 
     class procedure DrawTriangles(vBuffer: TglrVertexBuffer; iBuffer: TglrIndexBuffer;
-      aStart, aVertCount: Integer);
+      aStartIndex, aIndicesCount: Integer);
     class procedure DrawPoints(vBuffer: TglrVertexBuffer; aStart, aVertCount: Integer);
 
     class property TextureBinds: Integer read fStatTextureBind;
@@ -639,12 +643,10 @@ const
 type
   TglrSprite = class (TglrNode)
   protected
+    fIndices: array[0..5] of Word;
     fVBOffset, fIBOffset: Word;
     fRot, fWidth, fHeight: Single;
     fPP: TdfVec2f;
-    class var VB: TglrVertexBuffer;
-    class var IB: TglrIndexBuffer;
-    class var VBLastOffset, IBLastOffset: Word;
 
     procedure SetRot(const aRot: Single);
     procedure SetWidth(const aWidth: Single);
@@ -654,9 +656,18 @@ type
 
     class procedure Init();
     class procedure DeInit();
+
+    class var VB: TglrVertexBuffer;
+    class var IB: TglrIndexBuffer;
+    class var VBLastOffset, IBLastOffset: Word;
+    class var Unused: TglrWordList;
+
+    class procedure GetBufferData(out vVBOffset, vIBOffset: Word);
+    class procedure FreeBufferData(aVBOffset, aIBOffset: Word);
   public
     Material: TglrMaterial;
     Vertices: array[0..3] of TglrVertexP3T2;
+
     constructor Create(); override; overload;
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f); overload;
     destructor Destroy(); override;
@@ -666,7 +677,9 @@ type
     property Height: Single read fHeight write SetHeight;
     property PivotPoint: TdfVec2f read fPP write SetPP;
 
-    procedure UpdateVertices();
+    procedure UpdateBuffers();
+    procedure SetDefaultVertices(); //Sets vertices due to width, height and pivot point
+    procedure SetDefaultTexCoords(); //Sets default texture coords
   end;
 
   {$ENDREGION}
@@ -723,7 +736,10 @@ procedure TglrSprite.SetWidth(const aWidth: Single);
 begin
   if (not Equalf(aWidth, fWidth)) then
   begin
-    Log.Write(lError, 'Sprite.SetWidth is not implemented');
+    fWidth := aWidth;
+    SetDefaultVertices();
+    UpdateBuffers();
+//    Log.Write(lError, 'Sprite.SetWidth is not implemented');
   end;
 end;
 
@@ -731,7 +747,10 @@ procedure TglrSprite.SetHeight(const aHeight: Single);
 begin
   if (not Equalf(aHeight, fHeight)) then
   begin
-    Log.Write(lError, 'Sprite.SetHeight is not implemented');
+    fHeight := aHeight;
+    SetDefaultVertices();
+    UpdateBuffers();
+//    Log.Write(lError, 'Sprite.SetHeight is not implemented');
   end;
 end;
 
@@ -739,14 +758,19 @@ procedure TglrSprite.SetPP(const aPP: TdfVec2f);
 begin
   if (aPP <> fPP) then
   begin
-    Log.Write(lError, 'Sprite.SetPP is not implemented');
+    fPP := aPP;
+    SetDefaultVertices();
+    UpdateBuffers();
+//    Log.Write(lError, 'Sprite.SetPP is not implemented');
   end;
 end;
 
 procedure TglrSprite.DoRender;
 begin
   inherited DoRender;
-  Log.Write(lError, 'Sprite.DoRender is not implemented');
+  Material.Bind();
+  Render.DrawTriangles(VB, IB, fIBOffset, 6);
+//  Log.Write(lError, 'Sprite.DoRender is not implemented');
 end;
 
 class procedure TglrSprite.Init;
@@ -755,12 +779,38 @@ begin
   IB := TglrIndexBuffer.Create(nil, SPRITE_IBUFFER_SIZE, ifShort);
   VBLastOffset := 0;
   IBLastOffset := 0;
+  Unused := TglrWordList.Create(64);
 end;
 
 class procedure TglrSprite.DeInit;
 begin
   VB.Free();
   IB.Free();
+  Unused.Free();
+end;
+
+class procedure TglrSprite.FreeBufferData(aVBOffset, aIBOffset: Word);
+begin
+  Unused.Add(aVBOffset div 4);
+end;
+
+class procedure TglrSprite.GetBufferData(out vVBOffset, vIBOffset: Word);
+begin
+  if VBLastOffset = SPRITE_VBUFFER_SIZE then
+  begin
+    if (Unused.Count = 0) then
+      Log.Write(lCritical, 'Sprite: too many sprites, vertex buffer is full');
+    vVBOffset := Unused[Unused.Count - 1] * 4;
+    vIBOffset := Unused[Unused.Count - 1] * 6;
+    Unused.DeleteByIndex(Unused.Count - 1);
+  end
+  else
+  begin
+    vVBOffset := VBLastOffset;
+    vIBOffset := IBLastOffset;
+    VBLastOffset += 4;
+    IBLastOffset += 6;
+  end;
 end;
 
 constructor TglrSprite.Create;
@@ -773,43 +823,58 @@ end;
 constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
 begin
   inherited Create();
+
+  GetBufferData(fVBOffset, fIBOffset);
+
+  Material := TglrMaterial.Create();
   if Default.fInited then
-    //dfdf
+    Material.Shader := Default.SpriteShader;
+
+  //Vertices
   fWidth := aWidth;
   fHeight := aHeight;
   fPP := aPivotPoint;
-  Vertices[0].vec := dfVec3f((dfVec2f(1, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
-  Vertices[1].vec := dfVec3f((dfVec2f(1, 0) - fPP) * dfVec2f(fWidth, fHeight), 0);
-  Vertices[2].vec := dfVec3f((fPP.NegateVector) * dfVec2f(fWidth, fHeight), 0);
-  Vertices[3].vec := dfVec3f((dfVec2f(0, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
+  SetDefaultVertices();
+  SetDefaultTexCoords();
+  UpdateBuffers();
 
-  Vertices[0].tex := dfVec2f(1, 1);
-  Vertices[1].tex := dfVec2f(1, 0);
-  Vertices[2].tex := dfVec2f(0, 0);
-  Vertices[3].tex := dfVec2f(0, 1);
-
-  fVBOffset := VBLastOffset;
-  fIBOffset := IBLastOffset;
-
-  VBLastOffset += 4;
-  IBLastOffset += 6;
-
-  Self.UpdateVertices();
-  //IB.Update()
+  //Indices
+  fIndices[0] := fVBOffset;
+  fIndices[1] := fVBOffset + 1;
+  fIndices[2] := fVBOffset + 2;
+  fIndices[3] := fVBOffset + 2;
+  fIndices[4] := fVBOffset + 3;
+  fIndices[5] := fVBOffset;
+  IB.Update(@fIndices[0], fIBOffset, 6);
 end;
 
 destructor TglrSprite.Destroy;
 begin
-  //VB.Update()
-  //IB.Update()
-  Log.Write(lError, 'Sprite.Destroy is not implemented');
+  FreeBufferData(fVBOffset, fIBOffset);
+  //Log.Write(lError, 'Sprite.Destroy is not implemented');
   inherited Destroy;
 end;
 
-procedure TglrSprite.UpdateVertices;
+procedure TglrSprite.UpdateBuffers;
 begin
   VB.Update(@Vertices[0], fVBOffset, 4);
-  Log.Write(lError, 'Sprite.UpdateVertices is not implemented');
+  //Log.Write(lError, 'Sprite.UpdateVertices is not implemented');
+end;
+
+procedure TglrSprite.SetDefaultVertices;
+begin
+  Vertices[0].vec := dfVec3f((dfVec2f(1, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
+  Vertices[1].vec := dfVec3f((dfVec2f(1, 0) - fPP) * dfVec2f(fWidth, fHeight), 0);
+  Vertices[2].vec := dfVec3f((fPP.NegateVector) * dfVec2f(fWidth, fHeight), 0);
+  Vertices[3].vec := dfVec3f((dfVec2f(0, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
+end;
+
+procedure TglrSprite.SetDefaultTexCoords;
+begin
+  Vertices[0].tex := dfVec2f(1, 1);
+  Vertices[1].tex := dfVec2f(1, 0);
+  Vertices[2].tex := dfVec2f(0, 0);
+  Vertices[3].tex := dfVec2f(0, 1);
 end;
 
 { Log }
@@ -1067,6 +1132,7 @@ begin
       fIndex := index;
       fData := aData;
     end;
+    Result := l;
   end;
 end;
 
@@ -1330,10 +1396,7 @@ begin
 end;
 
 class function Convert.ToString(aVal: TdfMat4f): AnsiString;
-var
-  f: PSingle;
 begin
-  f := @aVal;
   log.Write(lCritical, 'Convert mat to string is not implemented');
 end;
 
@@ -1611,7 +1674,6 @@ end;
 class procedure FileSystem.UnloadPack(const aPackFileName: AnsiString);
 var
   i: Integer;
-  FileStream: TglrStream;
 begin
   i := GetPackIndexByPackName(aPackFileName);
   if (i = -1) then
@@ -2034,7 +2096,7 @@ begin
 end;
 
 class procedure Render.DrawTriangles(vBuffer: TglrVertexBuffer;
-  iBuffer: TglrIndexBuffer; aStart, aVertCount: Integer);
+  iBuffer: TglrIndexBuffer; aStartIndex, aIndicesCount: Integer);
 begin
   if (fVB <> vBuffer.Id) then
   begin
@@ -2047,10 +2109,10 @@ begin
     iBuffer.Bind();
   end;
 
-  gl.DrawElements(GL_TRIANGLES, aVertCount, IF_FORMAT[iBuffer.iFormat], Pointer(aStart * IF_STRIDE[iBuffer.iFormat]));
+  gl.DrawElements(GL_TRIANGLES, aIndicesCount, IF_FORMAT[iBuffer.iFormat], Pointer(aStartIndex * IF_STRIDE[iBuffer.iFormat]));
 
   fDipCount += 1;
-  fTriCount += aVertCount div 3;
+  fTriCount += aIndicesCount div 3;
 end;
 
 class procedure Render.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
@@ -2110,6 +2172,13 @@ begin
   inherited Destroy;
 end;
 
+procedure TglrIndexBuffer.Update(aData: Pointer; aStart, aCount: Integer);
+begin
+  gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, Id);
+  gl.BufferSubData(GL_ELEMENT_ARRAY_BUFFER, aStart, aCount * IF_STRIDE[iFormat], aData);
+  gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+end;
+
 { TglrVertexBuffer }
 
 procedure TglrVertexBuffer.Bind;
@@ -2120,14 +2189,14 @@ begin
     begin
       gl.EnableVertexAttribArray(Ord(vaCoord));
       gl.EnableVertexAttribArray(Ord(vaTexCoord0));
-			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
+			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
       gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
     end;
     vfPos2Tex2:
     begin
       gl.EnableVertexAttribArray(Ord(vaCoord));
       gl.EnableVertexAttribArray(Ord(vaTexCoord0));
-			gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
+			gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
 			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec2f)));
     end;
     vfPos3Tex2Nor3:
@@ -2135,7 +2204,7 @@ begin
       gl.EnableVertexAttribArray(Ord(vaCoord));
       gl.EnableVertexAttribArray(Ord(vaTexCoord0));
       gl.EnableVertexAttribArray(Ord(vaNormal));
-			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], 0);
+			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
       gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
       gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
     end
@@ -2513,7 +2582,8 @@ begin
   BoundsCheck(Index);
   if FreeItem then
     TObject(FItems[Index]).Free;
-  Move(FItems[Index + 1], FItems[Index], (FCount - Index - 1) * SizeOf(T));
+  if Index <> fCount - 1 then
+    Move(FItems[Index + 1], FItems[Index], (FCount - Index - 1) * SizeOf(T));
   Dec(FCount);
   if Length(FItems) - FCount + 1 > FCapacity then
     SetLength(FItems, Length(FItems) - FCapacity);
