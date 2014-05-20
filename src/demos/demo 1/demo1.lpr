@@ -10,15 +10,19 @@ type
   TGame = class(TglrGame)
   protected
     dx, dy: Integer;
-    Scene: TglrScene;
+    Scene, SceneHud: TglrScene;
     Points: array of TdfVec3f;
-    Tex: TglrTexture;
+    Material: TglrMaterial;
 
     meshData: array of TglrVertexP3T2N3;
     meshBuffer: TglrVertexBuffer;
     meshIBuffer: TglrIndexBuffer;
+
+    Sprites: array of TglrSprite;
+
     procedure PrepareMesh();
     procedure RenderMesh();
+    procedure CreateSprites();
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -127,6 +131,23 @@ begin
   Render.DrawTriangles(meshBuffer, meshIBuffer, 0, 36);
 end;
 
+procedure TGame.CreateSprites;
+const
+  count = 5;
+var
+  i: Integer;
+begin
+  SetLength(Sprites, count);
+  for i := 0 to count - 1 do
+  begin
+    Sprites[i] := TglrSprite.Create(15 + Random(3), 15 + Random(3), dfVec2f(0.5, 0.5));
+    Sprites[i].Position := dfVec3f(50 + Random(50), 50 + Random(50), 1);
+    SceneHud.Root.Childs.Add(Sprites[i]);
+    Sprites[i].Material := Material;
+    //Sprites[i].Material.Color := dfVec4f(0, 0, 0, 1.0);
+  end;
+end;
+
 procedure TGame.OnFinish;
 begin
   WriteLn('End');
@@ -175,8 +196,8 @@ begin
       gl.Vertex3fv(Points[i]);
   gl.Endp();
 
-
     gl.Beginp(GL_LINES);
+
       gl.Color4ub(255, 0, 0, 255);
       gl.Vertex3f(0, 0, 0);
       gl.Vertex3f(100, 0, 0);
@@ -190,9 +211,12 @@ begin
       gl.Vertex3f(0, 0, 100);
     gl.Endp();
 
-//  Default.SpriteMaterial.Bind();
+
+  Material.Bind();
   RenderMesh();
-//  Default.SpriteMaterial.Unbind();
+  Material.Unbind();
+
+  SceneHud.RenderScene();
 end;
 
 procedure TGame.OnResume;
@@ -221,9 +245,17 @@ begin
   Scene.Camera.SetCamera(dfVec3f(5, 5, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
   Scene.Camera.ProjectionMode := pmPerspective;
 
-  Tex := TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga');
+  SceneHud := TglrScene.Create(True);
+  SceneHud.Camera.ProjectionMode := pmOrtho;
+  SceneHud.Camera.SetCamera(dfVec3f(0, 0, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+
+  Material := TglrMaterial.Create();
+  Material.Shader.Free();
+  Material.Shader := Default.SpriteShader;
+  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
 
   PrepareMesh();
+  CreateSprites();
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
