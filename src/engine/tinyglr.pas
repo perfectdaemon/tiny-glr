@@ -685,6 +685,34 @@ type
     procedure SetDefaultTexCoords(); //Sets default texture coords
   end;
 
+  TglrText = class;
+
+  { TglrFont }
+
+  TglrFont = class
+  protected
+    vb: TglrVertexBuffer;
+    ib: TglrIndexBuffer;
+  public
+    constructor Create(aStream: TglrStream;
+      aFreeStreamOnFinish: Boolean = True); virtual;
+    destructor Destroy(); override;
+
+    procedure RenderText(aText: TglrText);
+  end;
+
+  TglrText = class (TglrNode)
+  protected
+    procedure DoRender(); override;
+  public
+    Font: TglrFont;
+    Text: AnsiString;
+  end;
+
+  TglrMesh = class (TglrNode)
+
+  end;
+
   {$ENDREGION}
 
   {$REGION 'Default'}
@@ -723,6 +751,33 @@ const
 
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
+
+{ TglrText }
+
+procedure TglrText.DoRender;
+begin
+  inherited DoRender;
+  Log.Write(lCritical, 'TglrText.DoRender is not implemented');
+end;
+
+{ TglrFont }
+
+constructor TglrFont.Create(aStream: TglrStream; aFreeStreamOnFinish: Boolean);
+begin
+  inherited Create();
+  Log.Write(lCritical, 'TglrFont.Create is not implemented');
+end;
+
+destructor TglrFont.Destroy;
+begin
+  Log.Write(lCritical, 'TglrFont.Destroy is not implemented');
+  inherited Destroy;
+end;
+
+procedure TglrFont.RenderText(aText: TglrText);
+begin
+  Log.Write(lCritical, 'TglrFont.RenderText is not implemented');
+end;
 
 { TglrRenderParams }
 
