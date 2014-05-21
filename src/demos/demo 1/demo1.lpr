@@ -140,8 +140,8 @@ begin
   SetLength(Sprites, count);
   for i := 0 to count - 1 do
   begin
-    Sprites[i] := TglrSprite.Create(15 + Random(3), 15 + Random(3), dfVec2f(0.5, 0.5));
-    Sprites[i].Position := dfVec3f(50 + Random(50), 50 + Random(50), 1);
+    Sprites[i] := TglrSprite.Create(35, 35, dfVec2f(0.5, 0.5));
+    Sprites[i].Position := dfVec3f(50 + Random(700), 50 + Random(500), Random(2));
     SceneHud.Root.Childs.Add(Sprites[i]);
     Sprites[i].Material := Material;
     //Sprites[i].Material.Color := dfVec4f(0, 0, 0, 1.0);
@@ -189,7 +189,7 @@ var
   i: Integer;
 begin
   Scene.RenderScene();
-  gl.Color3f(1, 1, 1);
+(*  gl.Color3f(1, 1, 1);
 
   gl.Beginp(GL_POINTS);
     for i := 0 to Length(Points) - 1 do
@@ -210,13 +210,15 @@ begin
       gl.Vertex3f(0, 0, 0);
       gl.Vertex3f(0, 0, 100);
     gl.Endp();
-
+*)
 
   Material.Bind();
   RenderMesh();
   Material.Unbind();
 
   SceneHud.RenderScene();
+  //SceneHud.Camera.Update();
+//  Sprites[0].RenderSelf();
 end;
 
 procedure TGame.OnResume;
@@ -253,6 +255,7 @@ begin
   Material.Shader.Free();
   Material.Shader := Default.SpriteShader;
   Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
+  Material.Color := dfVec4f(0.7, 0.2, 0.1, 1);
 
   PrepareMesh();
   CreateSprites();
