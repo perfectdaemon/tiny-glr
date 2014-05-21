@@ -141,7 +141,7 @@ begin
   for i := 0 to count - 1 do
   begin
     Sprites[i] := TglrSprite.Create(35, 35, dfVec2f(0.5, 0.5));
-    Sprites[i].Position := dfVec3f(50 + Random(700), 50 + Random(500), Random(2));
+    Sprites[i].Position := dfVec3f(50 + 50 * i, 50 + Random(500), Random(2));
     SceneHud.Root.Childs.Add(Sprites[i]);
     Sprites[i].Material := Material;
     //Sprites[i].Material.Color := dfVec4f(0, 0, 0, 1.0);
