@@ -304,9 +304,12 @@ type
 
   { Render }
 
+  { TglrRenderParams }
+
   TglrRenderParams = record
     ViewProj, Model, ModelViewProj: TdfMat4f;
     Color: TdfVec4f;
+    procedure CalculateMVP();
   end;
 
 const
@@ -721,6 +724,13 @@ const
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
 
+{ TglrRenderParams }
+
+procedure TglrRenderParams.CalculateMVP;
+begin
+  ModelViewProj := ViewProj * Model;
+end;
+
 { TglrSprite }
 
 procedure TglrSprite.SetRot(const aRot: Single);
@@ -846,7 +856,7 @@ begin
   fIndices[3] := fVBOffset + 2;
   fIndices[4] := fVBOffset + 3;
   fIndices[5] := fVBOffset;
-  IB.Update(@fIndices[0], fIBOffset, 6);
+  IB.Update(@fIndices[0], fIBOffset * IF_STRIDE[ifShort], 6 * IF_STRIDE[ifShort]);
 end;
 
 destructor TglrSprite.Destroy;
@@ -858,7 +868,7 @@ end;
 
 procedure TglrSprite.UpdateBuffers;
 begin
-  VB.Update(@Vertices[0], fVBOffset, 4);
+  VB.Update(@Vertices[0], fVBOffset * VF_STRIDE[vfPos3Tex2], 4 * VF_STRIDE[vfPos3Tex2]);
   //Log.Write(lError, 'Sprite.UpdateVertices is not implemented');
 end;
 
@@ -1302,20 +1312,22 @@ end;
 
 procedure TglrCamera.Update;
 begin
-  //UpdateVectorsFromMatrix();
-//  Matrix.Pos := dfVec3f(0, 0, 0);
-//  Matrix.Pos := Matrix * fPos.NegateVector;
+  Matrix.Pos := dfVec3f(0, 0, 0);
+  Matrix.Pos := Matrix * fPos.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
   Render.Params.ModelViewProj := Render.Params.ViewProj;
+  UpdateVectorsFromMatrix();
 
   if (Render.Width <> fW) or (Render.Height <> fH) then
     ViewportOnly(0, 0, Render.Width, Render.Height);
 
   //no shaders, bad, bad, bad
+  (*
   gl.MatrixMode(GL_PROJECTION);
   gl.LoadMatrixf(fProjMatrix);
   gl.MatrixMode(GL_MODELVIEW);
   gl.LoadMatrixf(Matrix);
+  *)
 end;
 
 procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
@@ -1426,7 +1438,7 @@ begin
   if (fParent = AValue) then
     Exit();
   fParent := AValue;
-  GetAbsMatrix();
+  //GetAbsMatrix();
 end;
 
 function TglrNode.GetAbsMatrix: TdfMat4f;
@@ -1495,7 +1507,7 @@ begin
   fLastRight := fRight;
   fLastUp := fUp;
 
-  GetAbsMatrix();
+  //GetAbsMatrix();
 end;
 
 procedure TglrNode.UpdateVectorsFromMatrix;
@@ -1513,7 +1525,7 @@ var
   i: Integer;
 begin
   for i := 0 to Childs.Count - 1 do
-    TglrNode(Childs[i]).RenderSelf;
+    Childs[i].RenderSelf;
 end;
 
 procedure TglrNode.DoRender;
@@ -1528,9 +1540,10 @@ begin
   Matrix.Identity;
   Visible := True;
   Parent := nil;
-  Right := dfVec3f(1, 0, 0);
-  Up := dfVec3f(0, 1, 0);
-  Direction := dfVec3f(0, 0, 1);
+  //Right := dfVec3f(1, 0, 0);
+  //Up := dfVec3f(0, 1, 0);
+  //Direction := dfVec3f(0, 0, 1);
+  UpdateVectorsFromMatrix();
 end;
 
 destructor TglrNode.Destroy;
@@ -1542,11 +1555,14 @@ begin
 end;
 
 procedure TglrNode.RenderSelf();
+var
+  m, m1: TdfMat4f;
 begin
   Matrix.Pos := fPos;
+  //m := Render.Params.Model;
+  //m1 := GetAbsMatrix;
   Render.Params.Model := GetAbsMatrix;
-  with Render.Params do
-    ModelViewProj := ViewProj * Model;
+  Render.Params.CalculateMVP();
 
   UpdateVectorsFromMatrix();
 
@@ -1554,6 +1570,8 @@ begin
     Exit();
   DoRender();
   RenderChilds();
+  //Render.Params.Model := m;
+  //Render.Params.CalculateMVP();
 end;
 
 { FileSystem }
