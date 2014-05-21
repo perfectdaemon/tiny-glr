@@ -142,16 +142,14 @@ begin
   begin
     Sprites[i] := TglrSprite.Create(35, 35, dfVec2f(0.5, 0.5));
     Sprites[i].Position := dfVec3f(50 + 50 * i, 50 + Random(500), Random(2));
-    SceneHud.Root.Childs.Add(Sprites[i]);
     Sprites[i].Material := Material;
-    //Sprites[i].Material.Color := dfVec4f(0, 0, 0, 1.0);
+    SceneHud.Root.Childs.Add(Sprites[i]);
   end;
 end;
 
 procedure TGame.OnFinish;
 begin
   WriteLn('End');
-  //Tex.Free();
   Scene.Free();
 end;
 
@@ -217,8 +215,6 @@ begin
   Material.Unbind();
 
   SceneHud.RenderScene();
-  //SceneHud.Camera.Update();
-//  Sprites[0].RenderSelf();
 end;
 
 procedure TGame.OnResume;
