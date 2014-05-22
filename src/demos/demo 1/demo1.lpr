@@ -133,7 +133,7 @@ end;
 
 procedure TGame.CreateSprites;
 const
-  count = 5;
+  count = 10;
 var
   i: Integer;
 begin
@@ -141,7 +141,7 @@ begin
   for i := 0 to count - 1 do
   begin
     Sprites[i] := TglrSprite.Create(35, 35, dfVec2f(0.5, 0.5));
-    Sprites[i].Position := dfVec3f(50 + 50 * i, 50 + Random(500), Random(2));
+    Sprites[i].Position := dfVec3f(50 + 50 * i, 50 +50 *i, 0);
     Sprites[i].Material := Material;
     SceneHud.Root.Childs.Add(Sprites[i]);
   end;
@@ -168,6 +168,12 @@ begin
     Scene.Camera.Rotate((y - dy) * deg2rad, Scene.Camera.Right);
     dx := X;
     dy := Y;
+  end;
+
+  if (aType = itTouchMove) and (aKey = kNoInput) then
+  begin
+    Sprites[1].Up := (Sprites[1].Position - dfVec3f(Core.Input.Touch[0].Pos, 0)).Normal;
+    Sprites[1].Direction := dfVec3f(0, 0.0, 1.0);
   end;
 
   if (aType = itWheel) then
@@ -259,7 +265,7 @@ end;
 
 procedure TGame.OnUpdate(const dt: Double);
 begin
-
+  Sprites[0].Rotation := Sprites[0].Rotation + dt * 20;
 end;
 
 var
