@@ -467,8 +467,6 @@ type
   {$ENDIF}
   end;
 
-  //PglrInitParams = ^TglrInitParams;
-
   { Core }
 
   Core = class
@@ -508,8 +506,7 @@ type
 
   TglrNode = class
   protected
-    fDir, fRight, fUp, fPos,
-    fLastDir, fLastRight, fLastUp: TdfVec3f;
+    fDir, fRight, fUp, fPos: TdfVec3f;
     fParent: TglrNode;
     fAbsMatrix: TdfMat4f;
 
@@ -701,12 +698,29 @@ type
     procedure RenderText(aText: TglrText);
   end;
 
+  TglrTextHorAlign = (haLeft, haCenter, haRight);
+  TglrTextVerAlign = (vaTop, vaCenter, vaBottom);
+
   TglrText = class (TglrNode)
   protected
+    fHorAlign: TglrTextHorAlign;
+    fTextWidth: Single;
+    fVerAlign: TglrTextVerAlign;
+    procedure SetHorAlign(aValue: TglrTextHorAlign);
+    procedure SetTextWidth(aValue: Single);
+    procedure SetVerAlign(aValue: TglrTextVerAlign);
     procedure DoRender(); override;
   public
     Font: TglrFont;
     Text: AnsiString;
+    LetterSpacing, LineSpacing: Single;
+
+    constructor Create(const aTextMaxLength: Word = 256); virtual;
+    destructor Destroy(); override;
+
+    property TextWidth: Single read fTextWidth write SetTextWidth;
+    property HorAlign: TglrTextHorAlign read fHorAlign write SetHorAlign;
+    property VerAlign: TglrTextVerAlign read fVerAlign write SetVerAlign;
   end;
 
   TglrMesh = class (TglrNode)
@@ -754,10 +768,45 @@ const
 
 { TglrText }
 
+procedure TglrText.SetHorAlign(aValue: TglrTextHorAlign);
+begin
+  if fHorAlign = aValue then
+    Exit();
+  fHorAlign := aValue;
+end;
+
+procedure TglrText.SetTextWidth(aValue: Single);
+begin
+  if fTextWidth = aValue then
+    Exit();
+  fTextWidth := aValue;
+end;
+
+procedure TglrText.SetVerAlign(aValue: TglrTextVerAlign);
+begin
+  if fVerAlign = aValue then
+    Exit();
+  fVerAlign := aValue;
+end;
+
 procedure TglrText.DoRender;
 begin
+  if (not Assigned(Font)) then
+    Exit();
+
   inherited DoRender;
-  Log.Write(lCritical, 'TglrText.DoRender is not implemented');
+  Font.RenderText(Self);
+//  Log.Write(lCritical, 'TglrText.DoRender is not implemented');
+end;
+
+constructor TglrText.Create(const aTextMaxLength: Word);
+begin
+  inherited Create();
+end;
+
+destructor TglrText.Destroy;
+begin
+  inherited Destroy;
 end;
 
 { TglrFont }
@@ -858,6 +907,7 @@ end;
 class procedure TglrSprite.FreeBufferData(aVBOffset, aIBOffset: Word);
 begin
   Unused.Add(aVBOffset div 4);
+  //Log.Write(lInformation, 'Sprite: Buffer data free. Unused memory chunks: ' + Convert.ToString(Unused.Count));
 end;
 
 class procedure TglrSprite.GetBufferData(out vVBOffset, vIBOffset: Word);
@@ -1511,6 +1561,7 @@ var
 begin
   if (fDir = aDir) then
     Exit;
+  aDir.Normalize;
   NewRight := fUp.Cross(aDir);
   NewRight.Negate;
   NewRight.Normalize;
@@ -1525,6 +1576,7 @@ var
 begin
   if (fRight = aRight) then
     Exit();
+  aRight.Normalize;
   NewDir := aRight.Cross(fUp);
   NewDir.Normalize;
   NewUp := NewDir.Cross(aRight);
@@ -1538,6 +1590,7 @@ var
 begin
   if (fUp = aUp) then
     Exit();
+  aUp.Normalize;
   NewRight := aUp.Cross(fDir);
   NewRight.Negate;
   NewRight.Normalize;
@@ -1558,11 +1611,6 @@ begin
   fRight := aNewRight;
   fUp   := aNewUp;
   fDir  := aNewDir;
-  fLastDir := fDir;
-  fLastRight := fRight;
-  fLastUp := fUp;
-
-  //GetAbsMatrix();
 end;
 
 procedure TglrNode.UpdateVectorsFromMatrix;
@@ -1595,9 +1643,6 @@ begin
   Matrix.Identity;
   Visible := True;
   Parent := nil;
-  //Right := dfVec3f(1, 0, 0);
-  //Up := dfVec3f(0, 1, 0);
-  //Direction := dfVec3f(0, 0, 1);
   UpdateVectorsFromMatrix();
 end;
 
@@ -1614,8 +1659,6 @@ var
   m, m1: TdfMat4f;
 begin
   Matrix.Pos := fPos;
-  //m := Render.Params.Model;
-  //m1 := GetAbsMatrix;
   Render.Params.Model := GetAbsMatrix;
   Render.Params.CalculateMVP();
 
@@ -1625,8 +1668,6 @@ begin
     Exit();
   DoRender();
   RenderChilds();
-  //Render.Params.Model := m;
-  //Render.Params.CalculateMVP();
 end;
 
 { FileSystem }
