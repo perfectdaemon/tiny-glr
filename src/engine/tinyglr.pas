@@ -243,6 +243,29 @@ type
     procedure Update(aData: Pointer; aStart, aCount: Integer); virtual;
   end;
 
+  TglrBufferData = record
+    V: TglrVertexBufferId;
+    I: TglrIndexBufferId;
+    vOffset, iOffset, vCount, iCount: Integer;
+  end;
+
+  { TglrVIBuffersProvider }
+
+  TglrVIBuffersProvider = class
+  protected
+    vb: array of TglrVertexBuffer;
+    ib: array of TglrIndexBuffer;
+    procedure Expand();
+  public
+    constructor Create(); virtual; overload;
+    constructor Create(const aInitialBuffersCount: Integer;
+      aVertexFormat: TglrVertexFormat; aIndexFormat: TglrIndexFormat); virtual; overload;
+    destructor Destroy(); override;
+
+    function GetBufferData(): TglrBufferData;
+    procedure FreeBufferData(const aData: TglrBufferData);
+  end;
+
   { TglrFrameBuffer }
 
   TglrFrameBuffer = class
@@ -682,17 +705,24 @@ type
     procedure SetDefaultTexCoords(); //Sets default texture coords
   end;
 
-  TglrText = class;
-
   { TglrFont }
+
+const
+  TEXT_IBUFFER_SIZE = 65532; // Maximum of 10922 sprites at scene (multiply by 6 indices)
+  TEXT_VBUFFER_SIZE = 43688; // 10922 * 4 vertices
+
+type
+  TglrText = class;
 
   TglrFont = class
   protected
     vb: TglrVertexBuffer;
     ib: TglrIndexBuffer;
+    Material: TglrMaterial;
   public
+    constructor Create(); virtual; overload;
     constructor Create(aStream: TglrStream;
-      aFreeStreamOnFinish: Boolean = True); virtual;
+      aFreeStreamOnFinish: Boolean = True); virtual; overload;
     destructor Destroy(); override;
 
     procedure RenderText(aText: TglrText);
@@ -766,6 +796,41 @@ const
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
 
+{ TglrVIBuffersProvider }
+
+procedure TglrVIBuffersProvider.Expand;
+begin
+  Log.Write(lCritical, 'VIBuffersProvider.Expand is not implemented');
+end;
+
+constructor TglrVIBuffersProvider.Create;
+begin
+  Create(4, vfPos3Tex2, ifShort);
+end;
+
+constructor TglrVIBuffersProvider.Create(const aInitialBuffersCount: Integer;
+  aVertexFormat: TglrVertexFormat; aIndexFormat: TglrIndexFormat);
+begin
+  inherited Create();
+  Log.Write(lCritical, 'VIBuffersProvider.Create is not implemented');
+end;
+
+destructor TglrVIBuffersProvider.Destroy;
+begin
+  Log.Write(lCritical, 'VIBuffersProvider.Destroy is not implemented');
+  inherited Destroy;
+end;
+
+function TglrVIBuffersProvider.GetBufferData: TglrBufferData;
+begin
+  Log.Write(lCritical, 'VIBuffersProvider.GetBufferData is not implemented');
+end;
+
+procedure TglrVIBuffersProvider.FreeBufferData(const aData: TglrBufferData);
+begin
+  Log.Write(lCritical, 'VIBuffersProvider.FreeBufferData is not implemented');
+end;
+
 { TglrText }
 
 procedure TglrText.SetHorAlign(aValue: TglrTextHorAlign);
@@ -773,6 +838,7 @@ begin
   if fHorAlign = aValue then
     Exit();
   fHorAlign := aValue;
+  Log.Write(lCritical, 'Text.SetHorAlign is not implemented');
 end;
 
 procedure TglrText.SetTextWidth(aValue: Single);
@@ -780,6 +846,7 @@ begin
   if fTextWidth = aValue then
     Exit();
   fTextWidth := aValue;
+  Log.Write(lCritical, 'Text.SetTexWidth is not implemented');
 end;
 
 procedure TglrText.SetVerAlign(aValue: TglrTextVerAlign);
@@ -787,6 +854,7 @@ begin
   if fVerAlign = aValue then
     Exit();
   fVerAlign := aValue;
+  Log.Write(lCritical, 'Text.SetVerAlign is not implemented');
 end;
 
 procedure TglrText.DoRender;
@@ -796,29 +864,46 @@ begin
 
   inherited DoRender;
   Font.RenderText(Self);
-//  Log.Write(lCritical, 'TglrText.DoRender is not implemented');
 end;
 
 constructor TglrText.Create(const aTextMaxLength: Word);
 begin
   inherited Create();
+  Log.Write(lCritical, 'Text.Create is not implemented');
 end;
 
 destructor TglrText.Destroy;
 begin
+  Log.Write(lCritical, 'Text.Destroy is not implemented');
   inherited Destroy;
 end;
 
 { TglrFont }
 
+constructor TglrFont.Create;
+begin
+  inherited Create();
+  if not Default.fInited then
+    Log.Write(lCritical, 'Font: Can not create default font - default assets are disabled');
+  Create(FileSystem.ReadResource('default assets/default.fnt'));
+end;
+
 constructor TglrFont.Create(aStream: TglrStream; aFreeStreamOnFinish: Boolean);
 begin
   inherited Create();
+  vb := TglrVertexBuffer.Create(nil, TEXT_VBUFFER_SIZE * VF_STRIDE[vfPos3Tex2], vfPos3Tex2);
+  ib := TglrIndexBuffer.Create(nil, TEXT_IBUFFER_SIZE * IF_STRIDE[ifShort], ifShort);
+
   Log.Write(lCritical, 'TglrFont.Create is not implemented');
+
+  if aFreeStreamOnFinish then
+    aStream.Free();
 end;
 
 destructor TglrFont.Destroy;
 begin
+  vb.Free();
+  ib.Free();
   Log.Write(lCritical, 'TglrFont.Destroy is not implemented');
   inherited Destroy;
 end;
@@ -853,7 +938,6 @@ begin
     fWidth := aWidth;
     SetDefaultVertices();
     UpdateBuffers();
-//    Log.Write(lError, 'Sprite.SetWidth is not implemented');
   end;
 end;
 
@@ -864,7 +948,6 @@ begin
     fHeight := aHeight;
     SetDefaultVertices();
     UpdateBuffers();
-//    Log.Write(lError, 'Sprite.SetHeight is not implemented');
   end;
 end;
 
@@ -875,7 +958,6 @@ begin
     fPP := aPP;
     SetDefaultVertices();
     UpdateBuffers();
-//    Log.Write(lError, 'Sprite.SetPP is not implemented');
   end;
 end;
 
@@ -885,13 +967,12 @@ begin
   Material.Bind();
   Render.DrawTriangles(VB, IB, fIBOffset, 6);
   Material.Unbind();
-//  Log.Write(lError, 'Sprite.DoRender is not implemented');
 end;
 
 class procedure TglrSprite.Init;
 begin
-  VB := TglrVertexBuffer.Create(nil, SPRITE_VBUFFER_SIZE, vfPos3Tex2);
-  IB := TglrIndexBuffer.Create(nil, SPRITE_IBUFFER_SIZE, ifShort);
+  VB := TglrVertexBuffer.Create(nil, SPRITE_VBUFFER_SIZE * VF_STRIDE[vfPos3Tex2], vfPos3Tex2);
+  IB := TglrIndexBuffer.Create(nil, SPRITE_IBUFFER_SIZE * IF_STRIDE[ifShort], ifShort);
   VBLastOffset := 0;
   IBLastOffset := 0;
   Unused := TglrWordList.Create(64);
@@ -907,7 +988,6 @@ end;
 class procedure TglrSprite.FreeBufferData(aVBOffset, aIBOffset: Word);
 begin
   Unused.Add(aVBOffset div 4);
-  //Log.Write(lInformation, 'Sprite: Buffer data free. Unused memory chunks: ' + Convert.ToString(Unused.Count));
 end;
 
 class procedure TglrSprite.GetBufferData(out vVBOffset, vIBOffset: Word);
@@ -931,9 +1011,7 @@ end;
 
 constructor TglrSprite.Create;
 begin
-  inherited Create;
   Create(1, 1, dfVec2f(0.5, 0.5));
-//  Log.Write(lError, 'Sprite.Create is not implemented');
 end;
 
 constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
@@ -967,14 +1045,12 @@ end;
 destructor TglrSprite.Destroy;
 begin
   FreeBufferData(fVBOffset, fIBOffset);
-  //Log.Write(lError, 'Sprite.Destroy is not implemented');
   inherited Destroy;
 end;
 
 procedure TglrSprite.UpdateBuffers;
 begin
   VB.Update(@Vertices[0], fVBOffset * VF_STRIDE[vfPos3Tex2], 4 * VF_STRIDE[vfPos3Tex2]);
-  //Log.Write(lError, 'Sprite.UpdateVertices is not implemented');
 end;
 
 procedure TglrSprite.SetDefaultVertices;
@@ -1844,7 +1920,6 @@ begin
         begin
           //load pack file from fPackData (memory)
           Result := TglrStream.Init(fPackFiles[i].fPackDataPointer + fPackFiles[i].fFiles[f].fStride, fPackFiles[i].fFiles[f].fSize);
-          //Log.Write(lError, 'FileSystem.ReadResource from pack file memory is not implemented');
         end;
         Log.Write(lInformation, 'FileSystem: read successfully');
         Exit();
