@@ -256,7 +256,8 @@ begin
   Material := TglrMaterial.Create();
   Material.Shader.Free();
   Material.Shader := Default.SpriteShader;
-  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
+  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial_10b.bmp'), 'bmp'), 'uDiffuse');
+//  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
   Material.Color := dfVec4f(0.7, 0.2, 0.1, 1);
 
   PrepareMesh();
