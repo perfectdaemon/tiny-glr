@@ -139,10 +139,10 @@ begin
   GenInit('Arial', 10, True, False);
   AddChars('0123456789');
   AddChars(' !@#$%^&*()_+|{}:"<>?-=\[];'',./~`');
-  AddChars('abcdefghijklmnopqrstuvwxyz');
-  AddChars('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-  AddChars('абвгдеёжзийклмнопрстуфхцчшщъыьэюя');
-  AddChars('АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ');
+  AddChars(UTF8Decode('abcdefghijklmnopqrstuvwxyz'));
+  AddChars(UTF8Decode('ABCDEFGHIJKLMNOPQRSTUVWXYZ'));
+  AddChars(UTF8Decode('абвгдеёжзийклмнопрстуфхцчшщъыьэюя'));
+  AddChars(UTF8Decode('АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'));
   PackChars;
   FontSaveBmp('Arial_10b');
 end;
