@@ -34,12 +34,12 @@ type
   private
     FNT : HFONT;
     MDC : HDC;
-    BMP : HBITMAP;
-    BI  : TBitmapInfo;
     CharData : PByteArray;
     MaxWidth, MaxHeight : LongInt;
     TexWidth, TexHeight: LongInt;
   public
+    BMP : HBITMAP;
+    BI  : TBitmapInfo;
     TexData  : PByteArray;
     FontChar : array of TFontChar;
     FontData : array [WideChar] of TFontChar;
@@ -51,8 +51,9 @@ type
     procedure AddChars(str: WideString);
     procedure ClearChars;
     function PackChars: LongInt;
-    procedure FontSave(const FileName: string);
-    procedure FontSaveBmp(const FileName: AnsiString);
+    procedure Save(const FileName: string);
+    procedure SaveBmp(const FileName: AnsiString);
+    procedure Draw(dest: HDC);
   end;
 
 implementation
@@ -136,15 +137,15 @@ end;
 constructor TFontDisplay.Create;
 begin
   inherited Create();
-  GenInit('Arial', 10, True, False);
-  AddChars('0123456789');
-  AddChars(' !@#$%^&*()_+|{}:"<>?-=\[];'',./~`');
-  AddChars(UTF8Decode('abcdefghijklmnopqrstuvwxyz'));
-  AddChars(UTF8Decode('ABCDEFGHIJKLMNOPQRSTUVWXYZ'));
-  AddChars(UTF8Decode('абвгдеёжзийклмнопрстуфхцчшщъыьэюя'));
-  AddChars(UTF8Decode('АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'));
-  PackChars;
-  FontSaveBmp('Arial_10b');
+  //GenInit('Arial', 10, True, False);
+  //AddChars('0123456789');
+  //AddChars(' !@#$%^&*()_+|{}:"<>?-=\[];'',./~`');
+  //AddChars(UTF8Decode('abcdefghijklmnopqrstuvwxyz'));
+  //AddChars(UTF8Decode('ABCDEFGHIJKLMNOPQRSTUVWXYZ'));
+  //AddChars(UTF8Decode('абвгдеёжзийклмнопрстуфхцчшщъыьэюя'));
+  //AddChars(UTF8Decode('АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'));
+  //PackChars;
+  //SaveBmp('Arial_10b');
 end;
 
 destructor TFontDisplay.Destroy;
@@ -414,7 +415,7 @@ begin
     Writeln('Can''t pack ', Result, ' chars');
 end;
 
-procedure TFontDisplay.FontSave(const FileName: string);
+procedure TFontDisplay.Save(const FileName: string);
 const
   DDSD_CAPS        = $0001;
   DDSD_HEIGHT      = $0002;
@@ -507,7 +508,7 @@ begin
   end;
 end;
 
-procedure TFontDisplay.FontSaveBmp(const FileName: AnsiString);
+procedure TFontDisplay.SaveBmp(const FileName: AnsiString);
 
 type
   BITMAPFILEHEADER = packed record
@@ -561,6 +562,11 @@ begin
   Stream.Write(texdata2^, TexWidth * TexHeight * 4);
 
   Stream.Free();
+end;
+
+procedure TFontDisplay.Draw(dest: HDC);
+begin
+  BitBlt(dest, 0, 0, TexWidth, TexHeight, GetDC(BMP), 0, 0, SRCCOPY);
 end;
 
 {$ENDREGION}
