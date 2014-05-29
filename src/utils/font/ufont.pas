@@ -53,7 +53,6 @@ type
     function PackChars: LongInt;
     procedure Save(const FileName: string);
     procedure SaveBmp(const FileName: AnsiString);
-    procedure Draw(dest: HDC);
   end;
 
 implementation
@@ -204,7 +203,10 @@ end;
 procedure TFontDisplay.GenFree;
 begin
   if TexData <> nil then
+  begin
     FreeMemory(TexData);
+    TexData := nil;;
+  end;
   FreeMemory(CharData);
   DeleteObject(BMP);
   DeleteObject(FNT);
@@ -337,10 +339,10 @@ var
 begin
   for i := 0 to Length(FontChar) - 1 do
   begin
-    FontChar[i].Free;
     FreeMemory(FontChar[i].Data);
+    FontChar[i].Free;
   end;
-  FontChar := nil;
+  SetLength(FontChar, 0);
 end;
 
 function TFontDisplay.PackChars: LongInt;
@@ -548,25 +550,21 @@ begin
   fh.bfReserved1 := $0F86;
   ih.biSize := SizeOf(BITMAPINFOHEADER);
   ih.biWidth := TexWidth;
-  ih.biHeight := TexHeight;
+  ih.biHeight := -TexHeight;
   ih.biPlanes := 1;
   ih.biBitCount := 32;
 
   Stream.Write(fh, SizeOf(BITMAPFILEHEADER));
   Stream.Write(ih, SizeOf(BITMAPINFOHEADER));
 
-  GetMemory(texdata2, TexWidth * TexHeight * 4);
+  texdata2 := GetMemory(TexWidth * TexHeight * 4);
   FillChar(texdata2^, TexWidth * TexHeight * 4, 255);
   for i := 0 to (TexWidth * TexHeight - 1) do
     texdata2^[i * 4 + 3] := TexData^[i * 2 + 1];
   Stream.Write(texdata2^, TexWidth * TexHeight * 4);
+  FreeMemory(texdata2);
 
   Stream.Free();
-end;
-
-procedure TFontDisplay.Draw(dest: HDC);
-begin
-  BitBlt(dest, 0, 0, TexWidth, TexHeight, GetDC(BMP), 0, 0, SRCCOPY);
 end;
 
 {$ENDREGION}

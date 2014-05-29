@@ -18,7 +18,6 @@ type
     bLoadFont: TButton;
     bChooseFilePath: TButton;
     bGenerate: TButton;
-    bSave: TButton;
     cbBold: TCheckBox;
     cbItalic: TCheckBox;
     editFontName: TEdit;
@@ -32,7 +31,7 @@ type
     Panel1: TPanel;
     procedure bChooseFontClick(Sender: TObject);
     procedure bGenerateClick(Sender: TObject);
-    procedure bSaveClick(Sender: TObject);
+    procedure editFontNameChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
@@ -66,24 +65,47 @@ begin
 end;
 
 procedure TForm1.bGenerateClick(Sender: TObject);
+var
+  g: Graphics.TBitmap;
 begin
   FontDisplay.GenFree();
+  FontDisplay.ClearChars();
   FontDisplay.GenInit(editFontName.Text, editSize.Value, cbBold.Checked, cbItalic.Checked);
   FontDisplay.AddChars(UTF8Decode(mSymbols.Lines.Text));
   FontDisplay.PackChars();
   //todo: draw bitmap to panel
-  FontDisplay.Draw(GetDC(Panel1.Handle));
+  g := Graphics.TBitmap.Create();
+  FontDisplay.SaveBmp(editFilePath.Text);
+  g.LoadFromFile(editFilePath.Text + '.bmp');
+  Panel1.Canvas.Brush.Color := clBlack;
+  Panel1.Canvas.FillRect(0, 0, Panel1.Width, Panel1.Height);
+  Panel1.Canvas.Draw(0, 0, g);
+  g.Free();
 end;
 
-procedure TForm1.bSaveClick(Sender: TObject);
+procedure TForm1.editFontNameChange(Sender: TObject);
+var
+  name, path: String;
 begin
-  FontDisplay.SaveBmp(editFilePath.Text);
+  name := ExtractFileName(editFilePath.Text);
+  path := ExtractFilePath(editFilePath.Text);
+
+  name := editFontName.Text + IntToStr(editSize.Value);
+  if (cbBold.Checked) then
+    name += 'b';
+  if (cbItalic.Checked) then
+    name += 'i';
+  editFilePath.Text := path + name;
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   FontDisplay := TFontDisplay.Create();
-  editFilePath.Text := ExtractFileDir(ParamStr(0));
+  editFilePath.Text := ExtractFileDir(ParamStr(0)) + '\';
+  editFontName.Text := 'Arial';
+  cbBold.Checked := True;
+  cbItalic.Checked := False;
+  editSize.Value := 12;
 end;
 
 procedure TForm1.FormDestroy(Sender: TObject);

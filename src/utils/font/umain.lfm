@@ -73,6 +73,7 @@ object Form1: TForm1
       Top = 32
       Width = 44
       Caption = 'Bold'
+      OnChange = editFontNameChange
       TabOrder = 0
     end
     object cbItalic: TCheckBox
@@ -81,6 +82,7 @@ object Form1: TForm1
       Top = 56
       Width = 45
       Caption = 'Italic'
+      OnChange = editFontNameChange
       TabOrder = 1
     end
     object editSize: TSpinEdit
@@ -88,6 +90,7 @@ object Form1: TForm1
       Height = 23
       Top = 52
       Width = 82
+      OnChange = editFontNameChange
       TabOrder = 2
       Value = 12
     end
@@ -104,50 +107,41 @@ object Form1: TForm1
       Height = 23
       Top = 8
       Width = 154
+      OnChange = editFontNameChange
       TabOrder = 3
     end
   end
   object bChooseFilePath: TButton
     Left = 439
     Height = 25
-    Top = 208
+    Top = 206
     Width = 40
     Caption = '...'
     TabOrder = 3
   end
   object editFilePath: TEdit
-    Left = 8
+    Left = 192
     Height = 23
     Top = 208
-    Width = 424
+    Width = 240
     TabOrder = 4
   end
   object bGenerate: TButton
     Left = 8
-    Height = 41
-    Top = 240
-    Width = 107
+    Height = 32
+    Top = 200
+    Width = 176
     Caption = 'Generate!'
     OnClick = bGenerateClick
     TabOrder = 5
   end
-  object bSave: TButton
-    Left = 8
-    Height = 41
-    Top = 424
-    Width = 107
-    Caption = 'Save!'
-    OnClick = bSaveClick
-    TabOrder = 6
-  end
   object Panel1: TPanel
-    Left = 120
+    Left = 8
     Height = 226
-    Top = 239
-    Width = 359
+    Top = 240
+    Width = 471
     BevelInner = bvLowered
-    FullRepaint = False
-    TabOrder = 7
+    TabOrder = 6
   end
   object FontDialog: TFontDialog
     MinFontSize = 0
