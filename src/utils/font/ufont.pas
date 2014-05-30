@@ -1,3 +1,7 @@
+{
+  Based on XProger' corexgine tool for font generation
+}
+
 unit uFont;
 
 {$mode delphi}
@@ -6,6 +10,7 @@ interface
 
 uses
   windows,
+  classes,
   sysutils;
 
 type
@@ -26,20 +31,20 @@ type
     function Insert(Width, Height: LongInt; out X, Y: LongInt): Boolean;
   end;
 
-  { TFontDisplay }
+  { TFontGenerator }
 
-  TFontDisplay = class
+  TFontGenerator = class
     constructor Create; virtual;
     destructor Destroy; override;
   private
     FNT : HFONT;
     MDC : HDC;
-    CharData : PByteArray;
-    MaxWidth, MaxHeight : LongInt;
-    TexWidth, TexHeight: LongInt;
-  public
     BMP : HBITMAP;
     BI  : TBitmapInfo;
+    CharData : PByteArray;
+    MaxWidth, MaxHeight : LongInt;
+  public
+    TexWidth, TexHeight: LongInt;
     TexData  : PByteArray;
     FontChar : array of TFontChar;
     FontData : array [WideChar] of TFontChar;
@@ -51,8 +56,9 @@ type
     procedure AddChars(str: WideString);
     procedure ClearChars;
     function PackChars: LongInt;
-    procedure Save(const FileName: string);
-    procedure SaveBmp(const FileName: AnsiString);
+//    procedure Save(const FileName: string);
+    procedure SaveBmpToFile(const FileName: AnsiString);
+    function SaveBmpToStream(): TStream;
   end;
 
 implementation
@@ -133,7 +139,7 @@ end;
 {$ENDREGION}
 
 {$REGION 'TFontDisplay'}
-constructor TFontDisplay.Create;
+constructor TFontGenerator.Create;
 begin
   inherited Create();
   //GenInit('Arial', 10, True, False);
@@ -144,17 +150,17 @@ begin
   //AddChars(UTF8Decode('абвгдеёжзийклмнопрстуфхцчшщъыьэюя'));
   //AddChars(UTF8Decode('АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'));
   //PackChars;
-  //SaveBmp('Arial_10b');
+  //SaveBmpToFile('Arial_10b');
 end;
 
-destructor TFontDisplay.Destroy;
+destructor TFontGenerator.Destroy;
 begin
   GenFree;
   ClearChars;
   inherited;
 end;
 
-procedure TFontDisplay.GenInit(const Face: WideString; Size: LongInt; Bold, Italic: Boolean);
+procedure TFontGenerator.GenInit(const Face: WideString; Size: LongInt; Bold, Italic: Boolean);
 var
   Weight : LongInt;
   DC : LongWord;
@@ -200,7 +206,7 @@ begin
   ReleaseDC(0, DC);
 end;
 
-procedure TFontDisplay.GenFree;
+procedure TFontGenerator.GenFree;
 begin
   if TexData <> nil then
   begin
@@ -213,7 +219,7 @@ begin
   DeleteDC(MDC);
 end;
 
-function TFontDisplay.GenChar(c: WideChar): TFontChar;
+function TFontGenerator.GenChar(c: WideChar): TFontChar;
 
   function ScanLine(Offset: LongInt; Vert: Boolean): Boolean;
   var
@@ -304,7 +310,7 @@ begin
     end;
 end;
 
-procedure TFontDisplay.AddChar(c: WideChar);
+procedure TFontGenerator.AddChar(c: WideChar);
 var
   f : TFontChar;
   i, j : LongInt;
@@ -325,7 +331,7 @@ begin
   FontData[f.ID] := f;
 end;
 
-procedure TFontDisplay.AddChars(str: WideString);
+procedure TFontGenerator.AddChars(str: WideString);
 var
   i : LongInt;
 begin
@@ -333,7 +339,7 @@ begin
     AddChar(str[i]);
 end;
 
-procedure TFontDisplay.ClearChars;
+procedure TFontGenerator.ClearChars;
 var
   i : LongInt;
 begin
@@ -345,7 +351,7 @@ begin
   SetLength(FontChar, 0);
 end;
 
-function TFontDisplay.PackChars: LongInt;
+function TFontGenerator.PackChars: LongInt;
 var
   i, j : LongInt;
   Node : TFontNode;
@@ -416,8 +422,8 @@ begin
   if Result > 0 then
     Writeln('Can''t pack ', Result, ' chars');
 end;
-
-procedure TFontDisplay.Save(const FileName: string);
+(*
+procedure TFontGenerator.Save(const FileName: string);
 const
   DDSD_CAPS        = $0001;
   DDSD_HEIGHT      = $0002;
@@ -509,38 +515,21 @@ begin
     Stream.Free;
   end;
 end;
-
-procedure TFontDisplay.SaveBmp(const FileName: AnsiString);
-
-type
-  BITMAPFILEHEADER = packed record
-    bfType : Word;
-    bfSize : LongWord;
-    bfReserved1 : Word;
-    bfReserved2 : Word;
-    bfOffBits : LongWord;
-  end;
-
-  BITMAPINFOHEADER = record
-    biSize : LongWord;
-    biWidth : LongInt;
-    biHeight : LongInt;
-    biPlanes : Word;
-    biBitCount : Word;
-    biCompression : LongWord;
-    biSizeImage : LongWord;
-    biXPelsPerMeter : LongInt;
-    biYPelsPerMeter : LongInt;
-    biClrUsed : LongWord;
-    biClrImportant : LongWord;
-  end;
-
+*)
+procedure TFontGenerator.SaveBmpToFile(const FileName: AnsiString);
 var
   Stream: TglrStream;
   fh: BITMAPFILEHEADER;
   ih: BITMAPINFOHEADER;
   texdata2: PByteArray;
-  i: Integer;
+  i: LongInt;
+
+  FileChar : record
+    ID   : WideChar;
+    py   : Word;
+    w, h : Word;
+    tx, ty, tw, th : Single;
+  end;
 begin
   Stream := TglrStream.Init(FileName + '.bmp', True);
   FillChar(fh, SizeOf(BITMAPFILEHEADER), 0);
@@ -564,7 +553,59 @@ begin
   Stream.Write(texdata2^, TexWidth * TexHeight * 4);
   FreeMemory(texdata2);
 
+  i := Length(FontChar);
+  Stream.Write(i, SizeOf(i));
+  for i := 0 to Length(FontChar) - 1 do
+  begin
+    with FontChar[i], FileChar do
+    begin
+      py := OffsetY;
+      tx := PosX / TexWidth;
+      ty := PosY / TexHeight;
+      tw := Width / TexWidth;
+      th := Height / TexHeight;
+      w  := Width;
+      h  := Height;
+    end;
+    FileChar.ID := FontChar[i].ID;
+    Stream.Write(FileChar, SizeOf(FileChar));
+  end;
+
   Stream.Free();
+end;
+
+function TFontGenerator.SaveBmpToStream: TStream;
+var
+  fh: BITMAPFILEHEADER;
+  ih: BITMAPINFOHEADER;
+  texdata2: PByteArray;
+  i: Integer;
+  size: LongInt;
+begin
+  Result := TMemoryStream.Create();
+  size := SizeOf(BITMAPFILEHEADER) + SizeOf(BITMAPINFOHEADER) + TexWidth * TexHeight * 4;
+  (Result as TMemoryStream).SetSize(size);
+  FillChar(fh, SizeOf(BITMAPFILEHEADER), 0);
+  FillChar(ih, SizeOf(BITMAPINFOHEADER), 0);
+
+  fh.bfType := $4D42;
+  fh.bfReserved1 := $0F86;
+  ih.biSize := SizeOf(BITMAPINFOHEADER);
+  ih.biWidth := TexWidth;
+  ih.biHeight := -TexHeight;
+  ih.biPlanes := 1;
+  ih.biBitCount := 32;
+  ih.biSizeImage := TexWidth * TexHeight * 4;
+
+  Result.Write(fh, SizeOf(BITMAPFILEHEADER));
+  Result.Write(ih, SizeOf(BITMAPINFOHEADER));
+
+  texdata2 := GetMemory(TexWidth * TexHeight * 4);
+  FillChar(texdata2^, TexWidth * TexHeight * 4, 255);
+  for i := 0 to (TexWidth * TexHeight - 1) do
+    texdata2^[i * 4 + 3] := TexData^[i * 2 + 1];
+  Result.Write(texdata2^, TexWidth * TexHeight * 4);
+  FreeMemory(texdata2);
 end;
 
 {$ENDREGION}

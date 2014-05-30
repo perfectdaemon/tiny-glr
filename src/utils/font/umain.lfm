@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 252
+  Left = 373
   Height = 474
-  Top = 120
+  Top = 188
   Width = 488
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
@@ -23,7 +23,7 @@ object Form1: TForm1
     Font.Quality = fqDraft
     Lines.Strings = (
       '0123456789'
-      ' !@#$%^&*()_+|{}:"<>?-=\[];'',./~`'
+      ' !@#$%^&*()_+|{}:"<>?-=\[];'',./~`«–»—'
       'abcdefghijklmnopqrstuvwxyz'
       'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
       'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'
@@ -90,6 +90,8 @@ object Form1: TForm1
       Height = 23
       Top = 52
       Width = 82
+      MaxValue = 72
+      MinValue = 4
       OnChange = editFontNameChange
       TabOrder = 2
       Value = 12
@@ -130,18 +132,50 @@ object Form1: TForm1
     Left = 8
     Height = 32
     Top = 200
-    Width = 176
-    Caption = 'Generate!'
+    Width = 80
+    Caption = 'Generate'
     OnClick = bGenerateClick
     TabOrder = 5
   end
   object Panel1: TPanel
     Left = 8
-    Height = 226
-    Top = 240
+    Height = 210
+    Top = 256
     Width = 471
     BevelInner = bvLowered
     TabOrder = 6
+  end
+  object Label1: TLabel
+    Left = 8
+    Height = 15
+    Top = 238
+    Width = 41
+    Caption = 'Preview'
+    ParentColor = False
+  end
+  object labelSize: TLabel
+    Left = 128
+    Height = 16
+    Top = 238
+    Width = 36
+    Caption = 'Size: '
+    Font.CharSet = RUSSIAN_CHARSET
+    Font.Height = -13
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
+    ParentColor = False
+    ParentFont = False
+  end
+  object bSave: TButton
+    Left = 104
+    Height = 32
+    Top = 200
+    Width = 80
+    Caption = 'Save'
+    OnClick = bSaveClick
+    TabOrder = 7
   end
   object FontDialog: TFontDialog
     MinFontSize = 0

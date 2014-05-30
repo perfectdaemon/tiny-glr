@@ -18,6 +18,7 @@ type
     bLoadFont: TButton;
     bChooseFilePath: TButton;
     bGenerate: TButton;
+    bSave: TButton;
     cbBold: TCheckBox;
     cbItalic: TCheckBox;
     editFontName: TEdit;
@@ -26,19 +27,19 @@ type
     FontDialog: TFontDialog;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
+    Label1: TLabel;
     Label2: TLabel;
+    labelSize: TLabel;
     mSymbols: TMemo;
     Panel1: TPanel;
     procedure bChooseFontClick(Sender: TObject);
     procedure bGenerateClick(Sender: TObject);
+    procedure bSaveClick(Sender: TObject);
     procedure editFontNameChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
-    FontDisplay: TFontDisplay;
-    { private declarations }
-  public
-    { public declarations }
+    FontGen: TFontGenerator;
   end;
 
 var
@@ -67,20 +68,35 @@ end;
 procedure TForm1.bGenerateClick(Sender: TObject);
 var
   g: Graphics.TBitmap;
+  s: TStream;
 begin
-  FontDisplay.GenFree();
-  FontDisplay.ClearChars();
-  FontDisplay.GenInit(editFontName.Text, editSize.Value, cbBold.Checked, cbItalic.Checked);
-  FontDisplay.AddChars(UTF8Decode(mSymbols.Lines.Text));
-  FontDisplay.PackChars();
-  //todo: draw bitmap to panel
+  if (Trim(editFontName.Text) = '') then
+  begin
+    ShowMessage('Font name is empty');
+    Exit;
+  end;
+
+  FontGen.GenFree();
+  FontGen.ClearChars();
+  FontGen.GenInit(editFontName.Text, editSize.Value, cbBold.Checked, cbItalic.Checked);
+  FontGen.AddChars(UTF8Decode(mSymbols.Lines.Text));
+  FontGen.PackChars();
+  labelSize.Caption := 'Size: ' + IntToStr(FontGen.TexWidth) + 'x' + IntToStr(FontGen.TexHeight);
+
   g := Graphics.TBitmap.Create();
-  FontDisplay.SaveBmp(editFilePath.Text);
-  g.LoadFromFile(editFilePath.Text + '.bmp');
+  s := FontGen.SaveBmpToStream();
+  s.Position := 0;
+  g.LoadFromStream(s, s.Size);
   Panel1.Canvas.Brush.Color := clBlack;
-  Panel1.Canvas.FillRect(0, 0, Panel1.Width, Panel1.Height);
+  Panel1.Canvas.FillRect(0, 0, FontGen.TexWidth, FontGen.TexHeight);
   Panel1.Canvas.Draw(0, 0, g);
   g.Free();
+  s.Free();
+end;
+
+procedure TForm1.bSaveClick(Sender: TObject);
+begin
+  FontGen.SaveBmpToFile(editFilePath.Text);
 end;
 
 procedure TForm1.editFontNameChange(Sender: TObject);
@@ -100,7 +116,7 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  FontDisplay := TFontDisplay.Create();
+  FontGen := TFontGenerator.Create();
   editFilePath.Text := ExtractFileDir(ParamStr(0)) + '\';
   editFontName.Text := 'Arial';
   cbBold.Checked := True;
@@ -110,7 +126,7 @@ end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
-  FontDisplay.Free();
+  FontGen.Free();
 end;
 
 end.
