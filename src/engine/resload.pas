@@ -86,14 +86,12 @@ begin
   if InfoHeader.biClrUsed <> 0 then
   begin
     Log.Write(lError, 'BMP load: Color map is not supported');
-//    logWriteError('TexLoad: Ошибка загрузки BMP из потока. ColorMaps не поддерживаются');
     Exit(nil);
   end;
 
   Width := InfoHeader.biWidth;
   Height := InfoHeader.biHeight;
-  //Если высота отрицательная, то битмап читается сверху вниз
-  //flip не нужен
+  //Если высота отрицательная, то битмап перевернут
   absHeight := Abs(Height);
   BytesPP := InfoHeader.biBitCount div 8;
   case BytesPP of
@@ -318,7 +316,9 @@ begin
       pSize := 3;
     end;
     if Height > 0 then
-      flipSurface(Result, Width, Height, pSize);
+      flipSurface(Result, Width, Height, pSize)
+    else
+      Height := -Height;
   end
   else if ext = 'tga' then
   begin
