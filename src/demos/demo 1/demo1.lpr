@@ -140,7 +140,7 @@ begin
   SetLength(Sprites, count);
   for i := 0 to count - 1 do
   begin
-    Sprites[i] := TglrSprite.Create(35, 35, dfVec2f(0.5, 0.5));
+    Sprites[i] := TglrSprite.Create(100, 100, dfVec2f(0.5, 0.5));
     Sprites[i].Position := dfVec3f(50 + 50 * i, 50 +50 *i, 0);
     Sprites[i].Material := Material;
     SceneHud.Root.Childs.Add(Sprites[i]);
@@ -178,9 +178,6 @@ begin
 
   if (aType = itWheel) then
     Scene.Camera.Translate(0, 0, -Sign(aOtherParam));
-
-  if (aType = itKeyDown) and (aKey = kL) then
-    Log.Write(lInformation, Convert.ToString(Render.Params.ModelViewProj));
 end;
 
 procedure TGame.OnPause;
@@ -256,7 +253,7 @@ begin
   Material := TglrMaterial.Create();
   Material.Shader.Free();
   Material.Shader := Default.SpriteShader;
-  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial_10b.bmp'), 'bmp'), 'uDiffuse');
+  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial12b.bmp'), 'bmp'), 'uDiffuse');
 //  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
   Material.Color := dfVec4f(0.7, 0.2, 0.1, 1);
 
