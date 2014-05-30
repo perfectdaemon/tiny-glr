@@ -55,6 +55,7 @@ object Form1: TForm1
       Top = 30
       Width = 152
       Caption = 'Load font from file...'
+      OnClick = bLoadFontClick
       TabOrder = 1
     end
   end
@@ -181,6 +182,11 @@ object Form1: TForm1
     MinFontSize = 0
     MaxFontSize = 0
     left = 312
+    top = 168
+  end
+  object OpenDialog: TOpenDialog
+    Filter = 'Font files|*.ttf;*.otf|All files|*.*'
+    left = 344
     top = 168
   end
 end

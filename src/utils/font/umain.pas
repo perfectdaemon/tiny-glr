@@ -31,9 +31,11 @@ type
     Label2: TLabel;
     labelSize: TLabel;
     mSymbols: TMemo;
+    OpenDialog: TOpenDialog;
     Panel1: TPanel;
     procedure bChooseFontClick(Sender: TObject);
     procedure bGenerateClick(Sender: TObject);
+    procedure bLoadFontClick(Sender: TObject);
     procedure bSaveClick(Sender: TObject);
     procedure editFontNameChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -94,6 +96,25 @@ begin
   s.Free();
 end;
 
+function AddFontResourceEx(name: LPCSTR; fl: LongWord; pdv: Pointer): longint; stdcall; external 'gdi32' name 'AddFontResourceExA';
+
+procedure TForm1.bLoadFontClick(Sender: TObject);
+var
+  p: PChar;
+begin
+  if (OpenDialog.Execute) then
+  begin
+    p := PChar(AnsiString(OpenDialog.FileName));
+    if (AddFontResourceEx(p, 16, nil) = 0) then
+      ShowMessage('Font loading failed!')
+    else
+    begin
+      ShowMessage('Font loading successful. Do not forget to specify font name. Generator can''t do it automatically');
+      editFontName.Text := '';
+    end;
+  end;
+end;
+
 procedure TForm1.bSaveClick(Sender: TObject);
 begin
   FontGen.SaveBmpToFile(editFilePath.Text);
@@ -122,6 +143,7 @@ begin
   cbBold.Checked := True;
   cbItalic.Checked := False;
   editSize.Value := 12;
+  OpenDialog.InitialDir := ExtractFileDir(ParamStr(0)) + '\';
 end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
