@@ -109,8 +109,8 @@ begin
       ShowMessage('Font loading failed!')
     else
     begin
-      ShowMessage('Font loading successful. Do not forget to specify font name. Generator can''t do it automatically');
-      editFontName.Text := '';
+      editFontName.Text := ExtractFileNameOnly(OpenDialog.FileName);
+      ShowMessage('Font loading successful. Do not forget to edit font name. Generator specify file name as font name');
     end;
   end;
 end;
