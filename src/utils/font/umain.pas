@@ -71,9 +71,10 @@ procedure TForm1.bGenerateClick(Sender: TObject);
 var
   g: Graphics.TBitmap;
   s: TStream;
-  p_in, p_out: Pointer;
+(*  p_in, p_out: Pointer;
   size: LongInt;
   f: File;
+*)
 begin
   if (Trim(editFontName.Text) = '') then
   begin
@@ -95,38 +96,21 @@ begin
   Panel1.Canvas.FillRect(0, 0, FontGen.TexWidth, FontGen.TexHeight);
   Panel1.Canvas.Draw(0, 0, g);
 
-  //shit for compress/decompress
+(*
+  //compress
   GetMem(p_in, s.Size);
-  GetMem(p_out, s.Size);
   s.Position := 0;
   s.Read(p_in^, s.Size);
   CompressData(p_in, s.Size, p_out, size);
+
   AssignFile(f, editFilePath.Text + '.fnt');
   Rewrite(f, 1);
   BlockWrite(f, p_out^, size);
   CloseFile(f);
 
   FreeMem(p_in);
-//  FreeMem(p_out);
-  GetMem(p_in, size * 10);
-//  GetMem(p_in, size);
-//  GetMem(p_out, size * 10);
-
-//  AssignFile(f, editFilePath.Text + '.fnt');
-//  Reset(f);
-//  BlockRead(f, p_in^, size);
-//  CloseFile(f);
-
-  DecompressData(p_out, size, p_in, size);
-
-  AssignFile(f,editFilePath.Text + '1.bmp');
-  Rewrite(f, 1);
-  BlockWrite(f, p_out^, size);
-  CloseFile(f);
-
-  FreeMem(p_in);
   FreeMem(p_out);
-  //end of shit
+*)
 
   g.Free();
   s.Free();
@@ -152,8 +136,34 @@ begin
 end;
 
 procedure TForm1.bSaveClick(Sender: TObject);
+(*
+var
+  f: File;
+  p_in, p_out: Pointer;
+  size: LongInt;  *)
 begin
   FontGen.SaveBmpToFile(editFilePath.Text);
+
+(*
+  //decompress and save
+  AssignFile(f, editFilePath.Text + '.fnt');
+  Reset(f, 1);
+  size := FileSize(editFilePath.Text + '.fnt');
+  GetMem(p_in, size);
+  GetMem(p_out, size * 100);
+  BlockRead(f, p_in^, size);
+  CloseFile(f);
+
+  DecompressData(p_in, size, p_out, size);
+
+  AssignFile(f, editFilePath.Text + '1.bmp');
+  Rewrite(f, 1);
+  BlockWrite(f, p_out^, size);
+  CloseFile(f);
+
+  FreeMem(p_in);
+  FreeMem(p_out);
+*)
 end;
 
 procedure TForm1.editFontNameChange(Sender: TObject);
