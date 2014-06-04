@@ -522,7 +522,7 @@ var
   fh: BITMAPFILEHEADER;
   ih: BITMAPINFOHEADER;
   texdata2: PByteArray;
-  i: LongInt;
+  i: LongWord;
 
   FileChar : record
     ID   : WideChar;

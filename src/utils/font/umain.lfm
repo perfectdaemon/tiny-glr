@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 373
+  Left = 521
   Height = 474
-  Top = 188
+  Top = 128
   Width = 488
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
