@@ -252,23 +252,40 @@ type
   TglrBufferData = record
     V: TglrVertexBufferId;
     I: TglrIndexBufferId;
-    vOffset, iOffset, vCount, iCount: Integer;
+    vOffset, iOffset, vCount, iCount: LongWord;
   end;
 
   { TglrVIBuffersProvider }
 
   TglrVIBuffersProvider = class
   protected
-    vb: array of TglrVertexBuffer;
-    ib: array of TglrIndexBuffer;
+    type
+      TChunk = record
+        vOffset, iOffset, vCount, iCount: LongWord;
+      end;
+
+      PChunk = ^TChunk;
+
+      TChunkList = TglrList<PChunk>;
+
+      TData = record
+        vb: TglrVertexBuffer;
+        ib: TglrIndexBuffer;
+        vbLast, ibLast: LongWord;
+        unused: TChunkList;
+      end;
+    var
+      data: array of TData;
+      iMax, vMax: LongWord;
     procedure Expand();
   public
     constructor Create(); virtual; overload;
     constructor Create(const aInitialBuffersCount: Integer;
-      aVertexFormat: TglrVertexFormat; aIndexFormat: TglrIndexFormat); virtual; overload;
+      aVertexFormat: TglrVertexFormat; aIndexFormat: TglrIndexFormat;
+      aVCount, aICount: LongWord); virtual; overload;
     destructor Destroy(); override;
 
-    function GetBufferData(): TglrBufferData;
+    function GetBufferData(const aICount, aVCount: LongWord): TglrBufferData;
     procedure FreeBufferData(const aData: TglrBufferData);
   end;
 
@@ -722,9 +739,24 @@ type
 
   TglrFont = class
   protected
-    vb: TglrVertexBuffer;
-    ib: TglrIndexBuffer;
-    Material: TglrMaterial;
+    type
+      TglrCharData = record
+        ID: WideChar;
+        py: Word;
+        w, h: Word;
+        tx, ty, tw, th: Single;
+      end;
+      PglrCharData = ^TglrCharData;
+
+    var
+      vb: TglrVertexBuffer;
+      ib: TglrIndexBuffer;
+      Material: TglrMaterial;
+      Table: array [WideChar] of PglrCharData;
+      CharData: array of TglrCharData;
+
+    procedure GetBufferData(out vVBOffset, vIBOffset: Word);
+    procedure FreeBufferData(aVBOffset, aIBOffset: Word);
   public
     constructor Create(); virtual; overload;
     constructor Create(aStream: TglrStream;
@@ -748,10 +780,11 @@ type
     procedure DoRender(); override;
   public
     Font: TglrFont;
-    Text: AnsiString;
+    Text: WideString;
     LetterSpacing, LineSpacing: Single;
 
-    constructor Create(const aTextMaxLength: Word = 256); virtual;
+    constructor Create(aFont: TglrFont; const aTextMaxLength: Word = 256); virtual; overload;
+    constructor Create(aFont: TglrFont; const aText: WideString); virtual; overload;
     destructor Destroy(); override;
 
     property TextWidth: Single read fTextWidth write SetTextWidth;
@@ -793,6 +826,8 @@ const
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3));
   IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
     (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
+  IF_MAX: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of LongWord =
+    (255, 65536, 4294967295);
   IF_FORMAT: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of TGLConst =
   (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INT);
 
@@ -811,23 +846,47 @@ end;
 
 constructor TglrVIBuffersProvider.Create;
 begin
-  Create(4, vfPos3Tex2, ifShort);
+  Create(4, vfPos3Tex2, ifShort, 65536, 65536);
 end;
 
 constructor TglrVIBuffersProvider.Create(const aInitialBuffersCount: Integer;
-  aVertexFormat: TglrVertexFormat; aIndexFormat: TglrIndexFormat);
+  aVertexFormat: TglrVertexFormat; aIndexFormat: TglrIndexFormat; aVCount,
+  aICount: LongWord);
+var
+  i: Integer;
 begin
   inherited Create();
-  Log.Write(lCritical, 'VIBuffersProvider.Create is not implemented');
+  SetLength(data, aInitialBuffersCount);
+  for i := 0 to aInitialBuffersCount - 1 do
+    with data[i] do
+    begin
+      vb := TglrVertexBuffer.Create(nil, aVCount, aVertexFormat);
+      ib := TglrIndexBuffer.Create(nil, aICount, aIndexFormat);
+      unused := TChunkList.Create(64);
+      vbLast := 0;
+      ibLast := 0;
+    end;
+//  Log.Write(lCritical, 'VIBuffersProvider.Create is not implemented');
 end;
 
 destructor TglrVIBuffersProvider.Destroy;
+var
+  i, j: Integer;
 begin
-  Log.Write(lCritical, 'VIBuffersProvider.Destroy is not implemented');
+  for i := 0 to Length(data) - 1 do
+    with data[i] do
+    begin
+      vb.Free();
+      ib.Free();
+      for j := 0 to unused.Count - 1 do
+        FreeMem(unused[i]);
+      unused.Free(False);
+    end;
+//  Log.Write(lCritical, 'VIBuffersProvider.Destroy is not implemented');
   inherited Destroy;
 end;
 
-function TglrVIBuffersProvider.GetBufferData: TglrBufferData;
+function TglrVIBuffersProvider.GetBufferData(const aICount, aVCount: LongWord): TglrBufferData;
 begin
   Log.Write(lCritical, 'VIBuffersProvider.GetBufferData is not implemented');
 end;
@@ -872,10 +931,18 @@ begin
   Font.RenderText(Self);
 end;
 
-constructor TglrText.Create(const aTextMaxLength: Word);
+constructor TglrText.Create(aFont: TglrFont; const aTextMaxLength: Word);
 begin
   inherited Create();
-  Log.Write(lCritical, 'Text.Create is not implemented');
+  Font := aFont;
+  //todo: reserve data in font' vb and ib
+end;
+
+constructor TglrText.Create(aFont: TglrFont; const aText: WideString);
+begin
+  inherited Create();
+  Font := aFont;
+  //todo: set data in font' vb and ib
 end;
 
 destructor TglrText.Destroy;
@@ -886,6 +953,16 @@ end;
 
 { TglrFont }
 
+procedure TglrFont.GetBufferData(out vVBOffset, vIBOffset: Word);
+begin
+
+end;
+
+procedure TglrFont.FreeBufferData(aVBOffset, aIBOffset: Word);
+begin
+
+end;
+
 constructor TglrFont.Create;
 begin
   inherited Create();
@@ -895,12 +972,26 @@ begin
 end;
 
 constructor TglrFont.Create(aStream: TglrStream; aFreeStreamOnFinish: Boolean);
+var
+  data: Pointer;
+  charCount, i: LongWord;
 begin
   inherited Create();
   vb := TglrVertexBuffer.Create(nil, TEXT_VBUFFER_SIZE * VF_STRIDE[vfPos3Tex2], vfPos3Tex2);
   ib := TglrIndexBuffer.Create(nil, TEXT_IBUFFER_SIZE * IF_STRIDE[ifShort], ifShort);
 
-  Log.Write(lCritical, 'TglrFont.Create is not implemented');
+  Material := TglrMaterial.Create();
+  if Default.fInited then;
+    Material.Shader := Default.SpriteShader;
+  Material.AddTexture(TglrTexture.Create(aStream, 'bmp', False), 'uDiffuse');
+
+  data := LoadFontData(aStream, charCount);
+  SetLength(Self.CharData, charCount);
+  Move(data^, CharData[0], charCount * SizeOf(TglrCharData));
+  FreeMem(data);
+  for i := 0 to charCount - 1 do
+    Table[CharData[i].ID] := @CharData[i];
+  //Log.Write(lCritical, 'TglrFont.Create is not implemented');
 
   if aFreeStreamOnFinish then
     aStream.Free();
@@ -910,6 +1001,7 @@ destructor TglrFont.Destroy;
 begin
   vb.Free();
   ib.Free();
+  Material.Free();
   Log.Write(lCritical, 'TglrFont.Destroy is not implemented');
   inherited Destroy;
 end;
@@ -977,8 +1069,8 @@ end;
 
 class procedure TglrSprite.Init;
 begin
-  VB := TglrVertexBuffer.Create(nil, SPRITE_VBUFFER_SIZE * VF_STRIDE[vfPos3Tex2], vfPos3Tex2);
-  IB := TglrIndexBuffer.Create(nil, SPRITE_IBUFFER_SIZE * IF_STRIDE[ifShort], ifShort);
+  VB := TglrVertexBuffer.Create(nil, SPRITE_VBUFFER_SIZE, vfPos3Tex2);
+  IB := TglrIndexBuffer.Create(nil, SPRITE_IBUFFER_SIZE, ifShort);
   VBLastOffset := 0;
   IBLastOffset := 0;
   Unused := TglrWordList.Create(64);
@@ -1163,7 +1255,9 @@ begin
   for i := 0 to Length(Textures) - 1 do
     Textures[i].Texture.Free();
   SetLength(Textures, 0);
-  Shader.Free();
+  //Wow, such a hack...
+  if (Shader <> Default.SpriteShader) then
+    Shader.Free();
   inherited Destroy;
 end;
 
@@ -2788,7 +2882,7 @@ begin
   if FreeItems then
     for i := 0 to Count - 1 do
       TObject(FItems[i]).Free;
-  FItems := nil;
+  SetLength(FItems, 0);
   FCount := 0;
 end;
 

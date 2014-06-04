@@ -14,6 +14,8 @@ function LoadTexture(const Stream: TglrStream; ext: String;
   out pSize: Integer;
   out Width, Height: Integer): Pointer;
 
+function LoadFontData(const Stream: TglrStream; out CharCount: LongWord): Pointer;
+
 function LoadShader(const Stream: TglrStream): PAnsiChar;
 
 implementation
@@ -341,6 +343,25 @@ begin
   begin
     Log.Write(lError, '"' + ext + '" is not supported');
   end;
+end;
+
+function LoadFontData(const Stream: TglrStream; out CharCount: LongWord): Pointer;
+var
+  fh: BITMAPFILEHEADER;
+  ih: BITMAPINFOHEADER;
+begin
+  Stream.Pos := 0;
+  Stream.Read(fh, SizeOf(BITMAPFILEHEADER));
+  Stream.Read(ih, SizeOf(BITMAPINFOHEADER));
+  if (fh.bfReserved1 <> $0F86) then
+  begin
+    FreeMem(Result);
+    Log.Write(lCritical, 'Font load failed, invalid bmpf file');
+  end;
+  Stream.Pos := SizeOf(BITMAPFILEHEADER) + SizeOf(BITMAPINFOHEADER) + ih.biSizeImage;
+  Stream.Read(CharCount, SizeOf(LongWord));
+  GetMem(Result, Stream.Size - Stream.Pos);
+  Stream.Read(Result^, Stream.Size - Stream.Pos);
 end;
 
 function LoadShader(const Stream: TglrStream): PAnsiChar;
