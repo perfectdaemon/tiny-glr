@@ -250,33 +250,30 @@ type
   end;
 
   TglrBufferData = record
-    V: TglrVertexBufferId;
-    I: TglrIndexBufferId;
-    vOffset, iOffset, vCount, iCount: LongWord;
+    V: TglrVertexBuffer;
+    I: TglrIndexBuffer;
+    vOffset, iOffset: LongWord;
   end;
 
   { TglrVIBuffersProvider }
-
+const
+  VERTEX_BUFFER_COUNT = 65536;
+  INDEX_BUFFER_COUNT = 65536;
+type
   TglrVIBuffersProvider = class
   protected
     type
-      TChunk = record
-        vOffset, iOffset, vCount, iCount: LongWord;
-      end;
-
-      PChunk = ^TChunk;
-
-      TChunkList = TglrList<PChunk>;
-
       TData = record
         vb: TglrVertexBuffer;
         ib: TglrIndexBuffer;
         vbLast, ibLast: LongWord;
-        unused: TChunkList;
+        unused: TglrWordList;
       end;
     var
-      data: array of TData;
-      iMax, vMax: LongWord;
+      fData: array of TData;
+      fVCount, fICount: LongWord;
+      fVFormat: TglrVertexFormat;
+      fIFormat: TglrIndexFormat;
     procedure Expand();
   public
     constructor Create(); virtual; overload;
@@ -285,7 +282,7 @@ type
       aVCount, aICount: LongWord); virtual; overload;
     destructor Destroy(); override;
 
-    function GetBufferData(const aICount, aVCount: LongWord): TglrBufferData;
+    function GetBufferData(): TglrBufferData;
     procedure FreeBufferData(const aData: TglrBufferData);
   end;
 
@@ -826,8 +823,6 @@ const
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3));
   IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
     (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
-  IF_MAX: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of LongWord =
-    (255, 65536, 4294967295);
   IF_FORMAT: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of TGLConst =
   (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INT);
 
@@ -840,13 +835,25 @@ const
 { TglrVIBuffersProvider }
 
 procedure TglrVIBuffersProvider.Expand;
+var
+  i: Integer;
 begin
   Log.Write(lCritical, 'VIBuffersProvider.Expand is not implemented');
+  i := Length(fData);
+  SetLength(fData, i + 1);
+  with fData[i] do
+  begin
+    vb := TglrVertexBuffer.Create(nil, VERTEX_BUFFER_COUNT, fVFormat);
+    ib := TglrIndexBuffer.Create(nil, INDEX_BUFFER_COUNT, fIFormat);
+    unused := TglrWordList.Create(64);
+    vbLast := 0;
+    ibLast := 0;
+  end;
 end;
 
 constructor TglrVIBuffersProvider.Create;
 begin
-  Create(4, vfPos3Tex2, ifShort, 65536, 65536);
+  Create(1, vfPos3Tex2, ifShort, 4, 6);
 end;
 
 constructor TglrVIBuffersProvider.Create(const aInitialBuffersCount: Integer;
@@ -856,13 +863,17 @@ var
   i: Integer;
 begin
   inherited Create();
-  SetLength(data, aInitialBuffersCount);
+  SetLength(fData, aInitialBuffersCount);
+  fVCount := aVCount;
+  fICount := aICount;
+  fVFormat := aVertexFormat;
+  fIFormat := aIndexFormat;
   for i := 0 to aInitialBuffersCount - 1 do
-    with data[i] do
+    with fData[i] do
     begin
-      vb := TglrVertexBuffer.Create(nil, aVCount, aVertexFormat);
-      ib := TglrIndexBuffer.Create(nil, aICount, aIndexFormat);
-      unused := TChunkList.Create(64);
+      vb := TglrVertexBuffer.Create(nil, VERTEX_BUFFER_COUNT, fVFormat);
+      ib := TglrIndexBuffer.Create(nil, INDEX_BUFFER_COUNT, fIFormat);
+      unused := TglrWordList.Create(64);
       vbLast := 0;
       ibLast := 0;
     end;
@@ -871,29 +882,67 @@ end;
 
 destructor TglrVIBuffersProvider.Destroy;
 var
-  i, j: Integer;
+  i: Integer;
 begin
-  for i := 0 to Length(data) - 1 do
-    with data[i] do
+  for i := 0 to Length(fData) - 1 do
+    with fData[i] do
     begin
       vb.Free();
       ib.Free();
-      for j := 0 to unused.Count - 1 do
-        FreeMem(unused[i]);
       unused.Free(False);
     end;
 //  Log.Write(lCritical, 'VIBuffersProvider.Destroy is not implemented');
   inherited Destroy;
 end;
 
-function TglrVIBuffersProvider.GetBufferData(const aICount, aVCount: LongWord): TglrBufferData;
+function TglrVIBuffersProvider.GetBufferData(): TglrBufferData;
+var
+  i: Integer;
 begin
-  Log.Write(lCritical, 'VIBuffersProvider.GetBufferData is not implemented');
+  for i := 0 to Length(fData) do
+    with fData[i] do
+    begin
+      if ((vbLast + fVCount) >= VERTEX_BUFFER_COUNT) or ((ibLast + fICount) >= INDEX_BUFFER_COUNT) then
+      begin
+        if (Unused.Count = 0) then
+          continue
+        else
+        begin
+          Result.V := vb;
+          Result.I := ib;
+          Result.vOffset := Unused[Unused.Count - 1] * fVCount;
+          Result.iOffset := Unused[Unused.Count - 1] * fICount;
+          Unused.DeleteByIndex(Unused.Count - 1);
+          Exit();
+        end;
+      end
+      else
+      begin
+        Result.V := vb;
+        Result.I := ib;
+        Result.vOffset := vbLast;
+        Result.iOffset := ibLast;
+        vbLast += fVCount;
+        ibLast += fICount;
+        Exit();
+      end;
+    end;
+
+  Expand();
+  Exit(GetBufferData());
 end;
 
 procedure TglrVIBuffersProvider.FreeBufferData(const aData: TglrBufferData);
+var
+  i: Integer;
 begin
-  Log.Write(lCritical, 'VIBuffersProvider.FreeBufferData is not implemented');
+  for i := 0 to Length(fData) - 1 do
+    if (aData.V = fData[i].vb) and (aData.I = fData[i].ib) then
+    begin
+      fData[i].unused.Add(aData.vOffset div fVCount);
+      Exit();
+    end;
+  Log.Write(lError, 'BuffersProvider: FreeBufferData failed - can''t find such Vertex and Index buffers');
 end;
 
 { TglrText }
