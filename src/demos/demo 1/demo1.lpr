@@ -133,15 +133,15 @@ end;
 
 procedure TGame.CreateSprites;
 const
-  count = 10;
+  count = 3000;
 var
   i: Integer;
 begin
   SetLength(Sprites, count);
   for i := 0 to count - 1 do
   begin
-    Sprites[i] := TglrSprite.Create(100, 100, dfVec2f(0.5, 0.5));
-    Sprites[i].Position := dfVec3f(50 + 50 * i, 50 +50 *i, 0);
+    Sprites[i] := TglrSprite.Create(30, 30, dfVec2f(0.5, 0.5));
+    Sprites[i].Position := dfVec3f(Random(800), Random(600), Random(5));
     Sprites[i].Material := Material;
     SceneHud.Root.Childs.Add(Sprites[i]);
   end;
@@ -253,8 +253,8 @@ begin
   Material := TglrMaterial.Create();
   Material.Shader.Free();
   Material.Shader := Default.SpriteShader;
-  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial12b.bmp'), 'bmp'), 'uDiffuse');
-//  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
+//  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial12b.bmp'), 'bmp'), 'uDiffuse');
+  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
   Material.Color := dfVec4f(0.7, 0.2, 0.1, 1);
 
   PrepareMesh();
@@ -262,8 +262,11 @@ begin
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
+var
+  i: Integer;
 begin
-  Sprites[0].Rotation := Sprites[0].Rotation + dt * 20;
+  for i := 0 to Length(Sprites) - 1 do
+    Sprites[i].Rotation := Sprites[i].Rotation + dt * Sprites[i].Position.y / 10;
 end;
 
 var
