@@ -679,15 +679,18 @@ type
 
   { TglrSprite }
 
-const
-  SPRITE_IBUFFER_SIZE = 65532; // Maximum of 10922 sprites at scene (multiply by 6 indices)
-  SPRITE_VBUFFER_SIZE = 43688; // 10922 * 4 vertices
+//const
+//  SPRITE_IBUFFER_SIZE = 65532; // Maximum of 10922 sprites at scene (multiply by 6 indices)
+//  SPRITE_VBUFFER_SIZE = 43688; // 10922 * 4 vertices
 
 type
   TglrSprite = class (TglrNode)
   protected
+    fBufferData: TglrBufferData;
     fIndices: array[0..5] of Word;
-    fVBOffset, fIBOffset: Word;
+//    fVBOffset, fIBOffset: Word;
+//    fVB: TglrVertexBuffer;
+//    fIB: TglrIndexBuffer;
     fRot, fWidth, fHeight: Single;
     fPP: TdfVec2f;
 
@@ -700,13 +703,15 @@ type
     class procedure Init();
     class procedure DeInit();
 
-    class var VB: TglrVertexBuffer;
-    class var IB: TglrIndexBuffer;
-    class var VBLastOffset, IBLastOffset: Word;
-    class var Unused: TglrWordList;
+    class var BuffersProvider: TglrVIBuffersProvider;
 
-    class procedure GetBufferData(out vVBOffset, vIBOffset: Word);
-    class procedure FreeBufferData(aVBOffset, aIBOffset: Word);
+//    class var VB: TglrVertexBuffer;
+//    class var IB: TglrIndexBuffer;
+//    class var VBLastOffset, IBLastOffset: Word;
+//    class var Unused: TglrWordList;
+
+//    class procedure GetBufferData(out vVBOffset, vIBOffset: Word);
+//    class procedure FreeBufferData(aVBOffset, aIBOffset: Word);
   public
     Material: TglrMaterial;
     Vertices: array[0..3] of TglrVertexP3T2;
@@ -727,9 +732,9 @@ type
 
   { TglrFont }
 
-const
-  TEXT_IBUFFER_SIZE = 65532; // Maximum of 10922 sprites at scene (multiply by 6 indices)
-  TEXT_VBUFFER_SIZE = 43688; // 10922 * 4 vertices
+//const
+//  TEXT_IBUFFER_SIZE = 65532; // Maximum of 10922 sprites at scene (multiply by 6 indices)
+//  TEXT_VBUFFER_SIZE = 43688; // 10922 * 4 vertices
 
 type
   TglrText = class;
@@ -746,14 +751,13 @@ type
       PglrCharData = ^TglrCharData;
 
     var
-      vb: TglrVertexBuffer;
-      ib: TglrIndexBuffer;
+      fBuffersProvider: TglrVIBuffersProvider;
       Material: TglrMaterial;
       Table: array [WideChar] of PglrCharData;
       CharData: array of TglrCharData;
 
-    procedure GetBufferData(out vVBOffset, vIBOffset: Word);
-    procedure FreeBufferData(aVBOffset, aIBOffset: Word);
+    //procedure GetBufferData(out vVBOffset, vIBOffset: Word);
+    //procedure FreeBufferData(aVBOffset, aIBOffset: Word);
   public
     constructor Create(); virtual; overload;
     constructor Create(aStream: TglrStream;
@@ -838,7 +842,7 @@ procedure TglrVIBuffersProvider.Expand;
 var
   i: Integer;
 begin
-  Log.Write(lCritical, 'VIBuffersProvider.Expand is not implemented');
+//  Log.Write(lCritical, 'VIBuffersProvider.Expand is not implemented');
   i := Length(fData);
   SetLength(fData, i + 1);
   with fData[i] do
@@ -1001,7 +1005,7 @@ begin
 end;
 
 { TglrFont }
-
+(*
 procedure TglrFont.GetBufferData(out vVBOffset, vIBOffset: Word);
 begin
 
@@ -1011,7 +1015,7 @@ procedure TglrFont.FreeBufferData(aVBOffset, aIBOffset: Word);
 begin
 
 end;
-
+     *)
 constructor TglrFont.Create;
 begin
   inherited Create();
@@ -1026,8 +1030,9 @@ var
   charCount, i: LongWord;
 begin
   inherited Create();
-  vb := TglrVertexBuffer.Create(nil, TEXT_VBUFFER_SIZE * VF_STRIDE[vfPos3Tex2], vfPos3Tex2);
-  ib := TglrIndexBuffer.Create(nil, TEXT_IBUFFER_SIZE * IF_STRIDE[ifShort], ifShort);
+  fBuffersProvider := TglrVIBuffersProvider.Create(1, vfPos3Tex2, ifShort, 4, 6);
+//  vb := TglrVertexBuffer.Create(nil, TEXT_VBUFFER_SIZE * VF_STRIDE[vfPos3Tex2], vfPos3Tex2);
+//  ib := TglrIndexBuffer.Create(nil, TEXT_IBUFFER_SIZE * IF_STRIDE[ifShort], ifShort);
 
   Material := TglrMaterial.Create();
   if Default.fInited then;
@@ -1048,8 +1053,9 @@ end;
 
 destructor TglrFont.Destroy;
 begin
-  vb.Free();
-  ib.Free();
+  fBuffersProvider.Free();
+//  vb.Free();
+//  ib.Free();
   Material.Free();
   Log.Write(lCritical, 'TglrFont.Destroy is not implemented');
   inherited Destroy;
@@ -1112,26 +1118,33 @@ procedure TglrSprite.DoRender;
 begin
   inherited DoRender;
   Material.Bind();
-  Render.DrawTriangles(VB, IB, fIBOffset, 6);
+  with fBufferData do
+    Render.DrawTriangles(V, I, iOffset, 6);
   Material.Unbind();
 end;
 
 class procedure TglrSprite.Init;
 begin
+  BuffersProvider := TglrVIBuffersProvider.Create(1, vfPos3Tex2, ifShort, 4, 6);
+  (*
   VB := TglrVertexBuffer.Create(nil, SPRITE_VBUFFER_SIZE, vfPos3Tex2);
   IB := TglrIndexBuffer.Create(nil, SPRITE_IBUFFER_SIZE, ifShort);
   VBLastOffset := 0;
   IBLastOffset := 0;
   Unused := TglrWordList.Create(64);
+  *)
 end;
 
 class procedure TglrSprite.DeInit;
 begin
+  BuffersProvider.Free();
+  (*
   VB.Free();
   IB.Free();
   Unused.Free();
+  *)
 end;
-
+(*
 class procedure TglrSprite.FreeBufferData(aVBOffset, aIBOffset: Word);
 begin
   Unused.Add(aVBOffset div 4);
@@ -1155,7 +1168,7 @@ begin
     IBLastOffset += 6;
   end;
 end;
-
+*)
 constructor TglrSprite.Create;
 begin
   Create(1, 1, dfVec2f(0.5, 0.5));
@@ -1164,8 +1177,8 @@ end;
 constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
 begin
   inherited Create();
-
-  GetBufferData(fVBOffset, fIBOffset);
+  fBufferData := BuffersProvider.GetBufferData();
+//  GetBufferData(fVBOffset, fIBOffset);
 
   Material := TglrMaterial.Create();
   if Default.fInited then
@@ -1180,24 +1193,28 @@ begin
   UpdateBuffers();
 
   //Indices
-  fIndices[0] := fVBOffset;
-  fIndices[1] := fVBOffset + 1;
-  fIndices[2] := fVBOffset + 2;
-  fIndices[3] := fVBOffset + 2;
-  fIndices[4] := fVBOffset + 3;
-  fIndices[5] := fVBOffset;
-  IB.Update(@fIndices[0], fIBOffset * IF_STRIDE[ifShort], 6 * IF_STRIDE[ifShort]);
+  with fBufferData do
+  begin
+    fIndices[0] := vOffset;
+    fIndices[1] := vOffset + 1;
+    fIndices[2] := vOffset + 2;
+    fIndices[3] := vOffset + 2;
+    fIndices[4] := vOffset + 3;
+    fIndices[5] := vOffset;
+    I.Update(@fIndices[0], iOffset * IF_STRIDE[ifShort], 6 * IF_STRIDE[ifShort]);
+  end;
 end;
 
 destructor TglrSprite.Destroy;
 begin
-  FreeBufferData(fVBOffset, fIBOffset);
+  BuffersProvider.FreeBufferData(fBufferData);
   inherited Destroy;
 end;
 
 procedure TglrSprite.UpdateBuffers;
 begin
-  VB.Update(@Vertices[0], fVBOffset * VF_STRIDE[vfPos3Tex2], 4 * VF_STRIDE[vfPos3Tex2]);
+  with fBufferData do
+    V.Update(@Vertices[0], vOffset * VF_STRIDE[vfPos3Tex2], 4 * VF_STRIDE[vfPos3Tex2]);
 end;
 
 procedure TglrSprite.SetDefaultVertices;
