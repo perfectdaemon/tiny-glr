@@ -677,27 +677,39 @@ type
     procedure Unbind();
   end;
 
+  { TglrSpriteBatch }
+
+  TglrSpriteBatch = class (TglrNode)
+  protected
+    fVData: array[0..65535] of TglrVertexP3T2;
+    fIData: array[0..65535] of Word;
+    fVB: TglrVertexBuffer;
+    fIB: TglrIndexBuffer;
+  public
+    Material: TglrMaterial;
+    constructor Create(); override;
+    destructor Destroy(); override;
+
+    procedure RenderSelf(); override;
+  end;
+
   { TglrSprite }
 
   TglrSprite = class (TglrNode)
   protected
-    fBufferData: TglrBufferData;
-    fIndices: array[0..5] of Word;
-    fRot, fWidth, fHeight: Single;
-    fPP: TdfVec2f;
+    const
+      Indices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
+    var
+//      fBufferData: TglrBufferData;
+//      fIndices: array[0..5] of Word;
+      fRot, fWidth, fHeight: Single;
+      fPP: TdfVec2f;
 
     procedure SetRot(const aRot: Single);
     procedure SetWidth(const aWidth: Single);
     procedure SetHeight(const aHeight: Single);
     procedure SetPP(const aPP: TdfVec2f);
-    procedure DoRender(); override;
-
-    class procedure Init();
-    class procedure DeInit();
-
-    class var BuffersProvider: TglrVIBuffersProvider;
   public
-    Material: TglrMaterial;
     Vertices: array[0..3] of TglrVertexP3T2;
 
     constructor Create(); override; overload;
@@ -709,9 +721,10 @@ type
     property Height: Single read fHeight write SetHeight;
     property PivotPoint: TdfVec2f read fPP write SetPP;
 
-    procedure UpdateBuffers();
     procedure SetDefaultVertices(); //Sets vertices due to width, height and pivot point
     procedure SetDefaultTexCoords(); //Sets default texture coords
+
+    procedure RenderSelf(); override;
   end;
 
   { TglrFont }
@@ -812,6 +825,54 @@ const
 
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
+
+{ TglrSpriteBatch }
+
+constructor TglrSpriteBatch.Create;
+begin
+  inherited Create;
+  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2);
+  fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
+end;
+
+destructor TglrSpriteBatch.Destroy;
+begin
+  fVB.Free();
+  fIB.Free();
+  inherited Destroy;
+end;
+
+//dirty - should make it easier
+procedure TglrSpriteBatch.RenderSelf;
+var
+  i, j, count: Integer;
+  p1, p2: Pointer;
+begin
+  count := 0;
+  for i := 0 to Childs.Count - 1 do
+    if not (Childs[i] is TglrSprite) then
+      Log.Write(lWarning, 'SpriteBatch: Child node is not a sprite')
+    else
+      if Childs[i].Visible then
+      begin
+        for j := 0 to 3 do
+        begin
+          fVData[count * 4 + j] := (Childs[i] as TglrSprite).Vertices[j];
+          (Childs[i] as TglrSprite).Matrix.Pos := (Childs[i] as TglrSprite).Position;
+          fVData[count * 4 + j].vec := (Childs[i] as TglrSprite).GetAbsMatrix() * fVData[count * 4 + j].vec;
+        end;
+        for j := 0 to 5 do
+          fIData[count * 6 + j] := (Childs[i] as TglrSprite).Indices[j] + count * 4;
+        count += 1;
+      end;
+  fVB.Update(@fVData[0], 0, count * 4);
+  fIB.Update(@fIData[0], 0, count * 6);
+  Render.Params.Model.Identity;
+  Render.Params.CalculateMVP();
+  Material.Bind();
+  Render.DrawTriangles(fVB, fIB, 0, 6 * count);
+  Material.Unbind();
+end;
 
 { TglrVIBuffersProvider }
 
@@ -1049,7 +1110,6 @@ begin
   begin
     fWidth := aWidth;
     SetDefaultVertices();
-    UpdateBuffers();
   end;
 end;
 
@@ -1059,7 +1119,6 @@ begin
   begin
     fHeight := aHeight;
     SetDefaultVertices();
-    UpdateBuffers();
   end;
 end;
 
@@ -1069,27 +1128,7 @@ begin
   begin
     fPP := aPP;
     SetDefaultVertices();
-    UpdateBuffers();
   end;
-end;
-
-procedure TglrSprite.DoRender;
-begin
-  inherited DoRender;
-  Material.Bind();
-  with fBufferData do
-    Render.DrawTriangles(V, I, iOffset, 6);
-  Material.Unbind();
-end;
-
-class procedure TglrSprite.Init;
-begin
-  BuffersProvider := TglrVIBuffersProvider.Create(1, vfPos3Tex2, ifShort, 4, 6);
-end;
-
-class procedure TglrSprite.DeInit;
-begin
-  BuffersProvider.Free();
 end;
 
 constructor TglrSprite.Create;
@@ -1100,43 +1139,17 @@ end;
 constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
 begin
   inherited Create();
-  fBufferData := BuffersProvider.GetBufferData();
-
-  Material := TglrMaterial.Create();
-  if Default.fInited then
-    Material.Shader := Default.SpriteShader;
-
   //Vertices
   fWidth := aWidth;
   fHeight := aHeight;
   fPP := aPivotPoint;
   SetDefaultVertices();
   SetDefaultTexCoords();
-  UpdateBuffers();
-
-  //Indices
-  with fBufferData do
-  begin
-    fIndices[0] := vOffset;
-    fIndices[1] := vOffset + 1;
-    fIndices[2] := vOffset + 2;
-    fIndices[3] := vOffset + 2;
-    fIndices[4] := vOffset + 3;
-    fIndices[5] := vOffset;
-    I.Update(@fIndices[0], iOffset * IF_STRIDE[ifShort], 6 * IF_STRIDE[ifShort]);
-  end;
 end;
 
 destructor TglrSprite.Destroy;
 begin
-  BuffersProvider.FreeBufferData(fBufferData);
   inherited Destroy;
-end;
-
-procedure TglrSprite.UpdateBuffers;
-begin
-  with fBufferData do
-    V.Update(@Vertices[0], vOffset * VF_STRIDE[vfPos3Tex2], 4 * VF_STRIDE[vfPos3Tex2]);
 end;
 
 procedure TglrSprite.SetDefaultVertices;
@@ -1153,6 +1166,11 @@ begin
   Vertices[1].tex := dfVec2f(1, 0);
   Vertices[2].tex := dfVec2f(0, 0);
   Vertices[3].tex := dfVec2f(0, 1);
+end;
+
+procedure TglrSprite.RenderSelf;
+begin
+
 end;
 
 { Log }
@@ -2296,14 +2314,11 @@ begin
     'GLSL: ' + gl.GetString(TGLConst.GL_SHADING_LANGUAGE_VERSION);
   Log.Write(lInformation, aStr);
   {$endif}
-
-  TglrSprite.Init();
 end;
 
 class procedure Render.DeInit;
 begin
   gl.Free();
-  TglrSprite.DeInit();
 end;
 
 class procedure Render.Resize(aWidth, aHeight: Integer);
