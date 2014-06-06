@@ -82,7 +82,7 @@ type
     GL_ARRAY_BUFFER = $8892, GL_ELEMENT_ARRAY_BUFFER,   GL_READ_ONLY = $88B8, GL_WRITE_ONLY = $88B9, GL_READ_WRITE = $88BA, GL_STATIC_DRAW = $88E4, GL_VERTEX_ARRAY = $8074, GL_NORMAL_ARRAY, GL_COLOR_ARRAY, GL_INDEX_ARRAY_EXT, GL_TEXTURE_COORD_ARRAY,
   // Queries
     GL_SAMPLES_PASSED = $8914, GL_QUERY_COUNTER_BITS = $8864, GL_CURRENT_QUERY, GL_QUERY_RESULT, GL_QUERY_RESULT_AVAILABLE,
-    GL_MAX_CONST = High(LongInt),
+    //GL_MAX_CONST = High(LongInt),
 
 
     GL_COLOR = $1800,
@@ -163,24 +163,24 @@ type
     //Materialfv     : procedure (face, pname: TGLConst; params: Pointer); stdcall;
     Viewport       : procedure (x, y, width, height: LongInt); stdcall;
     Scissor        : procedure (x, y, width, height: LongInt); stdcall;
-    Beginp         : procedure (mode: TGLConst); stdcall;
-    Endp           : procedure;
+//    Beginp         : procedure (mode: TGLConst); stdcall;
+//    Endp           : procedure;
     PointSize      : procedure (size: Single); stdcall;
     //LineWidth      : procedure (width: Single); stdcall;
-    Color3f        : procedure (r, g, b: Single); stdcall;
-    Color3fv       : procedure (const rgb: TdfVec3f); stdcall;
-    Color4ub       : procedure (r, g, b, a: Byte); stdcall;
-    Color4ubv      : procedure (var rgba: TRGBA); stdcall;
-    Color4f        : procedure (r, g, b, a: Single); stdcall;
-    Color4fv       : procedure (const rgba: TdfVec4f); stdcall;
-    Vertex2f       : procedure (x, y: Single); stdcall;
-    Vertex2fv      : procedure (const xy: TdfVec2f); stdcall;
-    Vertex3f       : procedure (x, y, z: Single); stdcall;
-    Vertex3fv      : procedure (const xyz: TdfVec3f); stdcall;
-    Normal3f       : procedure (x, y, z: Single); stdcall;
-    Normal3fv      : procedure (const xyz: TdfVec3f); stdcall;
-    TexCoord2f     : procedure (s, t: Single); stdcall;
-    TexCoord2fv    : procedure (const st: TdfVec2f); stdcall;
+//    Color3f        : procedure (r, g, b: Single); stdcall;
+//    Color3fv       : procedure (const rgb: TdfVec3f); stdcall;
+//    Color4ub       : procedure (r, g, b, a: Byte); stdcall;
+//    Color4ubv      : procedure (var rgba: TRGBA); stdcall;
+//    Color4f        : procedure (r, g, b, a: Single); stdcall;
+//    Color4fv       : procedure (const rgba: TdfVec4f); stdcall;
+//    Vertex2f       : procedure (x, y: Single); stdcall;
+//    Vertex2fv      : procedure (const xy: TdfVec2f); stdcall;
+//    Vertex3f       : procedure (x, y, z: Single); stdcall;
+//    Vertex3fv      : procedure (const xyz: TdfVec3f); stdcall;
+//    Normal3f       : procedure (x, y, z: Single); stdcall;
+//    Normal3fv      : procedure (const xyz: TdfVec3f); stdcall;
+//    TexCoord2f     : procedure (s, t: Single); stdcall;
+//    TexCoord2fv    : procedure (const st: TdfVec2f); stdcall;
 //    EnableClientState  : procedure (_array: TGLConst); stdcall;
 //    DisableClientState : procedure (_array: TGLConst); stdcall;
     DrawElements    : procedure (mode: TGLConst; count: LongInt; _type: TGLConst; const indices: Pointer); stdcall;
@@ -189,12 +189,12 @@ type
 //    VertexPointer   : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
 //    TexCoordPointer : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
 //    NormalPointer   : procedure (type_: TGLConst; stride: LongWord; const P: Pointer); stdcall;
-    MatrixMode      : procedure (mode: TGLConst); stdcall;
-    LoadIdentity    : procedure;
-    LoadMatrixf     : procedure (const m: TdfMat4f); stdcall;
-    MultMatrixf     : procedure (const m: TdfMat4f); stdcall;
-    PushMatrix      : procedure;
-    PopMatrix       : procedure;
+//    MatrixMode      : procedure (mode: TGLConst); stdcall;
+//    LoadIdentity    : procedure;
+//    LoadMatrixf     : procedure (const m: TdfMat4f); stdcall;
+//    MultMatrixf     : procedure (const m: TdfMat4f); stdcall;
+//    PushMatrix      : procedure;
+//    PopMatrix       : procedure;
     //Scalef          : procedure (x, y, z: Single); stdcall;
     //Translatef      : procedure (x, y, z: Single); stdcall;
     //Rotatef         : procedure (Angle, x, y, z: Single); stdcall;
@@ -261,7 +261,7 @@ type
     PointParameterf         : procedure (pname: TGLConst; param: Single); stdcall;
     TexEnvf                 : procedure (target, pname: TGLConst; param: Single); stdcall;
     TexEnvi                 : procedure (target, pname: TGLConst; param: TGLConst); stdcall;
-    IsTexture               : function  (texture: LongInt): Boolean; stdcall;
+//    IsTexture               : function  (texture: LongInt): Boolean; stdcall;
 
     procedure Init;
     procedure Free;
@@ -323,24 +323,24 @@ const
     //'glMaterialfv',
     'glViewport',
     'glScissor',
-    'glBegin',
-    'glEnd',
+//    'glBegin',
+//    'glEnd',
     'glPointSize',
     //'glLineWidth',
-    'glColor3f',
-    'glColor3fv',
-    'glColor4ub',
-    'glColor4ubv',
-    'glColor4f',
-    'glColor4fv',
-    'glVertex2f',
-    'glVertex2fv',
-    'glVertex3f',
-    'glVertex3fv',
-    'glNormal3f',
-    'glNormal3fv',
-    'glTexCoord2f',
-    'glTexCoord2fv',
+//    'glColor3f',
+//    'glColor3fv',
+//    'glColor4ub',
+//    'glColor4ubv',
+//    'glColor4f',
+//    'glColor4fv',
+//    'glVertex2f',
+//    'glVertex2fv',
+//    'glVertex3f',
+//    'glVertex3fv',
+//    'glNormal3f',
+//    'glNormal3fv',
+//    'glTexCoord2f',
+//    'glTexCoord2fv',
 //    'glEnableClientState',
 //    'glDisableClientState',
     'glDrawElements',
@@ -349,12 +349,12 @@ const
 //    'glVertexPointer',
 //    'glTexCoordPointer',
 //    'glNormalPointer',
-    'glMatrixMode',
-    'glLoadIdentity',
-    'glLoadMatrixf',
-    'glMultMatrixf',
-    'glPushMatrix',
-    'glPopMatrix',
+//    'glMatrixMode',
+//    'glLoadIdentity',
+//    'glLoadMatrixf',
+//    'glMultMatrixf',
+//    'glPushMatrix',
+//    'glPopMatrix',
     //'glScalef',
     //'glTranslatef',
     //'glRotatef',
@@ -414,8 +414,8 @@ const
     'glPointParameterfv',
     'glPointParameterf',
     'glTexEnvf',
-    'glTexEnvi',
-    'glIsTexture'
+    'glTexEnvi'
+//    'glIsTexture'
   );
 var
   i    : LongInt;
