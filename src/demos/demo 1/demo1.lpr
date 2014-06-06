@@ -19,6 +19,7 @@ type
     meshIBuffer: TglrIndexBuffer;
 
     Sprites: array of TglrSprite;
+    Batch: TglrSpriteBatch;
 
     procedure PrepareMesh();
     procedure RenderMesh();
@@ -137,13 +138,16 @@ const
 var
   i: Integer;
 begin
+  Batch := TglrSpriteBatch.Create();
+  Batch.Material := Material;
+  SceneHud.Root.Childs.Add(Batch);
   SetLength(Sprites, count);
   for i := 0 to count - 1 do
   begin
     Sprites[i] := TglrSprite.Create(30, 30, dfVec2f(0.5, 0.5));
     Sprites[i].Position := dfVec3f(Random(800), Random(600), Random(5));
-    Sprites[i].Material := Material;
-    SceneHud.Root.Childs.Add(Sprites[i]);
+//    Sprites[i].Material := Material;
+    Batch.Childs.Add(Sprites[i]);
   end;
 end;
 
