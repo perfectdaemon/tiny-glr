@@ -16,7 +16,7 @@ uses
   ogl, glrMath;
 
 const
-  TINYGLR_VERSION = '0.1';
+  TINYGLR_VERSION = '0.1 :: pre-alpha';
   LOG_FILE = 'tinyglr.log';
 
 type
@@ -679,18 +679,10 @@ type
 
   { TglrSprite }
 
-//const
-//  SPRITE_IBUFFER_SIZE = 65532; // Maximum of 10922 sprites at scene (multiply by 6 indices)
-//  SPRITE_VBUFFER_SIZE = 43688; // 10922 * 4 vertices
-
-type
   TglrSprite = class (TglrNode)
   protected
     fBufferData: TglrBufferData;
     fIndices: array[0..5] of Word;
-//    fVBOffset, fIBOffset: Word;
-//    fVB: TglrVertexBuffer;
-//    fIB: TglrIndexBuffer;
     fRot, fWidth, fHeight: Single;
     fPP: TdfVec2f;
 
@@ -704,14 +696,6 @@ type
     class procedure DeInit();
 
     class var BuffersProvider: TglrVIBuffersProvider;
-
-//    class var VB: TglrVertexBuffer;
-//    class var IB: TglrIndexBuffer;
-//    class var VBLastOffset, IBLastOffset: Word;
-//    class var Unused: TglrWordList;
-
-//    class procedure GetBufferData(out vVBOffset, vIBOffset: Word);
-//    class procedure FreeBufferData(aVBOffset, aIBOffset: Word);
   public
     Material: TglrMaterial;
     Vertices: array[0..3] of TglrVertexP3T2;
@@ -732,11 +716,6 @@ type
 
   { TglrFont }
 
-//const
-//  TEXT_IBUFFER_SIZE = 65532; // Maximum of 10922 sprites at scene (multiply by 6 indices)
-//  TEXT_VBUFFER_SIZE = 43688; // 10922 * 4 vertices
-
-type
   TglrText = class;
 
   TglrFont = class
@@ -756,8 +735,6 @@ type
       Table: array [WideChar] of PglrCharData;
       CharData: array of TglrCharData;
 
-    //procedure GetBufferData(out vVBOffset, vIBOffset: Word);
-    //procedure FreeBufferData(aVBOffset, aIBOffset: Word);
   public
     constructor Create(); virtual; overload;
     constructor Create(aStream: TglrStream;
@@ -842,7 +819,6 @@ procedure TglrVIBuffersProvider.Expand;
 var
   i: Integer;
 begin
-//  Log.Write(lCritical, 'VIBuffersProvider.Expand is not implemented');
   i := Length(fData);
   SetLength(fData, i + 1);
   with fData[i] do
@@ -881,7 +857,6 @@ begin
       vbLast := 0;
       ibLast := 0;
     end;
-//  Log.Write(lCritical, 'VIBuffersProvider.Create is not implemented');
 end;
 
 destructor TglrVIBuffersProvider.Destroy;
@@ -895,7 +870,6 @@ begin
       ib.Free();
       unused.Free(False);
     end;
-//  Log.Write(lCritical, 'VIBuffersProvider.Destroy is not implemented');
   inherited Destroy;
 end;
 
@@ -1005,17 +979,7 @@ begin
 end;
 
 { TglrFont }
-(*
-procedure TglrFont.GetBufferData(out vVBOffset, vIBOffset: Word);
-begin
 
-end;
-
-procedure TglrFont.FreeBufferData(aVBOffset, aIBOffset: Word);
-begin
-
-end;
-     *)
 constructor TglrFont.Create;
 begin
   inherited Create();
@@ -1031,8 +995,6 @@ var
 begin
   inherited Create();
   fBuffersProvider := TglrVIBuffersProvider.Create(1, vfPos3Tex2, ifShort, 4, 6);
-//  vb := TglrVertexBuffer.Create(nil, TEXT_VBUFFER_SIZE * VF_STRIDE[vfPos3Tex2], vfPos3Tex2);
-//  ib := TglrIndexBuffer.Create(nil, TEXT_IBUFFER_SIZE * IF_STRIDE[ifShort], ifShort);
 
   Material := TglrMaterial.Create();
   if Default.fInited then;
@@ -1045,7 +1007,6 @@ begin
   FreeMem(data);
   for i := 0 to charCount - 1 do
     Table[CharData[i].ID] := @CharData[i];
-  //Log.Write(lCritical, 'TglrFont.Create is not implemented');
 
   if aFreeStreamOnFinish then
     aStream.Free();
@@ -1054,8 +1015,6 @@ end;
 destructor TglrFont.Destroy;
 begin
   fBuffersProvider.Free();
-//  vb.Free();
-//  ib.Free();
   Material.Free();
   Log.Write(lCritical, 'TglrFont.Destroy is not implemented');
   inherited Destroy;
@@ -1126,49 +1085,13 @@ end;
 class procedure TglrSprite.Init;
 begin
   BuffersProvider := TglrVIBuffersProvider.Create(1, vfPos3Tex2, ifShort, 4, 6);
-  (*
-  VB := TglrVertexBuffer.Create(nil, SPRITE_VBUFFER_SIZE, vfPos3Tex2);
-  IB := TglrIndexBuffer.Create(nil, SPRITE_IBUFFER_SIZE, ifShort);
-  VBLastOffset := 0;
-  IBLastOffset := 0;
-  Unused := TglrWordList.Create(64);
-  *)
 end;
 
 class procedure TglrSprite.DeInit;
 begin
   BuffersProvider.Free();
-  (*
-  VB.Free();
-  IB.Free();
-  Unused.Free();
-  *)
-end;
-(*
-class procedure TglrSprite.FreeBufferData(aVBOffset, aIBOffset: Word);
-begin
-  Unused.Add(aVBOffset div 4);
 end;
 
-class procedure TglrSprite.GetBufferData(out vVBOffset, vIBOffset: Word);
-begin
-  if VBLastOffset = SPRITE_VBUFFER_SIZE then
-  begin
-    if (Unused.Count = 0) then
-      Log.Write(lCritical, 'Sprite: too many sprites, vertex buffer is full');
-    vVBOffset := Unused[Unused.Count - 1] * 4;
-    vIBOffset := Unused[Unused.Count - 1] * 6;
-    Unused.DeleteByIndex(Unused.Count - 1);
-  end
-  else
-  begin
-    vVBOffset := VBLastOffset;
-    vIBOffset := IBLastOffset;
-    VBLastOffset += 4;
-    IBLastOffset += 6;
-  end;
-end;
-*)
 constructor TglrSprite.Create;
 begin
   Create(1, 1, dfVec2f(0.5, 0.5));
@@ -1178,7 +1101,6 @@ constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
 begin
   inherited Create();
   fBufferData := BuffersProvider.GetBufferData();
-//  GetBufferData(fVBOffset, fIBOffset);
 
   Material := TglrMaterial.Create();
   if Default.fInited then
@@ -1667,14 +1589,6 @@ begin
 
   if (Render.Width <> fW) or (Render.Height <> fH) then
     ViewportOnly(0, 0, Render.Width, Render.Height);
-
-  //no shaders, bad, bad, bad
-  (*
-  gl.MatrixMode(GL_PROJECTION);
-  gl.LoadMatrixf(fProjMatrix);
-  gl.MatrixMode(GL_MODELVIEW);
-  gl.LoadMatrixf(Matrix);
-  *)
 end;
 
 procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
@@ -2085,7 +1999,6 @@ begin
   for i := 0 to Length(fPackFiles) - 1 do
     if (fPackFiles[i].fPackName = aPackName) then
       Exit(i);
-  //Log.Write(lError, 'FileSystem: Pack "' + aPackName + '" was not found');
 end;
 
 class procedure FileSystem.LoadPack(const aPackFileName: AnsiString);
