@@ -1,10 +1,13 @@
 attribute vec3 vaCoord;
 attribute vec2 vaTexCoord0;
+attribute vec4 vaColor;
 varying vec2 texCoord0;
+varying vec4 vColor;
 uniform mat4 uModelViewProj;
 
 void main(void)
 {
   texCoord0 = vaTexCoord0;
+  vColor = vaColor;
   gl_Position = uModelViewProj * vec4(vaCoord, 1.0);
 }
