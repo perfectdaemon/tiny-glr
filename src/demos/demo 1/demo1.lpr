@@ -11,7 +11,6 @@ type
   protected
     dx, dy: Integer;
     Scene, SceneHud: TglrScene;
-    Points: array of TdfVec3f;
     Material: TglrMaterial;
 
     meshData: array of TglrVertexP3T2N3;
@@ -123,8 +122,6 @@ begin
 
   meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2Nor3);
   meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
-//  Default.SpriteMaterial.Color := dfVec4f(1, 0, 1, 0.5);
-//  Default.SpriteMaterial.AddTexture(Tex, 'uDiffuse');
 end;
 
 procedure TGame.RenderMesh;
@@ -134,7 +131,7 @@ end;
 
 procedure TGame.CreateSprites;
 const
-  count = 3000;
+  count = 300;
 var
   i: Integer;
 begin
@@ -146,7 +143,7 @@ begin
   begin
     Sprites[i] := TglrSprite.Create(30, 30, dfVec2f(0.5, 0.5));
     Sprites[i].Position := dfVec3f(Random(800), Random(600), Random(5));
-//    Sprites[i].Material := Material;
+    Sprites[i].SetVerticesColor(dfVec4f(Random(), Random(), Random, 1));
     Batch.Childs.Add(Sprites[i]);
   end;
 end;
@@ -182,6 +179,8 @@ begin
 
   if (aType = itWheel) then
     Scene.Camera.Translate(0, 0, -Sign(aOtherParam));
+  if (aType = itKeyUp) and (aKey = kU) then
+    log.Write(lInformation, 'Camera.Up: ' + Convert.ToString(Scene.Camera.Up));
 end;
 
 procedure TGame.OnPause;
@@ -190,32 +189,8 @@ begin
 end;
 
 procedure TGame.OnRender;
-var
-  i: Integer;
 begin
   Scene.RenderScene();
-(*  gl.Color3f(1, 1, 1);
-
-  gl.Beginp(GL_POINTS);
-    for i := 0 to Length(Points) - 1 do
-      gl.Vertex3fv(Points[i]);
-  gl.Endp();
-
-    gl.Beginp(GL_LINES);
-
-      gl.Color4ub(255, 0, 0, 255);
-      gl.Vertex3f(0, 0, 0);
-      gl.Vertex3f(100, 0, 0);
-
-      gl.Color4ub(0, 255, 0, 255);
-      gl.Vertex3f(0, 0, 0);
-      gl.Vertex3f(0, 100, 0);
-
-      gl.Color4ub(0, 0, 255, 255);
-      gl.Vertex3f(0, 0, 0);
-      gl.Vertex3f(0, 0, 100);
-    gl.Endp();
-*)
 
   Material.Bind();
   RenderMesh();
@@ -235,22 +210,17 @@ begin
 end;
 
 procedure TGame.OnStart;
-var
-  i: Integer;
 begin
   WriteLn('Start');
 
-  SetLength(Points, 1024);
-  Randomize();
   Render.SetCullMode(cmBack);
-  for i := 0 to Length(Points) - 1 do
-    Points[i] := dfVec3f(15 - Random(30), 10 - Random(20), 15 - Random(30));
 
   Scene := TglrScene.Create(True);
-  Scene.Camera.SetCamera(dfVec3f(5, 5, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  Scene.Camera.SetCamera(dfVec3f(5, 0, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
   Scene.Camera.ProjectionMode := pmPerspective;
 
   SceneHud := TglrScene.Create(True);
+  //SceneHud.Camera := Scene.Camera;
   SceneHud.Camera.ProjectionMode := pmOrtho;
   SceneHud.Camera.SetCamera(dfVec3f(0, 0, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
 
@@ -259,7 +229,7 @@ begin
   Material.Shader := Default.SpriteShader;
 //  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial12b.bmp'), 'bmp'), 'uDiffuse');
   Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
-  Material.Color := dfVec4f(0.7, 0.2, 0.1, 1);
+//  Material.Color := dfVec4f(0.7, 0.2, 0.1, 1);
 
   PrepareMesh();
   CreateSprites();

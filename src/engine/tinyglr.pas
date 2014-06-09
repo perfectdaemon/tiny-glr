@@ -151,6 +151,9 @@ type
     class function ToString(aVal: Integer): AnsiString; overload;
     class function ToString(aVal: Single; Digits: Integer = 5): AnsiString; overload;
     class function ToString(aVal: TdfMat4f): AnsiString; overload;
+    class function ToString(aVal: TdfVec2f): AnsiString; overload;
+    class function ToString(aVal: TdfVec3f): AnsiString; overload;
+    class function ToString(aVal: TdfVec4f): AnsiString; overload;
     class function ToInt(aStr: AnsiString; aDefault: Integer = -1): Integer; overload;
     class function ToFloat(aStr: AnsiString; aDefault: Single = -1.0): Single; overload;
   end;
@@ -168,7 +171,7 @@ type
   TglrIndex = type Word;
 
   //TglrTextureFormat = (tfFuck);
-  TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2, vfPos3Tex2Nor3);
+  TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2, vfPos3Tex2Nor3, vfPos3Tex2Col4);
   TglrIndexFormat = (ifByte, ifShort, ifInt);
 
   TglrVertexP2T2 = record
@@ -186,7 +189,13 @@ type
     nor: TdfVec3f;
   end;
 
-  TglrVertexAtrib = (vaCoord = 0, vaNormal = 1, vaTexCoord0 = 2, vaTexCoord1 = 3{, ...});
+  TglrVertexP3T2C4 = packed record
+    vec: TdfVec3f;
+    tex: TdfVec2f;
+    col: TdfVec4f;
+  end;
+
+  TglrVertexAtrib = (vaCoord = 0, vaNormal = 1, vaTexCoord0 = 2, vaTexCoord1 = 3, vaColor = 4{, ...});
 
   { TglrTexture }
 
@@ -681,7 +690,7 @@ type
 
   TglrSpriteBatch = class (TglrNode)
   protected
-    fVData: array[0..65535] of TglrVertexP3T2;
+    fVData: array[0..65535] of TglrVertexP3T2C4;
     fIData: array[0..65535] of Word;
     fVB: TglrVertexBuffer;
     fIB: TglrIndexBuffer;
@@ -694,23 +703,21 @@ type
   end;
 
   { TglrSprite }
+const
+  SpriteIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
 
+type
   TglrSprite = class (TglrNode)
   protected
-    const
-      Indices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
-    var
-//      fBufferData: TglrBufferData;
-//      fIndices: array[0..5] of Word;
-      fRot, fWidth, fHeight: Single;
-      fPP: TdfVec2f;
+    fRot, fWidth, fHeight: Single;
+    fPP: TdfVec2f;
 
     procedure SetRot(const aRot: Single);
     procedure SetWidth(const aWidth: Single);
     procedure SetHeight(const aHeight: Single);
     procedure SetPP(const aPP: TdfVec2f);
   public
-    Vertices: array[0..3] of TglrVertexP3T2;
+    Vertices: array[0..3] of TglrVertexP3T2C4;
 
     constructor Create(); override; overload;
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f); overload;
@@ -721,8 +728,9 @@ type
     property Height: Single read fHeight write SetHeight;
     property PivotPoint: TdfVec2f read fPP write SetPP;
 
-    procedure SetDefaultVertices(); //Sets vertices due to width, height and pivot point
+    procedure SetDefaultVertices(); //Sets vertices due to width, height, pivot point and rotation
     procedure SetDefaultTexCoords(); //Sets default texture coords
+    procedure SetVerticesColor(aColor: TdfVec4f);
 
     procedure RenderSelf(); override;
   end;
@@ -814,7 +822,7 @@ uses
 
 const
   VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
-    (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3));
+    (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3), SizeOf(TglrVertexP3T2C4));
   IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
     (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
   IF_FORMAT: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of TGLConst =
@@ -831,7 +839,7 @@ const
 constructor TglrSpriteBatch.Create;
 begin
   inherited Create;
-  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2);
+  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2Col4);
   fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
 end;
 
@@ -846,7 +854,7 @@ end;
 procedure TglrSpriteBatch.RenderSelf;
 var
   i, j, count: Integer;
-  p1, p2: Pointer;
+  child: TglrSprite;
 begin
   count := 0;
   for i := 0 to Childs.Count - 1 do
@@ -857,18 +865,19 @@ begin
       begin
         for j := 0 to 3 do
         begin
-          fVData[count * 4 + j] := (Childs[i] as TglrSprite).Vertices[j];
-          (Childs[i] as TglrSprite).Matrix.Pos := (Childs[i] as TglrSprite).Position;
-          fVData[count * 4 + j].vec := (Childs[i] as TglrSprite).GetAbsMatrix() * fVData[count * 4 + j].vec;
+          child := (Childs[i] as TglrSprite);
+          fVData[count * 4 + j] := child.Vertices[j];
+          child.Matrix.Pos := child.Position;
+          fVData[count * 4 + j].vec := child.AbsoluteMatrix * fVData[count * 4 + j].vec;
         end;
         for j := 0 to 5 do
-          fIData[count * 6 + j] := (Childs[i] as TglrSprite).Indices[j] + count * 4;
+          fIData[count * 6 + j] := SpriteIndices[j] + count * 4;
         count += 1;
       end;
   fVB.Update(@fVData[0], 0, count * 4);
   fIB.Update(@fIData[0], 0, count * 6);
-  Render.Params.Model.Identity;
-  Render.Params.CalculateMVP();
+
+  Render.Params.ModelViewProj := Render.Params.ViewProj;
   Material.Bind();
   Render.DrawTriangles(fVB, fIB, 0, 6 * count);
   Material.Unbind();
@@ -1099,7 +1108,8 @@ procedure TglrSprite.SetRot(const aRot: Single);
 begin
   if (not Equalf(aRot, fRot)) then
   begin
-    Matrix.Rotate((aRot - FRot) * deg2rad, dfVec3f(0, 0, 1));
+    Matrix.Identity();
+    Matrix.Rotate(aRot * deg2rad, dfVec3f(0, 0, 1));
     fRot := aRot;
   end;
 end;
@@ -1145,6 +1155,7 @@ begin
   fPP := aPivotPoint;
   SetDefaultVertices();
   SetDefaultTexCoords();
+  SetVerticesColor(dfVec4f(1, 1, 1, 1));
 end;
 
 destructor TglrSprite.Destroy;
@@ -1166,6 +1177,14 @@ begin
   Vertices[1].tex := dfVec2f(1, 0);
   Vertices[2].tex := dfVec2f(0, 0);
   Vertices[3].tex := dfVec2f(0, 1);
+end;
+
+procedure TglrSprite.SetVerticesColor(aColor: TdfVec4f);
+begin
+  Vertices[0].col := aColor;
+  Vertices[1].col := aColor;
+  Vertices[2].col := aColor;
+  Vertices[3].col := aColor;
 end;
 
 procedure TglrSprite.RenderSelf;
@@ -1690,6 +1709,22 @@ end;
 class function Convert.ToString(aVal: TdfMat4f): AnsiString;
 begin
   log.Write(lCritical, 'Convert mat to string is not implemented');
+end;
+
+class function Convert.ToString(aVal: TdfVec2f): AnsiString;
+begin
+  Result := ToString(aVal.x) + '|' + ToString(aVal.y);
+end;
+
+class function Convert.ToString(aVal: TdfVec3f): AnsiString;
+begin
+  Result := ToString(aVal.x) + '|' + ToString(aVal.y) + '|' + ToString(aVal.z);
+end;
+
+class function Convert.ToString(aVal: TdfVec4f): AnsiString;
+begin
+  Result := ToString(aVal.x) + '|' + ToString(aVal.y) + '|' + ToString(aVal.z)
+   + '|' + ToString(aVal.w);
 end;
 
 class function Convert.ToInt(aStr: AnsiString; aDefault: Integer): Integer;
@@ -2585,6 +2620,15 @@ begin
 			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
       gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
       gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
+    end;
+    vfPos3Tex2Col4:
+    begin
+      gl.EnableVertexAttribArray(Ord(vaCoord));
+      gl.EnableVertexAttribArray(Ord(vaTexCoord0));
+      gl.EnableVertexAttribArray(Ord(vaColor));
+			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
+			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
+      gl.VertexAttribPointer(Ord(vaColor), 4, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
     end
     else
       Log.Write(lCritical, 'Unsupported type of vertexbuffer format. Tinyglr developer is an asshole');
