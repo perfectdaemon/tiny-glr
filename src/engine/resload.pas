@@ -354,10 +354,7 @@ begin
   Stream.Read(fh, SizeOf(BITMAPFILEHEADER));
   Stream.Read(ih, SizeOf(BITMAPINFOHEADER));
   if (fh.bfReserved1 <> $0F86) then
-  begin
-    FreeMem(Result);
     Log.Write(lCritical, 'Font load failed, invalid bmpf file');
-  end;
   Stream.Pos := SizeOf(BITMAPFILEHEADER) + SizeOf(BITMAPINFOHEADER) + ih.biSizeImage;
   Stream.Read(CharCount, SizeOf(LongWord));
   GetMem(Result, Stream.Size - Stream.Pos);
