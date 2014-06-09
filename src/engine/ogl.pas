@@ -4,9 +4,8 @@ interface
 
 uses
   {$IFDEF WINDOWS}
-  Windows,
+  Windows;
   {$ENDIF}
-  glrMath;
 
 type
 
@@ -131,7 +130,6 @@ type
     GetString      : function (name: TGLConst): PAnsiChar; stdcall;
     GetError       : function (): LongWord; stdcall;
     Flush          : procedure;
-    //PolygonMode    : procedure (face, mode: TGLConst); stdcall;
     PixelStorei    : procedure (pname: TGLConst; param: LongInt); stdcall;
     GenTextures    : procedure (n: LongInt; textures: Pointer); stdcall;
     DeleteTextures : procedure (n: LongInt; textures: Pointer); stdcall;
@@ -159,45 +157,10 @@ type
     StencilFunc    : procedure (func: TGLConst; ref: LongInt; mask: LongWord); stdcall;
     DepthFunc      : procedure (func: TGLConst); stdcall;
     StencilOp      : procedure (fail, zfail, zpass: TGLConst); stdcall;
-    //Lightfv        : procedure (light, pname: TGLConst; params: Pointer); stdcall;
-    //Materialfv     : procedure (face, pname: TGLConst; params: Pointer); stdcall;
     Viewport       : procedure (x, y, width, height: LongInt); stdcall;
     Scissor        : procedure (x, y, width, height: LongInt); stdcall;
-//    Beginp         : procedure (mode: TGLConst); stdcall;
-//    Endp           : procedure;
     PointSize      : procedure (size: Single); stdcall;
-    //LineWidth      : procedure (width: Single); stdcall;
-//    Color3f        : procedure (r, g, b: Single); stdcall;
-//    Color3fv       : procedure (const rgb: TdfVec3f); stdcall;
-//    Color4ub       : procedure (r, g, b, a: Byte); stdcall;
-//    Color4ubv      : procedure (var rgba: TRGBA); stdcall;
-//    Color4f        : procedure (r, g, b, a: Single); stdcall;
-//    Color4fv       : procedure (const rgba: TdfVec4f); stdcall;
-//    Vertex2f       : procedure (x, y: Single); stdcall;
-//    Vertex2fv      : procedure (const xy: TdfVec2f); stdcall;
-//    Vertex3f       : procedure (x, y, z: Single); stdcall;
-//    Vertex3fv      : procedure (const xyz: TdfVec3f); stdcall;
-//    Normal3f       : procedure (x, y, z: Single); stdcall;
-//    Normal3fv      : procedure (const xyz: TdfVec3f); stdcall;
-//    TexCoord2f     : procedure (s, t: Single); stdcall;
-//    TexCoord2fv    : procedure (const st: TdfVec2f); stdcall;
-//    EnableClientState  : procedure (_array: TGLConst); stdcall;
-//    DisableClientState : procedure (_array: TGLConst); stdcall;
     DrawElements    : procedure (mode: TGLConst; count: LongInt; _type: TGLConst; const indices: Pointer); stdcall;
-//    DrawArrays      : procedure (mode: TGLConst; first, count: LongInt); stdcall;
-//    ColorPointer    : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
-//    VertexPointer   : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
-//    TexCoordPointer : procedure (size: LongInt; _type: TGLConst; stride: LongInt; const ptr: Pointer); stdcall;
-//    NormalPointer   : procedure (type_: TGLConst; stride: LongWord; const P: Pointer); stdcall;
-//    MatrixMode      : procedure (mode: TGLConst); stdcall;
-//    LoadIdentity    : procedure;
-//    LoadMatrixf     : procedure (const m: TdfMat4f); stdcall;
-//    MultMatrixf     : procedure (const m: TdfMat4f); stdcall;
-//    PushMatrix      : procedure;
-//    PopMatrix       : procedure;
-    //Scalef          : procedure (x, y, z: Single); stdcall;
-    //Translatef      : procedure (x, y, z: Single); stdcall;
-    //Rotatef         : procedure (Angle, x, y, z: Single); stdcall;
     Ortho           : procedure (left, right, bottom, top, zNear, zFar: Double); stdcall;
     Frustum         : procedure (left, right, bottom, top, zNear, zFar: Double); stdcall;
     ReadPixels      : procedure (x, y, width, height: LongInt; format, _type: TGLConst; pixels: Pointer); stdcall;
@@ -254,14 +217,10 @@ type
   // Multisample
     SampleCoverage          : procedure (value: Single; invert: Boolean); stdcall;
 
-//    PushAttrib              : procedure (mask: TGLConst); stdcall;
-//    PopAttrib               : procedure; stdcall;
-
     PointParameterfv        : procedure (pname: TGLConst; const params: Pointer); stdcall;
     PointParameterf         : procedure (pname: TGLConst; param: Single); stdcall;
     TexEnvf                 : procedure (target, pname: TGLConst; param: Single); stdcall;
     TexEnvi                 : procedure (target, pname: TGLConst; param: TGLConst); stdcall;
-//    IsTexture               : function  (texture: LongInt): Boolean; stdcall;
 
     procedure Init;
     procedure Free;
@@ -291,7 +250,6 @@ const
     'glGetString',
     'glGetError',
     'glFlush',
-    //'glPolygonMode',
     'glPixelStorei',
     'glGenTextures',
     'glDeleteTextures',
@@ -319,45 +277,10 @@ const
     'glStencilFunc',
     'glDepthFunc',
     'glStencilOp',
-    //'glLightfv',
-    //'glMaterialfv',
     'glViewport',
     'glScissor',
-//    'glBegin',
-//    'glEnd',
     'glPointSize',
-    //'glLineWidth',
-//    'glColor3f',
-//    'glColor3fv',
-//    'glColor4ub',
-//    'glColor4ubv',
-//    'glColor4f',
-//    'glColor4fv',
-//    'glVertex2f',
-//    'glVertex2fv',
-//    'glVertex3f',
-//    'glVertex3fv',
-//    'glNormal3f',
-//    'glNormal3fv',
-//    'glTexCoord2f',
-//    'glTexCoord2fv',
-//    'glEnableClientState',
-//    'glDisableClientState',
     'glDrawElements',
-//    'glDrawArrays',
-//    'glColorPointer',
-//    'glVertexPointer',
-//    'glTexCoordPointer',
-//    'glNormalPointer',
-//    'glMatrixMode',
-//    'glLoadIdentity',
-//    'glLoadMatrixf',
-//    'glMultMatrixf',
-//    'glPushMatrix',
-//    'glPopMatrix',
-    //'glScalef',
-    //'glTranslatef',
-    //'glRotatef',
     'glOrtho',
     'glFrustum',
     'glReadPixels',
@@ -409,13 +332,10 @@ const
     'glBindRenderbufferEXT',
     'glRenderbufferStorageEXT',
     'glSampleCoverage',
-//    'glPushAttrib',
-//    'glPopAttrib',
     'glPointParameterfv',
     'glPointParameterf',
     'glTexEnvf',
     'glTexEnvi'
-//    'glIsTexture'
   );
 var
   i    : LongInt;
@@ -457,11 +377,5 @@ begin
   FreeLibrary(Lib);
   {$ENDIF}
 end;
-
-
-initialization
-
-
-finalization
 
 end.
