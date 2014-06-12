@@ -174,16 +174,16 @@ type
   TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2, vfPos3Tex2Nor3, vfPos3Tex2Col4);
   TglrIndexFormat = (ifByte, ifShort, ifInt);
 
-  TglrVertexP2T2 = record
+  TglrVertexP2T2 = packed record
     vec, tex: TdfVec2f;
   end;
 
-  TglrVertexP3T2 = record
+  TglrVertexP3T2 = packed record
     vec: TdfVec3f;
     tex: TdfVec2f;
   end;
 
-  TglrVertexP3T2N3 = record
+  TglrVertexP3T2N3 = packed record
     vec: TdfVec3f;
     tex: TdfVec2f;
     nor: TdfVec3f;
@@ -194,6 +194,8 @@ type
     tex: TdfVec2f;
     col: TdfVec4f;
   end;
+
+  TglrQuadP3T2C4 = array[0..3] of TglrVertexP3T2C4;
 
   TglrVertexAtrib = (vaCoord = 0, vaNormal = 1, vaTexCoord0 = 2, vaTexCoord1 = 3, vaColor = 4{, ...});
 
@@ -233,7 +235,7 @@ type
 
   TglrVertexBuffer = class
     Id: TglrVertexBufferId;
-    vbFormat: TglrVertexFormat;
+    Format: TglrVertexFormat;
     Count: Integer;
     procedure Bind();
     class procedure Unbind();
@@ -249,7 +251,7 @@ type
 
   TglrIndexBuffer = class
     Id: TglrIndexBufferId;
-    iFormat: TglrIndexFormat;
+    Format: TglrIndexFormat;
     procedure Bind();
     class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrIndexFormat); virtual;
@@ -558,7 +560,7 @@ type
 
   TglrNode = class
   protected
-    fDir, fRight, fUp, fPos: TdfVec3f;
+    fDir, fRight, fUp: TdfVec3f;
     fParent: TglrNode;
     fAbsMatrix: TdfMat4f;
 
@@ -574,6 +576,7 @@ type
   public
     Visible: Boolean;
     Matrix: TdfMat4f;
+    Position: TdfVec3f;
     Childs: TglrNodeList;
 
     constructor Create; virtual;
@@ -582,7 +585,7 @@ type
     property AbsoluteMatrix: TdfMat4f read GetAbsMatrix write fAbsMatrix;
     property Parent: TglrNode read fParent write SetParent;
 
-    property Position: TdfVec3f read fPos write fPos;
+//    property Position: TdfVec3f read Position write Position;
     property Up: TdfVec3f read fUp write SetUp;
     property Direction: TdfVec3f read fDir write SetDir;
     property Right: TdfVec3f read fRight write SetRight;
@@ -751,18 +754,19 @@ type
       PglrCharData = ^TglrCharData;
 
     var
-      fBuffersProvider: TglrVIBuffersProvider;
+      //fBuffersProvider: TglrVIBuffersProvider;
       Material: TglrMaterial;
       Table: array [WideChar] of PglrCharData;
       CharData: array of TglrCharData;
 
+    function GetCharQuad(aChar: WideChar): TglrQuadP3T2C4;
   public
     constructor Create(); virtual; overload;
     constructor Create(aStream: TglrStream;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
     destructor Destroy(); override;
 
-    procedure RenderText(aText: TglrText);
+    //procedure RenderText(aText: TglrText);
   end;
 
   TglrTextHorAlign = (haLeft, haCenter, haRight);
@@ -776,19 +780,33 @@ type
     procedure SetHorAlign(aValue: TglrTextHorAlign);
     procedure SetTextWidth(aValue: Single);
     procedure SetVerAlign(aValue: TglrTextVerAlign);
-    procedure DoRender(); override;
   public
-    Font: TglrFont;
     Text: WideString;
     LetterSpacing, LineSpacing: Single;
-
-    constructor Create(aFont: TglrFont; const aTextMaxLength: Word = 256); virtual; overload;
-    constructor Create(aFont: TglrFont; const aText: WideString); virtual; overload;
+    constructor Create(const aText: WideString = ''); virtual;
     destructor Destroy(); override;
 
     property TextWidth: Single read fTextWidth write SetTextWidth;
     property HorAlign: TglrTextHorAlign read fHorAlign write SetHorAlign;
     property VerAlign: TglrTextVerAlign read fVerAlign write SetVerAlign;
+
+    procedure RenderSelf(); override;
+  end;
+
+  { TglrFontBatch }
+
+  TglrFontBatch = class (TglrNode)
+  protected
+    fVData: array[0..65535] of TglrVertexP3T2C4;
+    fIData: array[0..65535] of Word;
+    fVB: TglrVertexBuffer;
+    fIB: TglrIndexBuffer;
+  public
+    Font: TglrFont;
+    constructor Create(aFont: TglrFont); virtual;
+    destructor Destroy(); override;
+
+    procedure RenderSelf(); override;
   end;
 
   TglrMesh = class (TglrNode)
@@ -834,6 +852,87 @@ const
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
 
+{ TglrFontBatch }
+
+constructor TglrFontBatch.Create(aFont: TglrFont);
+begin
+  inherited Create;
+  if (aFont = nil) then
+    Log.Write(lCritical, 'FontBatch: Null pointer provided, Font object expected');
+  Font := aFont;
+  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2Col4);
+  fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
+end;
+
+destructor TglrFontBatch.Destroy;
+begin
+  fVB.Free();
+  fIB.Free();
+  inherited Destroy;
+end;
+
+procedure TglrFontBatch.RenderSelf;
+var
+  i, j, k, count: Integer;
+  x, y: Single;
+  child: TglrText;
+  quad: TglrQuadP3T2C4;
+begin
+  count := 0;
+  x := 0;
+  y := 0;
+  for i := 0 to Childs.Count - 1 do
+    if not (Childs[i] is TglrText) then
+      Log.Write(lWarning, 'FontBatch: Child node is not a Text')
+    else
+    begin
+      child := Childs[i] as TglrText;
+      if (not child.Visible) or (child.Text = '') then
+        continue;
+
+      for j := 1 to Length(child.Text) do
+      begin
+        if (child.Text[j] = #10) then
+        begin
+          x := 0;
+          y += child.LineSpacing;
+          continue;
+        end;
+
+        if Font.Table[child.Text[j]] = nil then
+          continue;
+
+        quad := Font.GetCharQuad(child.Text[j]);
+        child.Matrix.Pos := child.Position;
+        for k := 0 to 3 do
+        begin
+          fVData[count * 4 + k] := quad[k];
+          fVData[count * 4 + k].vec += dfVec3f(x, y, 0);
+          fVData[count * 4 + k].vec := child.AbsoluteMatrix * fVData[count * 4 + k].vec;
+          fVData[count * 4 + k].col := dfVec4f(1, 1, 1, 1);
+        end;
+
+        for k := 0 to 5 do
+          fIData[count * 6 + k] := SpriteIndices[k] + count * 4;
+
+        x += quad[0].vec.x + child.LetterSpacing;
+        count += 1;
+      end;
+
+    end;
+
+  if count = 0 then
+    Exit();
+
+  fVB.Update(@fVData[0], 0, count * 4);
+  fIB.Update(@fIData[0], 0, count * 6);
+
+  Render.Params.ModelViewProj := Render.Params.ViewProj;
+  Font.Material.Bind();
+  Render.DrawTriangles(fVB, fIB, 0, 6 * count);
+  Font.Material.Unbind();
+end;
+
 { TglrSpriteBatch }
 
 constructor TglrSpriteBatch.Create;
@@ -863,17 +962,19 @@ begin
     else
       if Childs[i].Visible then
       begin
+        child := (Childs[i] as TglrSprite);
+        child.Matrix.Pos := child.Position;
         for j := 0 to 3 do
         begin
-          child := (Childs[i] as TglrSprite);
           fVData[count * 4 + j] := child.Vertices[j];
-          child.Matrix.Pos := child.Position;
           fVData[count * 4 + j].vec := child.AbsoluteMatrix * fVData[count * 4 + j].vec;
         end;
         for j := 0 to 5 do
           fIData[count * 6 + j] := SpriteIndices[j] + count * 4;
         count += 1;
       end;
+  if count = 0 then
+    Exit();
   fVB.Update(@fVData[0], 0, count * 4);
   fIB.Update(@fIData[0], 0, count * 6);
 
@@ -1019,36 +1120,44 @@ begin
   Log.Write(lCritical, 'Text.SetVerAlign is not implemented');
 end;
 
-procedure TglrText.DoRender;
-begin
-  if (not Assigned(Font)) then
-    Exit();
-
-  inherited DoRender;
-  Font.RenderText(Self);
-end;
-
-constructor TglrText.Create(aFont: TglrFont; const aTextMaxLength: Word);
+constructor TglrText.Create(const aText: WideString);
 begin
   inherited Create();
-  Font := aFont;
-  //todo: reserve data in font' vb and ib
-end;
-
-constructor TglrText.Create(aFont: TglrFont; const aText: WideString);
-begin
-  inherited Create();
-  Font := aFont;
-  //todo: set data in font' vb and ib
+  Text := aText;
+  LineSpacing := 2.0;
+  LetterSpacing := 1.0;
 end;
 
 destructor TglrText.Destroy;
 begin
-  Log.Write(lCritical, 'Text.Destroy is not implemented');
   inherited Destroy;
 end;
 
+procedure TglrText.RenderSelf;
+begin
+
+end;
+
 { TglrFont }
+
+function TglrFont.GetCharQuad(aChar: WideChar): TglrQuadP3T2C4;
+begin
+  FillChar(Result[0], SizeOf(TglrVertexP3T2C4) * 4, 0);
+  if Table[aChar] = nil then
+    Exit();
+  with Table[aChar]^ do
+  begin
+    Result[0].vec := dfVec3f(w, py + h, 0);
+    Result[1].vec := dfVec3f(w, py, 0);
+    Result[2].vec := dfVec3f(0, py, 0);
+    Result[3].vec := dfVec3f(0, py + h, 0);
+
+    Result[0].tex := dfVec2f(tx + tw, ty + th);
+    Result[1].tex := dfVec2f(tx + tw, ty);
+    Result[2].tex := dfVec2f(tx, ty);
+    Result[3].tex := dfVec2f(tx, ty + th);
+  end;
+end;
 
 constructor TglrFont.Create;
 begin
@@ -1064,7 +1173,7 @@ var
   charCount, i: LongWord;
 begin
   inherited Create();
-  fBuffersProvider := TglrVIBuffersProvider.Create(1, vfPos3Tex2, ifShort, 4, 6);
+//  fBuffersProvider := TglrVIBuffersProvider.Create(1, vfPos3Tex2, ifShort, 4, 6);
 
   Material := TglrMaterial.Create();
   if Default.fInited then;
@@ -1084,16 +1193,16 @@ end;
 
 destructor TglrFont.Destroy;
 begin
-  fBuffersProvider.Free();
+//  fBuffersProvider.Free();
   Material.Free();
   Log.Write(lCritical, 'TglrFont.Destroy is not implemented');
   inherited Destroy;
 end;
 
-procedure TglrFont.RenderText(aText: TglrText);
-begin
-  Log.Write(lCritical, 'TglrFont.RenderText is not implemented');
-end;
+//procedure TglrFont.RenderText(aText: TglrText);
+//begin
+//  Log.Write(lCritical, 'TglrFont.RenderText is not implemented');
+//end;
 
 { TglrRenderParams }
 
@@ -1587,7 +1696,7 @@ var
   v: TdfVec3f;
 begin
   v := Up * alongUpVector + Right * alongRightVector + Direction * alongDirVector;
-  fPos += v;
+  Position += v;
   UpdateVectorsFromMatrix();
 end;
 
@@ -1619,7 +1728,7 @@ end;
 procedure TglrCamera.Update;
 begin
   Matrix.Pos := dfVec3f(0, 0, 0);
-  Matrix.Pos := Matrix * fPos.NegateVector;
+  Matrix.Pos := Matrix * Position.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
   Render.Params.ModelViewProj := Render.Params.ViewProj;
   UpdateVectorsFromMatrix();
@@ -1635,14 +1744,14 @@ begin
   fDir := (aTargetPos - aPos).Normal();
   fRight := fDir.Cross(fUp).Normal();
   fUp := fRight.Cross(fDir).Normal();
-  fPos := aPos;
+  Position := aPos;
   fDir.Negate;
 
   with Matrix do
   begin
-    e00 := fRight.x;  e10 := fRight.y;  e20 := fRight.z;  e30 := -fRight.Dot(fPos);
-    e01 := fUp.x;    e11 := fUp.y;    e21 := fUp.z;    e31 := -fUp.Dot(fPos);
-    e02 := fDir.x;   e12 := fDir.y;   e22 := fDir.z;   e32 := -fDir.Dot(fPos);
+    e00 := fRight.x;  e10 := fRight.y;  e20 := fRight.z;  e30 := -fRight.Dot(Position);
+    e01 := fUp.x;    e11 := fUp.y;    e21 := fUp.z;    e31 := -fUp.Dot(Position);
+    e02 := fDir.x;   e12 := fDir.y;   e22 := fDir.z;   e32 := -fDir.Dot(Position);
     e03 := 0;        e13 := 0;        e23 := 0;        e33 := 1;
   end;
 
@@ -1812,9 +1921,9 @@ procedure TglrNode.UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TdfVec3f);
 begin
   with Matrix do
   begin
-    e00 := aNewRight.x; e01 := aNewRight.y; e02 := aNewRight.z; e03 := FPos.Dot(aNewRight);
-    e10 := aNewUp.x;    e11 := aNewUp.y;    e12 := aNewUp.z;    e13 := FPos.Dot(aNewUp);
-    e20 := aNewDir.x;   e21 := aNewDir.y;   e22 := aNewDir.z;   e23 := FPos.Dot(aNewDir);
+    e00 := aNewRight.x; e01 := aNewRight.y; e02 := aNewRight.z; e03 := Position.Dot(aNewRight);
+    e10 := aNewUp.x;    e11 := aNewUp.y;    e12 := aNewUp.z;    e13 := Position.Dot(aNewUp);
+    e20 := aNewDir.x;   e21 := aNewDir.y;   e22 := aNewDir.z;   e23 := Position.Dot(aNewDir);
     e30 := 0;           e31 := 0;           e32 := 0;           e33 := 1;
   end;
   fRight := aNewRight;
@@ -1867,7 +1976,7 @@ procedure TglrNode.RenderSelf();
 var
   m, m1: TdfMat4f;
 begin
-  Matrix.Pos := fPos;
+  Matrix.Pos := Position;
   Render.Params.Model := GetAbsMatrix;
   Render.Params.CalculateMVP();
 
@@ -2522,7 +2631,7 @@ begin
     iBuffer.Bind();
   end;
 
-  gl.DrawElements(GL_TRIANGLES, aIndicesCount, IF_FORMAT[iBuffer.iFormat], Pointer(aStartIndex * IF_STRIDE[iBuffer.iFormat]));
+  gl.DrawElements(GL_TRIANGLES, aIndicesCount, IF_FORMAT[iBuffer.Format], Pointer(aStartIndex * IF_STRIDE[iBuffer.Format]));
 
   fDipCount += 1;
   fTriCount += aIndicesCount div 3;
@@ -2573,9 +2682,9 @@ constructor TglrIndexBuffer.Create(aData: Pointer; aCount: Integer;
   aFormat: TglrIndexFormat);
 begin
   gl.GenBuffers(1, @Self.Id);
-  iFormat := aFormat;
+  Format := aFormat;
   Self.Bind();
-  gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[iFormat] * aCount, aData, GL_STATIC_DRAW);
+  gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[Format] * aCount, aData, GL_STATIC_DRAW);
   Self.Unbind();
 end;
 
@@ -2588,7 +2697,7 @@ end;
 procedure TglrIndexBuffer.Update(aData: Pointer; aStart, aCount: Integer);
 begin
   gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, Id);
-  gl.BufferSubData(GL_ELEMENT_ARRAY_BUFFER, aStart, aCount * IF_STRIDE[iFormat], aData);
+  gl.BufferSubData(GL_ELEMENT_ARRAY_BUFFER, aStart, aCount * IF_STRIDE[Format], aData);
   gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 end;
 
@@ -2597,38 +2706,38 @@ end;
 procedure TglrVertexBuffer.Bind;
 begin
   gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
-  case vbFormat of
+  case Format of
     vfPos3Tex2:
     begin
       gl.EnableVertexAttribArray(Ord(vaCoord));
       gl.EnableVertexAttribArray(Ord(vaTexCoord0));
-			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
-      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
+			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[Format], nil);
+      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f)));
     end;
     vfPos2Tex2:
     begin
       gl.EnableVertexAttribArray(Ord(vaCoord));
       gl.EnableVertexAttribArray(Ord(vaTexCoord0));
-			gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
-			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec2f)));
+			gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[Format], nil);
+			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec2f)));
     end;
     vfPos3Tex2Nor3:
     begin
       gl.EnableVertexAttribArray(Ord(vaCoord));
       gl.EnableVertexAttribArray(Ord(vaTexCoord0));
       gl.EnableVertexAttribArray(Ord(vaNormal));
-			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
-      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
-      gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
+			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[Format], nil);
+      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f)));
+      gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
     end;
     vfPos3Tex2Col4:
     begin
       gl.EnableVertexAttribArray(Ord(vaCoord));
       gl.EnableVertexAttribArray(Ord(vaTexCoord0));
       gl.EnableVertexAttribArray(Ord(vaColor));
-			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vbFormat], nil);
-			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f)));
-      gl.VertexAttribPointer(Ord(vaColor), 4, GL_FLOAT, False, VF_STRIDE[vbFormat], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
+			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[Format], nil);
+			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f)));
+      gl.VertexAttribPointer(Ord(vaColor), 4, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
     end
     else
       Log.Write(lCritical, 'Unsupported type of vertexbuffer format. Tinyglr developer is an asshole');
@@ -2645,7 +2754,7 @@ constructor TglrVertexBuffer.Create(aData: Pointer; aCount: Integer;
   aFormat: TglrVertexFormat);
 begin
   gl.GenBuffers(1, @Self.Id);
-  Self.vbFormat := aFormat;
+  Self.Format := aFormat;
   Self.Count := aCount;
   gl.BindBuffer(GL_ARRAY_BUFFER, Id);
   gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[aFormat] * aCount, aData, GL_STATIC_DRAW);
@@ -2655,7 +2764,7 @@ end;
 procedure TglrVertexBuffer.Update(aData: Pointer; aStart, aCount: Integer);
 begin
   gl.BindBuffer(GL_ARRAY_BUFFER, Id);
-  gl.BufferSubData(GL_ARRAY_BUFFER, aStart, aCount * VF_STRIDE[vbFormat], aData);
+  gl.BufferSubData(GL_ARRAY_BUFFER, aStart, aCount * VF_STRIDE[Format], aData);
   gl.BindBuffer(GL_ARRAY_BUFFER, 0);
 end;
 
