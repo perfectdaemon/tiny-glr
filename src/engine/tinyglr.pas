@@ -1,8 +1,8 @@
 {
-  TODO:
-    - Базовый шейдер
-    - Класс батча?
-    - Спрайт, меш
+  tiny glr
+
+  Dmity Orlov a.k.a. perfect.daemon
+  http://perfect-daemon.ru
 }
 
 unit tinyglr;
@@ -258,43 +258,6 @@ type
     destructor Destroy(); override;
 
     procedure Update(aData: Pointer; aStart, aCount: Integer); virtual;
-  end;
-
-  TglrBufferData = record
-    V: TglrVertexBuffer;
-    I: TglrIndexBuffer;
-    vOffset, iOffset: LongWord;
-  end;
-
-  { TglrVIBuffersProvider }
-const
-  VERTEX_BUFFER_COUNT = 65536;
-  INDEX_BUFFER_COUNT = 65536;
-type
-  TglrVIBuffersProvider = class
-  protected
-    type
-      TData = record
-        vb: TglrVertexBuffer;
-        ib: TglrIndexBuffer;
-        vbLast, ibLast: LongWord;
-        unused: TglrWordList;
-      end;
-    var
-      fData: array of TData;
-      fVCount, fICount: LongWord;
-      fVFormat: TglrVertexFormat;
-      fIFormat: TglrIndexFormat;
-    procedure Expand();
-  public
-    constructor Create(); virtual; overload;
-    constructor Create(const aInitialBuffersCount: Integer;
-      aVertexFormat: TglrVertexFormat; aIndexFormat: TglrIndexFormat;
-      aVCount, aICount: LongWord); virtual; overload;
-    destructor Destroy(); override;
-
-    function GetBufferData(): TglrBufferData;
-    procedure FreeBufferData(const aData: TglrBufferData);
   end;
 
   { TglrFrameBuffer }
@@ -585,7 +548,6 @@ type
     property AbsoluteMatrix: TdfMat4f read GetAbsMatrix write fAbsMatrix;
     property Parent: TglrNode read fParent write SetParent;
 
-//    property Position: TdfVec3f read Position write Position;
     property Up: TdfVec3f read fUp write SetUp;
     property Direction: TdfVec3f read fDir write SetDir;
     property Right: TdfVec3f read fRight write SetRight;
@@ -754,7 +716,6 @@ type
       PglrCharData = ^TglrCharData;
 
     var
-      //fBuffersProvider: TglrVIBuffersProvider;
       Material: TglrMaterial;
       Table: array [WideChar] of PglrCharData;
       CharData: array of TglrCharData;
@@ -765,8 +726,6 @@ type
     constructor Create(aStream: TglrStream;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
     destructor Destroy(); override;
-
-    //procedure RenderText(aText: TglrText);
   end;
 
   TglrTextHorAlign = (haLeft, haCenter, haRight);
@@ -949,7 +908,6 @@ begin
   inherited Destroy;
 end;
 
-//dirty - should make it easier
 procedure TglrSpriteBatch.RenderSelf;
 var
   i, j, count: Integer;
@@ -982,116 +940,6 @@ begin
   Material.Bind();
   Render.DrawTriangles(fVB, fIB, 0, 6 * count);
   Material.Unbind();
-end;
-
-{ TglrVIBuffersProvider }
-
-procedure TglrVIBuffersProvider.Expand;
-var
-  i: Integer;
-begin
-  i := Length(fData);
-  SetLength(fData, i + 1);
-  with fData[i] do
-  begin
-    vb := TglrVertexBuffer.Create(nil, VERTEX_BUFFER_COUNT, fVFormat);
-    ib := TglrIndexBuffer.Create(nil, INDEX_BUFFER_COUNT, fIFormat);
-    unused := TglrWordList.Create(64);
-    vbLast := 0;
-    ibLast := 0;
-  end;
-end;
-
-constructor TglrVIBuffersProvider.Create;
-begin
-  Create(1, vfPos3Tex2, ifShort, 4, 6);
-end;
-
-constructor TglrVIBuffersProvider.Create(const aInitialBuffersCount: Integer;
-  aVertexFormat: TglrVertexFormat; aIndexFormat: TglrIndexFormat; aVCount,
-  aICount: LongWord);
-var
-  i: Integer;
-begin
-  inherited Create();
-  SetLength(fData, aInitialBuffersCount);
-  fVCount := aVCount;
-  fICount := aICount;
-  fVFormat := aVertexFormat;
-  fIFormat := aIndexFormat;
-  for i := 0 to aInitialBuffersCount - 1 do
-    with fData[i] do
-    begin
-      vb := TglrVertexBuffer.Create(nil, VERTEX_BUFFER_COUNT, fVFormat);
-      ib := TglrIndexBuffer.Create(nil, INDEX_BUFFER_COUNT, fIFormat);
-      unused := TglrWordList.Create(64);
-      vbLast := 0;
-      ibLast := 0;
-    end;
-end;
-
-destructor TglrVIBuffersProvider.Destroy;
-var
-  i: Integer;
-begin
-  for i := 0 to Length(fData) - 1 do
-    with fData[i] do
-    begin
-      vb.Free();
-      ib.Free();
-      unused.Free(False);
-    end;
-  inherited Destroy;
-end;
-
-function TglrVIBuffersProvider.GetBufferData(): TglrBufferData;
-var
-  i: Integer;
-begin
-  for i := 0 to Length(fData) do
-    with fData[i] do
-    begin
-      if ((vbLast + fVCount) >= VERTEX_BUFFER_COUNT) or ((ibLast + fICount) >= INDEX_BUFFER_COUNT) then
-      begin
-        if (Unused.Count = 0) then
-          continue
-        else
-        begin
-          Result.V := vb;
-          Result.I := ib;
-          Result.vOffset := Unused[Unused.Count - 1] * fVCount;
-          Result.iOffset := Unused[Unused.Count - 1] * fICount;
-          Unused.DeleteByIndex(Unused.Count - 1);
-          Exit();
-        end;
-      end
-      else
-      begin
-        Result.V := vb;
-        Result.I := ib;
-        Result.vOffset := vbLast;
-        Result.iOffset := ibLast;
-        vbLast += fVCount;
-        ibLast += fICount;
-        Exit();
-      end;
-    end;
-
-  Expand();
-  Exit(GetBufferData());
-end;
-
-procedure TglrVIBuffersProvider.FreeBufferData(const aData: TglrBufferData);
-var
-  i: Integer;
-begin
-  for i := 0 to Length(fData) - 1 do
-    if (aData.V = fData[i].vb) and (aData.I = fData[i].ib) then
-    begin
-      fData[i].unused.Add(aData.vOffset div fVCount);
-      Exit();
-    end;
-  Log.Write(lError, 'BuffersProvider: FreeBufferData failed - can''t find such Vertex and Index buffers');
 end;
 
 { TglrText }
@@ -1173,7 +1021,6 @@ var
   charCount, i: LongWord;
 begin
   inherited Create();
-//  fBuffersProvider := TglrVIBuffersProvider.Create(1, vfPos3Tex2, ifShort, 4, 6);
 
   Material := TglrMaterial.Create();
   if Default.fInited then;
@@ -1193,16 +1040,10 @@ end;
 
 destructor TglrFont.Destroy;
 begin
-//  fBuffersProvider.Free();
   Material.Free();
   Log.Write(lCritical, 'TglrFont.Destroy is not implemented');
   inherited Destroy;
 end;
-
-//procedure TglrFont.RenderText(aText: TglrText);
-//begin
-//  Log.Write(lCritical, 'TglrFont.RenderText is not implemented');
-//end;
 
 { TglrRenderParams }
 
@@ -1258,7 +1099,6 @@ end;
 constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
 begin
   inherited Create();
-  //Vertices
   fWidth := aWidth;
   fHeight := aHeight;
   fPP := aPivotPoint;
@@ -1379,7 +1219,7 @@ constructor TglrMaterial.Create(aStream: TglrStream;
   aFreeStreamOnFinish: Boolean);
 begin
   Create();
-  Log.Write(lWarning, 'Material create from stream is not implemented');
+  Log.Write(lCritical, 'Material create from stream is not implemented');
 end;
 
 destructor TglrMaterial.Destroy;
