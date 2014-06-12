@@ -20,9 +20,14 @@ type
     Sprites: array of TglrSprite;
     Batch: TglrSpriteBatch;
 
+    Font: TglrFont;
+    Text: TglrText;
+    FontBatch: TglrFontBatch;
+
     procedure PrepareMesh();
     procedure RenderMesh();
     procedure CreateSprites();
+    procedure CreateFont();
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -148,6 +153,17 @@ begin
   end;
 end;
 
+procedure TGame.CreateFont;
+begin
+  Font := TglrFont.Create(FileSystem.ReadResource('data/Arial14b.bmp'));
+  Text := TglrText.Create('Hello, world!');
+  Text.LetterSpacing := 2;
+  Text.Position.z := 90;
+  FontBatch := TglrFontBatch.Create(Font);
+  FontBatch.Childs.Add(Text);
+  SceneHud.Root.Childs.Add(FontBatch);
+end;
+
 procedure TGame.OnFinish;
 begin
   WriteLn('End');
@@ -222,7 +238,7 @@ begin
   SceneHud := TglrScene.Create(True);
   //SceneHud.Camera := Scene.Camera;
   SceneHud.Camera.ProjectionMode := pmOrtho;
-  SceneHud.Camera.SetCamera(dfVec3f(0, 0, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  SceneHud.Camera.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
 
   Material := TglrMaterial.Create();
   Material.Shader.Free();
@@ -233,6 +249,7 @@ begin
 
   PrepareMesh();
   CreateSprites();
+  CreateFont();
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
