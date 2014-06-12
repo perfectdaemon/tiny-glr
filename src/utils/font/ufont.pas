@@ -542,6 +542,7 @@ begin
   ih.biHeight := -TexHeight;
   ih.biPlanes := 1;
   ih.biBitCount := 32;
+  ih.biSizeImage := TexWidth * TexHeight * 4;
 
   Stream.Write(fh, SizeOf(BITMAPFILEHEADER));
   Stream.Write(ih, SizeOf(BITMAPINFOHEADER));
