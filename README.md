@@ -1,6 +1,6 @@
 ---
 
-**Status**: nothing to use right now, it's in deep development, come back later.
+Status: nothing to use right now, it's in deep development, come back later.
 
 ---
 ###Introduction###
