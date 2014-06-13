@@ -722,6 +722,8 @@ type
 
     function GetCharQuad(aChar: WideChar): TglrQuadP3T2C4;
   public
+    MaxCharHeight: Word;
+
     constructor Create(); virtual; overload;
     constructor Create(aStream: TglrStream;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
@@ -854,7 +856,7 @@ begin
         if (child.Text[j] = #10) then
         begin
           x := 0;
-          y += child.LineSpacing;
+          y += child.LineSpacing + Font.MaxCharHeight;
           continue;
         end;
 
@@ -1031,8 +1033,13 @@ begin
   SetLength(Self.CharData, charCount);
   Move(data^, CharData[0], charCount * SizeOf(TglrCharData));
   FreeMem(data);
+  MaxCharHeight := 0;
   for i := 0 to charCount - 1 do
+  begin
     Table[CharData[i].ID] := @CharData[i];
+    if CharData[i].h > MaxCharHeight then
+      MaxCharHeight := CharData[i].h;
+  end;
 
   if aFreeStreamOnFinish then
     aStream.Free();

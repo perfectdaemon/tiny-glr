@@ -156,9 +156,10 @@ end;
 procedure TGame.CreateFont;
 begin
   Font := TglrFont.Create(FileSystem.ReadResource('data/Arial14b.bmp'));
-  Text := TglrText.Create('Hello, world!');
-  Text.LetterSpacing := 2;
-  Text.Position := dfVec3f(200, 150, 90);
+  Text := TglrText.Create(UTF8Decode('Hello, world! / Привет, мир! ' + #13#10 +
+    'This time it will go over platforms... / На этот раз все будет кроссплатформенно...'));
+  Text.LetterSpacing := 1;
+  Text.Position := dfVec3f(10, 150, 90);
   FontBatch := TglrFontBatch.Create(Font);
   FontBatch.Childs.Add(Text);
   SceneHud.Root.Childs.Add(FontBatch);
@@ -236,7 +237,6 @@ begin
   Scene.Camera.ProjectionMode := pmPerspective;
 
   SceneHud := TglrScene.Create(True);
-  //SceneHud.Camera := Scene.Camera;
   SceneHud.Camera.ProjectionMode := pmOrtho;
   SceneHud.Camera.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
 
