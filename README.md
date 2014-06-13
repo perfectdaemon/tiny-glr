@@ -1,5 +1,9 @@
-```
-Status: nothing to use right now, it's in deep development, come back later.
+```pascal
+procedure StartUse();
+begin
+  //Status: nothing to use right now, it's in deep development, come back later.
+  Exit();
+end;
 ```
 
 ###Introduction###
