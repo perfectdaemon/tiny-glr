@@ -1041,7 +1041,7 @@ end;
 destructor TglrFont.Destroy;
 begin
   Material.Free();
-  Log.Write(lCritical, 'TglrFont.Destroy is not implemented');
+  SetLength(CharData, 0);
   inherited Destroy;
 end;
 
@@ -1633,8 +1633,8 @@ begin
   if not Assigned(Camera) and not fCameraAssignedLogError then
   begin
     Log.Write(lError, 'No camera assigned to scene, render is impossible');
-    Exit();
     fCameraAssignedLogError := True;
+    Exit();
   end
   else
     fCameraAssignedLogError := False;

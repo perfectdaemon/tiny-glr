@@ -158,7 +158,7 @@ begin
   Font := TglrFont.Create(FileSystem.ReadResource('data/Arial14b.bmp'));
   Text := TglrText.Create('Hello, world!');
   Text.LetterSpacing := 2;
-  Text.Position.z := 90;
+  Text.Position := dfVec3f(200, 150, 90);
   FontBatch := TglrFontBatch.Create(Font);
   FontBatch.Childs.Add(Text);
   SceneHud.Root.Childs.Add(FontBatch);
