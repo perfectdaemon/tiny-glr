@@ -210,7 +210,6 @@ type
   public
     Id: TglrTextureId;
 
-    X, Y, RegionWidth, RegionHeight,
     Width, Height: Integer;
 
     procedure SetWrapS(aWrap: TglrTexWrap);
@@ -226,6 +225,32 @@ type
 
     procedure Bind(const aSampler: Integer = 0);
     class procedure Unbind();
+  end;
+
+  PglrTextureRegion = ^TglrTextureRegion;
+  TglrTextureRegion = record
+    Texture: TglrTexture;
+    Name: AnsiString;
+    tx, ty, tw, th: Single;
+    Rotated: Boolean;
+  end;
+
+
+  { TglrTextureAtlas }
+
+  TglrTextureAtlas = class (TglrTexture)
+  protected
+    type
+      TglrTextureRegionsList = TglrList<PglrTextureRegion>;
+    var
+      fRegions: TglrTextureRegionsList;
+  public
+    constructor Create(aImageStream, aInfoStream: TglrStream;
+      aImageExt, aInfoExt: AnsiString;
+      aFreeStreamsOnFinish: Boolean = True); virtual;
+    destructor Destroy(); override;
+
+    function GetRegion(aName: AnsiString): PglrTextureRegion;
   end;
 
 
@@ -813,6 +838,82 @@ const
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
 
+{ TglrTextureAtlas }
+
+function ParseLine(const aLine: AnsiString): TglrStringList;
+var
+  start, i: Integer;
+begin
+  Result := TglrStringList.Create(8);
+  start := 1;
+  for i := start to Length(aLine) do
+    if aLine[i] = #9 then
+    begin
+      Result.Add(Copy(aLine, start, i - start));
+      start := i;
+    end;
+end;
+
+constructor TglrTextureAtlas.Create(aImageStream, aInfoStream: TglrStream;
+  aImageExt, aInfoExt: AnsiString; aFreeStreamsOnFinish: Boolean);
+var
+  lines, list: TglrStringList;
+  i: Integer;
+  p: PglrTextureRegion;
+begin
+  if aInfoExt = 'cheetah' then
+  begin
+    inherited Create(aImageStream, aImageExt, aFreeStreamsOnFinish);
+    fRegions := TglrTextureRegionsList.Create(8);
+    lines := LoadStringList(aInfoStream);
+    for i := 0 to lines.Count - 1 do
+    begin
+      list := ParseLine(lines[i]);
+      if list.Count > 0 then
+      begin
+        New(p);
+        p^.Name := list[0];
+        p^.Texture := Self;
+        p^.tx := Convert.ToInt(list[1]) / Self.Width;
+        p^.ty := Convert.ToInt(list[2]) / Self.Height;
+        p^.tw := Convert.ToInt(list[3]) / Self.Width;
+        p^.th := Convert.ToInt(list[4]) / Self.Height;
+        p^.Rotated := ((list.Count > 9) and (list[9] = 'r'));
+        fRegions.Add(p);
+      end
+      else
+        Log.Write(lError, 'TextureAtlas: Cheetah atlas - can not parse line `' + lines[i] + '`');
+      list.Free();
+    end;
+    lines.Free();
+
+    if aFreeStreamsOnFinish then
+      aInfoStream.Free();
+  end
+  else
+    Log.Write(lCritical, 'TextureAtlas: unrecognizable info file extension: `' + aInfoExt + '`');
+end;
+
+destructor TglrTextureAtlas.Destroy;
+var
+  i: Integer;
+begin
+  for i := 0 to fRegions.Count - 1 do
+    Dispose(fRegions[i]);
+  fRegions.Free();
+  inherited Destroy;
+end;
+
+function TglrTextureAtlas.GetRegion(aName: AnsiString): PglrTextureRegion;
+var
+  i: Integer;
+begin
+  for i := 0 to fRegions.Count - 1 do
+    if fRegions[i]^.Name = aName then
+      Exit(fRegions[i]);
+  Log.Write(lError, 'TextureAtlas: Can not find requested region "' + aName + '" at atlas');
+end;
+
 { TglrFontBatch }
 
 constructor TglrFontBatch.Create(aFont: TglrFont);
@@ -1326,7 +1427,7 @@ begin
   i := Length(ShadersId);
   SetLength(ShadersId, i + 1);
   ShadersId[i] := gl.CreateShader(aType);
-  data := LoadShader(aStream);
+  data := LoadText(aStream);
   gl.ShaderSource(ShadersId[i], 1, @data, nil);
   FreeMem(data);
   gl.CompileShader(ShadersId[i]);
@@ -2669,7 +2770,8 @@ begin
   end;
 end;
 
-class function TglrStream.Init(const FileName: AnsiString; RW: Boolean): TglrStream;
+class function TglrStream.Init(const FileName: AnsiString; RW: Boolean
+  ): TglrStream;
 var
   io: Integer;
 begin
@@ -2730,13 +2832,14 @@ begin
   FreeMemory(p);
 end;
 
+
 function TglrStream.Read(out Buf; BufSize: LongInt): LongInt;
 begin
   if SType = stMemory then
   begin
     Result := Min(FPos + BufSize, FSize) - FPos;
     Move(Mem^, Buf, Result);
-  end else
+  end else if SType = stFile then
     BlockRead(F, Buf, BufSize, Result);
   Inc(FPos, Result);
 end;
@@ -2747,8 +2850,9 @@ begin
   begin
     Result := Min(FPos + BufSize, FSize) - FPos;
     Move(Buf, Mem^, Result);
-  end else
+  end else if SType = stFile then
     BlockWrite(F, Buf, BufSize, Result);
+
   Inc(FPos, Result);
   Inc(FSize, Max(0, FPos - FSize));
 end;
@@ -2846,11 +2950,6 @@ begin
   gl.BindTexture(GL_TEXTURE_2D, 0);
 
   Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load completed');
-
-  X := 0;
-  Y := 0;
-  RegionWidth := Width;
-  RegionHeight := Height;
 
   Freemem(data);
   if (aFreeStreamOnFinish) then

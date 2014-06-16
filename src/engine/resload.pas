@@ -16,7 +16,8 @@ function LoadTexture(const Stream: TglrStream; ext: String;
 
 function LoadFontData(const Stream: TglrStream; out CharCount: LongWord): Pointer;
 
-function LoadShader(const Stream: TglrStream): PAnsiChar;
+function LoadText(const Stream: TglrStream): PAnsiChar;
+function LoadStringList(const Stream: TglrStream): TglrStringList;
 
 implementation
 
@@ -361,7 +362,7 @@ begin
   Stream.Read(Result^, Stream.Size - Stream.Pos);
 end;
 
-function LoadShader(const Stream: TglrStream): PAnsiChar;
+function LoadText(const Stream: TglrStream): PAnsiChar;
 var
   bytesRead: Integer;
   data: PAnsiChar;
@@ -370,9 +371,28 @@ begin
   bytesRead := Stream.Read(data^, Stream.Size);
   data[Stream.Size] := #0;
   if (bytesRead <> Stream.Size) then
-    Log.Write(lCritical, 'Shader load: Count of bytes read not equal to stream size');
+    Log.Write(lCritical, 'Text file load: Count of bytes read not equal to stream size');
 
   Result := data;
+end;
+
+function LoadStringList(const Stream: TglrStream): TglrStringList;
+var
+  line: AnsiString;
+  i, start: Integer;
+begin
+  line := LoadText(Stream);
+  Result := TglrStringList.Create(32);
+  start := 1;
+  for i := 1 to Length(line) do
+    if line[i] = #10 then
+    begin
+      if (i > 1) and (line[i - 1] = #13) then
+        Result.Add(Copy(line, start + 1, i - start - 1))
+      else
+        Result.Add(Copy(line, start + 1, i - start));
+      start := i;
+    end;
 end;
 
 
