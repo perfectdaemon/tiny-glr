@@ -150,7 +150,7 @@ type
   public
     class function ToString(aVal: Integer): AnsiString; overload;
     class function ToString(aVal: Single; Digits: Integer = 5): AnsiString; overload;
-    class function ToString(aVal: TdfMat4f): AnsiString; overload;
+    class function ToString(aVal: TdfMat4f; aDigits: Integer = 5): AnsiString; overload;
     class function ToString(aVal: TdfVec2f): AnsiString; overload;
     class function ToString(aVal: TdfVec3f): AnsiString; overload;
     class function ToString(aVal: TdfVec4f): AnsiString; overload;
@@ -1662,9 +1662,20 @@ begin
   Str(aVal:0:Digits, Result);
 end;
 
-class function Convert.ToString(aVal: TdfMat4f): AnsiString;
+class function Convert.ToString(aVal: TdfMat4f; aDigits: Integer): AnsiString;
+var
+  p: PSingle;
+  i: Integer;
 begin
-  log.Write(lCritical, 'Convert mat to string is not implemented');
+  p := @aVal;
+  Result := '';
+  for i := 0 to 15 do
+  begin
+    Result += ToString(p[i], aDigits) + ' ';
+    if i in [3, 7, 11] then
+      Result += #13#10;
+  end;
+  //log.Write(lCritical, 'Convert mat to string is not implemented');
 end;
 
 class function Convert.ToString(aVal: TdfVec2f): AnsiString;
