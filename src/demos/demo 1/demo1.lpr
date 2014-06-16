@@ -141,6 +141,8 @@ const
 var
   i: Integer;
 begin
+  atlas := TglrTextureAtlas.Create(FileSystem.ReadResource('data/atlas.tga'), FileSystem.ReadResource('data/atlas.atlas'), 'tga', 'cheetah');
+
   Batch := TglrSpriteBatch.Create();
   Batch.Material := Material;
   SceneHud.Root.Childs.Add(Batch);
@@ -150,10 +152,9 @@ begin
     Sprites[i] := TglrSprite.Create(30, 30, dfVec2f(0.5, 0.5));
     Sprites[i].Position := dfVec3f(Random(800), Random(600), Random(5));
     Sprites[i].SetVerticesColor(dfVec4f(Random(), Random(), Random, 1));
+    Sprites[i].SetTextureRegion(atlas.GetRegion('goodline.png'));
     Batch.Childs.Add(Sprites[i]);
   end;
-
-  atlas := TglrTextureAtlas.Create(FileSystem.ReadResource('data/atlas.tga'), FileSystem.ReadResource('data/atlas.atlas'), 'tga', 'cheetah');
 end;
 
 procedure TGame.CreateFont;
@@ -247,12 +248,13 @@ begin
   Material.Shader.Free();
   Material.Shader := Default.SpriteShader;
 //  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial12b.bmp'), 'bmp'), 'uDiffuse');
-  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
+//  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
 //  Material.Color := dfVec4f(0.7, 0.2, 0.1, 1);
 
   PrepareMesh();
   CreateSprites();
   CreateFont();
+  Material.AddTexture(atlas, 'uDiffuse');
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
