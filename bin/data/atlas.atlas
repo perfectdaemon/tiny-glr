@@ -1,0 +1,11 @@
+textures: atlas.tga
+goodline.png	0	0	187	234	0	0	187	234	
+btn_normal.png	0	235	250	50	0	0	250	50	
+btn_click.png	0	286	250	50	0	0	250	50	
+btn_over.png	0	337	250	50	0	0	250	50	
+arrow.png	188	0	66	41	0	0	66	41	
+particle.png	188	42	39	41	5	4	46	46	
+block.png	188	84	34	34	0	0	34	34	
+slider_btn.png	228	42	16	32	0	0	16	32	
+slider_over.png	0	388	226	16	0	0	226	16	
+slider_back.png	0	405	226	16	0	0	226	16	
