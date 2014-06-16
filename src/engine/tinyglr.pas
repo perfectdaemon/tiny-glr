@@ -722,6 +722,8 @@ type
     procedure SetDefaultTexCoords(); //Sets default texture coords
     procedure SetVerticesColor(aColor: TdfVec4f);
 
+    procedure SetTextureRegion(aRegion: PglrTextureRegion);
+
     procedure RenderSelf(); override;
   end;
 
@@ -1242,6 +1244,25 @@ begin
   Vertices[1].col := aColor;
   Vertices[2].col := aColor;
   Vertices[3].col := aColor;
+end;
+
+procedure TglrSprite.SetTextureRegion(aRegion: PglrTextureRegion);
+begin
+  with aRegion^ do
+    if not Rotated then
+    begin
+      Vertices[0].tex := dfVec2f(tx + tw, ty + th);
+      Vertices[1].tex := dfVec2f(tx + tw, ty);
+      Vertices[2].tex := dfVec2f(tx, ty);
+      Vertices[3].tex := dfVec2f(tx, ty + th);
+    end
+    else
+    begin
+      Vertices[0].tex := dfVec2f(tx, ty + th);
+      Vertices[1].tex := dfVec2f(tx + tw, ty + th);
+      Vertices[2].tex := dfVec2f(tx + tw, ty);
+      Vertices[3].tex := dfVec2f(tx, ty);
+    end;
 end;
 
 procedure TglrSprite.RenderSelf;
