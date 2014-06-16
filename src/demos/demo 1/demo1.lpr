@@ -23,6 +23,7 @@ type
     Font: TglrFont;
     Text: TglrText;
     FontBatch: TglrFontBatch;
+    atlas: TglrTextureAtlas;
 
     procedure PrepareMesh();
     procedure RenderMesh();
@@ -151,6 +152,8 @@ begin
     Sprites[i].SetVerticesColor(dfVec4f(Random(), Random(), Random, 1));
     Batch.Childs.Add(Sprites[i]);
   end;
+
+  atlas := TglrTextureAtlas.Create(FileSystem.ReadResource('data/atlas.tga'), FileSystem.ReadResource('data/atlas.atlas'), 'tga', 'cheetah');
 end;
 
 procedure TGame.CreateFont;
@@ -197,7 +200,7 @@ begin
   if (aType = itWheel) then
     Scene.Camera.Translate(0, 0, -Sign(aOtherParam));
   if (aType = itKeyUp) and (aKey = kU) then
-    log.Write(lInformation, 'Camera.Up: ' + Convert.ToString(Scene.Camera.Up));
+    log.Write(lInformation, 'Camera.Mat: '#13#10 + Convert.ToString(Scene.Camera.Matrix, 2));
 end;
 
 procedure TGame.OnPause;
