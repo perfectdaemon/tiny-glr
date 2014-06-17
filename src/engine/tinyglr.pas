@@ -690,6 +690,8 @@ type
     destructor Destroy(); override;
 
     procedure RenderSelf(); override;
+
+    procedure SortFarthestFirst();
   end;
 
   { TglrSprite }
@@ -722,7 +724,7 @@ type
     procedure SetDefaultTexCoords(); //Sets default texture coords
     procedure SetVerticesColor(aColor: TdfVec4f);
 
-    procedure SetTextureRegion(aRegion: PglrTextureRegion);
+    procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean = True);
 
     procedure RenderSelf(); override;
   end;
@@ -1047,6 +1049,29 @@ begin
   Material.Unbind();
 end;
 
+procedure TglrSpriteBatch.SortFarthestFirst;
+var
+  i, j, max: Integer;
+  tmp: TglrNode;
+begin
+  for i := 0 to Childs.Count - 2 do
+  begin
+    max := i;
+    for j := i + 1 to Childs.Count - 2 do
+    begin
+      if Childs[j].Position.z > Childs[max].Position.z then
+        max := j;
+    end;
+
+    if max <> i then
+    begin
+      tmp := Childs[i];
+      Childs[i] := Childs[max];
+      Childs[max] := tmp;
+    end;
+  end;
+end;
+
 { TglrText }
 
 procedure TglrText.SetHorAlign(aValue: TglrTextHorAlign);
@@ -1246,7 +1271,8 @@ begin
   Vertices[3].col := aColor;
 end;
 
-procedure TglrSprite.SetTextureRegion(aRegion: PglrTextureRegion);
+procedure TglrSprite.SetTextureRegion(aRegion: PglrTextureRegion;
+  aAdjustSpriteSize: Boolean);
 begin
   with aRegion^ do
     if not Rotated then
@@ -1255,6 +1281,11 @@ begin
       Vertices[1].tex := dfVec2f(tx + tw, ty);
       Vertices[2].tex := dfVec2f(tx, ty);
       Vertices[3].tex := dfVec2f(tx, ty + th);
+      if aAdjustSpriteSize then
+      begin
+        Width := tw * Texture.Width;
+        Height := th * Texture.Height;
+      end;
     end
     else
     begin
@@ -1262,6 +1293,11 @@ begin
       Vertices[1].tex := dfVec2f(tx + tw, ty + th);
       Vertices[2].tex := dfVec2f(tx + tw, ty);
       Vertices[3].tex := dfVec2f(tx, ty);
+      if aAdjustSpriteSize then
+      begin
+        Width := th * Texture.Height;
+        Height := tw * Texture.Width;
+      end;
     end;
 end;
 
@@ -1438,7 +1474,7 @@ var
   i: Integer;
   param, len: Integer;
   ErrorLog: PAnsiChar;
-  data: Pointer;
+  data: PAnsiChar;
   v: TglrVertexAtrib;
 begin
   case aShaderType of
@@ -1577,6 +1613,7 @@ constructor TglrShaderProgram.Create;
 begin
   inherited;
   Self.Id := gl.CreateProgram();
+  SetLength(ShadersId, 0);
 end;
 
 destructor TglrShaderProgram.Destroy;
