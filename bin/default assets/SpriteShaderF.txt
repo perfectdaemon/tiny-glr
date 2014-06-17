@@ -6,4 +6,6 @@ uniform vec4 uColor;
 void main(void)
 {
   gl_FragColor = uColor * vColor * texture2D( uDiffuse, texCoord0 );
+  if (gl_FragColor.a < 0.001)
+    discard;
 }
