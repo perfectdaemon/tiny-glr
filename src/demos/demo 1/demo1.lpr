@@ -137,7 +137,7 @@ end;
 
 procedure TGame.CreateSprites;
 const
-  count = 300;
+  count = 30;
 var
   i: Integer;
 begin
@@ -150,11 +150,12 @@ begin
   for i := 0 to count - 1 do
   begin
     Sprites[i] := TglrSprite.Create(30, 30, dfVec2f(0.5, 0.5));
-    Sprites[i].Position := dfVec3f(Random(800), Random(600), Random(5));
+    Sprites[i].Position := dfVec3f(Random(800), Random(600), Random(15));
     Sprites[i].SetVerticesColor(dfVec4f(Random(), Random(), Random, 1));
     Sprites[i].SetTextureRegion(atlas.GetRegion('goodline.png'));
     Batch.Childs.Add(Sprites[i]);
   end;
+  //Batch.SortFarthestFirst();
 end;
 
 procedure TGame.CreateFont;
