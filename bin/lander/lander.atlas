@@ -1,0 +1,6 @@
+textures: lander.png
+lander.png	1	1	90	72	1	0	91	72	
+flame.png	93	1	33	30	0	0	30	33	r
+particle.png	93	33	28	24	4	5	36	36	r
+fuel_level_back.png	1	75	106	21	0	0	106	21	
+fuel_level.png	1	98	102	6	0	0	102	6	
