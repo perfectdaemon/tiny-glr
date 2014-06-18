@@ -1,7 +1,11 @@
 program lander;
 
 uses
-  glrMath, ogl, tinyglr;
+  glrMath, ogl, tinyglr, uSpace;
+
+const
+  MAX_FUEL = 100.0;
+  FUEL_PER_SEC = 3.0;
 
 type
 
@@ -10,6 +14,7 @@ type
   TFuelLevel = class
     Level: Single;
     sBack, sLevel: TglrSprite;
+    sLevelOrigWidth: Single;
     constructor Create();
     destructor Destroy();
 
@@ -33,6 +38,8 @@ type
     Flame: TglrSprite;
 
     FuelLevel: TFuelLevel;
+
+    Space: TSpace;
 
     //Scenes
     Scene: TglrScene;
@@ -58,12 +65,15 @@ begin
   inherited;
   sBack := TglrSprite.Create();
   sBack.SetTextureRegion(Game.Atlas.GetRegion('fuel_level_back.png'));
-  sLevel := TglrSprite.Create();
+  sLevel := TglrSprite.Create(1, 1, dfVec2f(0, 0.5));
   sLevel.SetTextureRegion(Game.Atlas.GetRegion('fuel_level.png'));
   sLevel.Height := sLevel.Height * 0.9;
 
+  sLevelOrigWidth := sLevel.Width;
   Game.SpriteBatch.Childs.Add(sBack);
   Game.SpriteBatch.Childs.Add(sLevel);
+
+  Level := MAX_FUEL;
 end;
 
 destructor TFuelLevel.Destroy;
@@ -75,7 +85,9 @@ end;
 procedure TFuelLevel.Update(const dt: Double);
 begin
   sBack.Position := Game.Ship.Position + dfVec3f(0, -65, 1);
-  sLevel.Position := sBack.Position + dfVec3f(0.5, 5.5, 1);
+  sLevel.Position := sBack.Position + dfVec3f(-50.5, 5.5, 1);
+  sLevel.Width := sLevelOrigWidth * Level / MAX_FUEL;
+  sLevel.SetVerticesColor(dfVec4f(1, 0.3 + Level / MAX_FUEL, 0.3 + Level / MAX_FUEL, 1));
 end;
 
 { TGame }
@@ -86,8 +98,8 @@ begin
   Render.SetClearColor(0.1, 0.1, 0.13);
 
   Atlas := TglrTextureAtlas.Create(
-    FileSystem.ReadResource('lander/lander.tga'),
-    FileSystem.ReadResource('lander/lander.atlas'),
+    FileSystem.ReadResource('lander/atlas.tga'),
+    FileSystem.ReadResource('lander/atlas.atlas'),
     'tga', 'cheetah');
   Material := TglrMaterial.Create();
   Material.Shader.Free();
@@ -100,7 +112,7 @@ begin
 
   Flame := TglrSprite.Create();
   Flame.SetTextureRegion(Atlas.GetRegion('flame.png'));
-  Flame.Position := dfVec3f(-50, 0, 1);
+  Flame.Position := dfVec3f(-50, 0, -5);
   Flame.Parent := Ship;
 
   SpriteBatch := TglrSpriteBatch.Create();
@@ -110,14 +122,20 @@ begin
 
   Scene := TglrScene.Create();
   Scene.Camera.ProjectionMode := pmOrtho;
-  Scene.Camera.SetCamera(dfVec3f(0, 0, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  Scene.Camera.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
   Scene.Root.Childs.Add(SpriteBatch);
 
   FuelLevel := TFuelLevel.Create();
+
+  Space := TSpace.Create(dfVec2f(Render.Width, Render.Height), Atlas.GetRegion('particle.png'), Material, 3);
+  Space.Camera := Scene.Camera;
+  //Scene.Root.Childs.Add(Space.fBatch);
 end;
 
 procedure TGame.OnFinish;
 begin
+  Space.Free();
   Scene.Free();
 
   FuelLevel.Free();
@@ -138,6 +156,8 @@ end;
 procedure TGame.OnRender;
 begin
   Scene.RenderScene();
+  Render.Params.ModelViewProj := Render.Params.ViewProj;
+  Space.RenderSelf();
 end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
@@ -155,6 +175,18 @@ begin
   Ship.Rotation := LerpAngles(Ship.Rotation, (Core.Input.MousePos - dfVec2f(Ship.Position)).GetRotationAngle(), 5 * dt);
   FuelLevel.Update(dt);
   Flame.Visible := (Core.Input.Touch[1].IsDown); //left button
+  if Flame.Visible then
+    FuelLevel.Level -= dt * FUEL_PER_SEC;
+
+  if Core.Input.KeyDown[kUp] then
+    Scene.Camera.Translate(-dt * 200, 0, 0)
+  else if Core.Input.KeyDown[kDown] then
+    Scene.Camera.Translate(dt * 200, 0, 0);
+
+  if Core.Input.KeyDown[kLeft] then
+    Scene.Camera.Translate(0, -dt * 200, 0)
+  else if Core.Input.KeyDown[kRight] then
+    Scene.Camera.Translate(0, dt * 200, 0);
 end;
 
 var

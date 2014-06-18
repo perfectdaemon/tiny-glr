@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="4">
+    <Units Count="5">
       <Unit0>
         <Filename Value="lander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -52,6 +52,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="tinyglr"/>
       </Unit3>
+      <Unit4>
+        <Filename Value="uspace.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uSpace"/>
+      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
