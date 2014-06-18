@@ -64,7 +64,8 @@ type
 
   Box2D = class
   public
-    class procedure SyncObjects(b2Body: Tb2Body; renderObject: TglrSprite);
+    class procedure SyncObjects(b2Body: Tb2Body; renderObject: TglrSprite;
+      aPositionsOnly: Boolean = False);
 
     class function ConvertB2ToGL(aVec: TVector2): TdfVec2f;
     class function ConvertGLToB2(aVec: TdfVec2f): TVector2;
@@ -175,14 +176,16 @@ end;
 
 
 
-class procedure Box2D.SyncObjects(b2Body: Tb2Body; renderObject: TglrSprite);
+class procedure Box2D.SyncObjects(b2Body: Tb2Body; renderObject: TglrSprite;
+  aPositionsOnly: Boolean);
 var
   pos2d: TdfVec2f;
 begin
   pos2d := dfVec2f(b2Body.GetPosition.x, b2Body.GetPosition.y) * (1 / C_COEF);
   renderObject.Position.x := pos2d.x;
   renderObject.Position.y := pos2d.y;
-  renderObject.Rotation := b2Body.GetAngle * rad2deg;
+  if not aPositionsOnly then
+    renderObject.Rotation := b2Body.GetAngle * rad2deg;
 end;
 
 class function Box2D.ConvertB2ToGL(aVec: TVector2): TdfVec2f;
