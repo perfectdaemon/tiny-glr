@@ -468,6 +468,7 @@ type
 
   TglrInput = class
     Touch: array[0..9] of TglrTouch;
+    MousePos: TdfVec2f;
     KeyDown: array[Low(TglrKey)..High(TglrKey)] of Boolean;
     lastWheelDelta: Integer;
 
@@ -854,8 +855,9 @@ begin
     if aLine[i] = #9 then
     begin
       Result.Add(Copy(aLine, start, i - start));
-      start := i;
+      start := i + 1;
     end;
+  Result.Add(Copy(aLine, start, i - start)); // add last
 end;
 
 constructor TglrTextureAtlas.Create(aImageStream, aInfoStream: TglrStream;
@@ -870,7 +872,7 @@ begin
     inherited Create(aImageStream, aImageExt, aFreeStreamsOnFinish);
     fRegions := TglrTextureRegionsList.Create(8);
     lines := LoadStringList(aInfoStream);
-    for i := 0 to lines.Count - 1 do
+    for i := 1 to lines.Count - 1 do
     begin
       list := ParseLine(lines[i]);
       if list.Count > 0 then
@@ -969,7 +971,8 @@ begin
           continue;
 
         quad := Font.GetCharQuad(child.Text[j]);
-        child.Matrix.Pos := child.Position;
+        //Do not need it anymore - included in AbsoluteMatrix computing
+        //child.Matrix.Pos := child.Position;
         for k := 0 to 3 do
         begin
           fVData[count * 4 + k] := quad[k];
@@ -1028,7 +1031,8 @@ begin
       if Childs[i].Visible then
       begin
         child := (Childs[i] as TglrSprite);
-        child.Matrix.Pos := child.Position;
+        //do not need it anymore. Included in AbsoluteMatrix computing
+        //child.Matrix.Pos := child.Position;
         for j := 0 to 3 do
         begin
           fVData[count * 4 + j] := child.Vertices[j];
@@ -1883,6 +1887,7 @@ end;
 
 function TglrNode.GetAbsMatrix: TdfMat4f;
 begin
+  Matrix.Pos := Position;
   if Assigned(fParent) then
     fAbsMatrix := fParent.AbsoluteMatrix * Matrix
   else
@@ -1993,8 +1998,8 @@ procedure TglrNode.RenderSelf();
 var
   m, m1: TdfMat4f;
 begin
-  Matrix.Pos := Position;
-  Render.Params.Model := GetAbsMatrix;
+//  Matrix.Pos := Position;
+  Render.Params.Model := AbsoluteMatrix;
   Render.Params.CalculateMVP();
 
   UpdateVectorsFromMatrix();
@@ -2430,7 +2435,10 @@ begin
     itTouchUp:
       Touch[Ord(aKey)].IsDown := False;
     itTouchMove:
+    begin
       Touch[Ord(aKey)].Pos := dfVec2f(X, Y);
+      MousePos := dfVec2f(X, Y);
+    end;
     itKeyDown:
       k^ := True;
     itKeyUp:
@@ -3136,13 +3144,26 @@ begin
 end;
 
 procedure TglrList<T>.Delete(Item: T; FreeItem: Boolean);
+var
+  i: Integer;
 begin
-  DeleteByIndex(IndexOf(Item), FreeItem);
+  i := IndexOf(Item);
+  if i <> -1 then
+    DeleteByIndex(i, FreeItem)
+  else
+    Log.Write(lError, 'List: No item found at list, delete is impossible');
 end;
 
 procedure TglrList<T>.DeleteSafe(Item: T; FreeItem: Boolean);
+var
+  i: Integer;
 begin
-  DeleteSafeByIndex(IndexOf(Item), FreeItem);
+  i := IndexOf(Item);
+  if i <> -1 then
+    DeleteSafeByIndex(i, FreeItem)
+  else
+    Log.Write(lError, 'List: No item found at list, delete is impossible');
+
 end;
 
 procedure TglrList<T>.DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean);
