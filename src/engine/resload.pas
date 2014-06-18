@@ -383,7 +383,7 @@ var
 begin
   line := LoadText(Stream);
   Result := TglrStringList.Create(32);
-  start := 1;
+  start := 0;
   for i := 1 to Length(line) do
     if line[i] = #10 then
     begin
