@@ -777,7 +777,7 @@ type
       m_contactListener: Tb2ContactListener;
 
       constructor Create;
-      destructor Destroy; overload; override;
+      destructor Destroy; overload; override;
 
       // Broad-phase callback.
       procedure AddPair(proxyUserDataA, proxyUserDataB: Pointer);
@@ -2879,7 +2879,7 @@ begin
    {$ELSE}
       extValue := value;
       {$IFDEF DOUBLE_PRECISION}
-      SetString(Result, Buffer, FloatToText(Buffer, extValue, fvExtended, ffGeneral, 15, 0));
+      SetString(Result, Buffer, FloatToText(Buffer, extValue, ffGeneral, 15, 0));
       {$ELSE}
       SetString(Result, Buffer, FloatToText(Buffer, extValue, fvExtended, ffGeneral, 7, 0));
       {$ENDIF}
@@ -6147,7 +6147,7 @@ begin
    Result := m_contactManager.m_contactCount;
 end;
 
-function Tb2World.GetTreeHeight: Int32;
+function Tb2World.GetTreeHeight: Int32;
 begin
    Result := m_contactManager.m_broadPhase.GetTreeHeight;
 end;
