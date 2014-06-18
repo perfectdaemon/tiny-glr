@@ -724,6 +724,8 @@ type
     procedure SetDefaultVertices(); //Sets vertices due to width, height, pivot point and rotation
     procedure SetDefaultTexCoords(); //Sets default texture coords
     procedure SetVerticesColor(aColor: TdfVec4f);
+    procedure SetSize(aWidth, aHeight: Single); overload;
+    procedure SetSize(aSize: TdfVec2f); overload;
 
     procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean = True);
 
@@ -1255,7 +1257,7 @@ procedure TglrSprite.SetDefaultVertices;
 begin
   Vertices[0].vec := dfVec3f((dfVec2f(1, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
   Vertices[1].vec := dfVec3f((dfVec2f(1, 0) - fPP) * dfVec2f(fWidth, fHeight), 0);
-  Vertices[2].vec := dfVec3f((fPP.NegateVector) * dfVec2f(fWidth, fHeight), 0);
+  Vertices[2].vec := dfVec3f((fPP.NegateVector)    * dfVec2f(fWidth, fHeight), 0);
   Vertices[3].vec := dfVec3f((dfVec2f(0, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
 end;
 
@@ -1273,6 +1275,18 @@ begin
   Vertices[1].col := aColor;
   Vertices[2].col := aColor;
   Vertices[3].col := aColor;
+end;
+
+procedure TglrSprite.SetSize(aWidth, aHeight: Single);
+begin
+  fWidth := aWidth;
+  fHeight := aHeight;
+  SetDefaultVertices();
+end;
+
+procedure TglrSprite.SetSize(aSize: TdfVec2f);
+begin
+  SetSize(aSize.x, aSize.y);
 end;
 
 procedure TglrSprite.SetTextureRegion(aRegion: PglrTextureRegion;
