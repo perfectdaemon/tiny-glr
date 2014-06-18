@@ -20,6 +20,17 @@
   <defs
      id="defs2987">
     <linearGradient
+       id="linearGradient3925">
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1;"
+         offset="0"
+         id="stop3927" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:0;"
+         offset="1"
+         id="stop3929" />
+    </linearGradient>
+    <linearGradient
        id="linearGradient5661"
        osb:paint="solid">
       <stop
@@ -190,6 +201,16 @@
          offset="1"
          style="stop-color:#ff6363;stop-opacity:1;" />
     </linearGradient>
+    <filter
+       id="filter4049"
+       inkscape:label="Simple blur"
+       inkscape:menu="ABCs"
+       inkscape:menu-tooltip="Simple Gaussian blur, same as the blur slider in Fill and Stroke dialog"
+       color-interpolation-filters="sRGB">
+      <feGaussianBlur
+         id="feGaussianBlur4051"
+         stdDeviation="3" />
+    </filter>
   </defs>
   <sodipodi:namedview
      id="base"
@@ -198,9 +219,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4142136"
-     inkscape:cx="734.26451"
-     inkscape:cy="825.55192"
+     inkscape:zoom="1"
+     inkscape:cx="455.37142"
+     inkscape:cy="638.27278"
      inkscape:current-layer="layer1"
      inkscape:document-units="px"
      showgrid="false"
@@ -232,8 +253,8 @@
        id="rect2993"
        width="1081"
        height="778"
-       x="88.477234"
-       y="-138.14302"
+       x="13.477236"
+       y="-157.14302"
        rx="2.5"
        ry="2.5" />
     <path
@@ -245,7 +266,7 @@
        sodipodi:rx="29.5"
        sodipodi:ry="29.5"
        d="m 94,196.5 a 29.5,29.5 0 1 1 -59,0 29.5,29.5 0 1 1 59,0 z"
-       transform="matrix(0.50348433,0,0,0.50348433,634.96509,-311.69769)"
+       transform="matrix(0.50348433,0,0,0.50348433,85.519328,-144.62453)"
        inkscape:label="#path3763" />
     <g
        id="player"
@@ -279,7 +300,7 @@
          sodipodi:nodetypes="ccccc" />
     </g>
     <g
-       transform="matrix(0.75898236,0,0,0.75898236,137.40188,-0.0077979)"
+       transform="matrix(0.75898236,0,0,0.75898236,796.40186,-56.007796)"
        id="enemy"
        inkscape:label="#g3882">
       <rect
@@ -313,7 +334,7 @@
        sodipodi:nodetypes="cccc"
        inkscape:connector-curvature="0"
        id="flame"
-       d="m 685.35375,-279.70828 c -7.68387,12.4085 -19.2329,13.09762 -30.07296,16.28097 10.84491,3.30052 22.4438,3.895 30.07296,16.28092 z"
+       d="m 135.90803,-112.63512 c -7.6839,12.4085 -19.2329,13.097619 -30.073,16.280969 10.8449,3.30052 22.4438,3.895 30.073,16.28092 z"
        style="fill:#ffffff;fill-opacity:1;stroke:none"
        inkscape:label="#path5673" />
     <g
@@ -416,16 +437,16 @@
        id="frame_rect"
        width="51.323986"
        height="45.602589"
-       x="204.86176"
-       y="207.52063"
+       x="1009.8618"
+       y="10.520636"
        rx="3.5078576"
        ry="3.4876325"
        inkscape:label="#rect3852" />
     <rect
        ry="3.4866486"
        rx="5.0103736"
-       y="141.74084"
-       x="172.51465"
+       y="85.740845"
+       x="857.51465"
        height="45.328144"
        width="158.49413"
        id="frame_long"
@@ -433,7 +454,7 @@
        inkscape:label="#rect3860" />
     <path
        style="fill:none;stroke:#ffffff;stroke-width:3;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
-       d="m 724.19237,-18.39336 0,-17.34458 c 0,-1.73517 0.70251,-3.30119 1.8413,-4.43343 1.1388,-1.13224 2.71392,-1.83069 4.45913,-1.83069 l 19.89547,0"
+       d="m 799.74662,105.67979 0,-17.344577 c 0,-1.73517 0.70251,-3.30119 1.8413,-4.43343 1.1388,-1.13224 2.71392,-1.83069 4.45913,-1.83069 l 19.89547,0"
        id="selection"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="csssc"
@@ -441,7 +462,7 @@
     <g
        id="lander"
        inkscape:label="#g3840"
-       transform="translate(189.50462,-188.0904)">
+       transform="translate(-359.94112,-21.017236)">
       <path
          sodipodi:nodetypes="cccc"
          inkscape:connector-curvature="0"
@@ -487,13 +508,13 @@
        id="fuel_level"
        width="101.5"
        height="5.5"
-       x="738.00464"
-       y="-285.44827"
+       x="188.55888"
+       y="-118.37511"
        inkscape:label="#rect3833" />
     <g
        id="fuel_level_back"
        inkscape:label="#g3852"
-       transform="translate(189.50462,-188.0904)">
+       transform="translate(-359.94112,-21.017236)">
       <rect
          inkscape:label="#rect3829"
          transform="matrix(0,-1,1,0,0,0)"
@@ -517,5 +538,22 @@
            id="tspan3850"
            sodipodi:role="line">топливо</tspan></text>
     </g>
+    <path
+       sodipodi:type="star"
+       style="fill:#ffffff;fill-opacity:1;stroke:none;filter:url(#filter4049)"
+       id="star"
+       sodipodi:sides="4"
+       sodipodi:cx="616.59711"
+       sodipodi:cy="352.22122"
+       sodipodi:r1="48.284267"
+       sodipodi:r2="1.5125881"
+       sodipodi:arg1="1.5707963"
+       sodipodi:arg2="2.3561945"
+       inkscape:flatsided="false"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 616.59711,400.50549 -1.06956,-47.21471 -47.21471,-1.06956 47.21471,-1.06956 1.06956,-47.21471 1.06956,47.21471 47.2147,1.06956 -47.2147,1.06956 z"
+       transform="matrix(0.37083433,0,0,0.35367705,72.941728,-173.35133)"
+       inkscape:label="#path3153" />
   </g>
 </svg>

@@ -1,0 +1,7 @@
+textures: atlas.png
+lander.png	0	0	90	72	1	0	91	72	
+star.png	91	0	35	37	2	2	41	39	r
+flame.png	94	38	33	30	0	0	30	33	r
+particle.png	99	69	28	24	4	5	36	36	r
+fuel_level_back.png	0	94	106	21	0	0	106	21	
+fuel_level.png	0	116	102	6	0	0	102	6	
