@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="5">
+    <Units Count="7">
       <Unit0>
         <Filename Value="lander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -57,6 +57,16 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uSpace"/>
       </Unit4>
+      <Unit5>
+        <Filename Value="..\..\engine\box2d\uBox2DImport.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBox2DImport"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\..\engine\box2d\UPhysics2D.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="UPhysics2D"/>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -67,7 +77,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..\..\engine"/>
+      <OtherUnitFiles Value="..\..\engine;..\..\engine\box2d"/>
       <UnitOutputDirectory Value="..\..\..\dcu"/>
     </SearchPaths>
     <Parsing>

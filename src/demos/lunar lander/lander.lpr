@@ -1,7 +1,7 @@
 program lander;
 
 uses
-  glrMath, ogl, tinyglr, uSpace;
+  glrMath, ogl, tinyglr, uSpace, uBox2DImport, UPhysics2D, UPhysics2DTypes;
 
 const
   MAX_FUEL = 100.0;
@@ -33,6 +33,8 @@ type
     SpriteBatch: TglrSpriteBatch;
     Material: TglrMaterial;
 
+    World: Tglrb2World;
+
     //Sprites
     Ship: TglrSprite;
     Flame: TglrSprite;
@@ -40,6 +42,8 @@ type
     FuelLevel: TFuelLevel;
 
     Space: TSpace;
+
+    b2Ship: Tb2Body;
 
     //Scenes
     Scene: TglrScene;
@@ -106,9 +110,13 @@ begin
   Material.Shader := Default.SpriteShader;
   Material.AddTexture(Atlas, 'uDiffuse');
 
+  World := Tglrb2World.Create(TVector2.From(0, 0.1), false, 1 / 40, 8);
+
   Ship := TglrSprite.Create();
   Ship.SetTextureRegion(Atlas.GetRegion('lander.png'));
   Ship.Position := dfVec3f(200, 200, 1);
+
+  b2Ship := Box2d.Circle(World, Ship, 0.5, 0.2, 0.0, $0002, $0001, 1);
 
   Flame := TglrSprite.Create();
   Flame.SetTextureRegion(Atlas.GetRegion('flame.png'));
@@ -172,6 +180,10 @@ end;
 
 procedure TGame.OnUpdate(const dt: Double);
 begin
+  World.Update(dt);
+
+  Box2d.SyncObjects(b2Ship, Ship, True);
+
   Ship.Rotation := LerpAngles(Ship.Rotation, (Core.Input.MousePos - dfVec2f(Ship.Position)).GetRotationAngle(), 5 * dt);
   FuelLevel.Update(dt);
   Flame.Visible := (Core.Input.Touch[1].IsDown); //left button
