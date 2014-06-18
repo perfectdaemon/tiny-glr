@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="7">
+    <Units Count="8">
       <Unit0>
         <Filename Value="lander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -67,6 +67,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="UPhysics2D"/>
       </Unit6>
+      <Unit7>
+        <Filename Value="umoon.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uMoon"/>
+      </Unit7>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -1,7 +1,8 @@
 program lander;
 
 uses
-  glrMath, ogl, tinyglr, uSpace, uBox2DImport, UPhysics2D, UPhysics2DTypes;
+  glrMath, ogl, tinyglr, uSpace, uBox2DImport, UPhysics2D, UPhysics2DTypes,
+  uMoon;
 
 const
   MAX_FUEL = 100.0;
@@ -31,7 +32,7 @@ type
     Font: TglrFont;
     FontBatch: TglrFontBatch;
     SpriteBatch: TglrSpriteBatch;
-    Material: TglrMaterial;
+    Material, MoonMaterial: TglrMaterial;
 
     World: Tglrb2World;
 
@@ -42,6 +43,7 @@ type
     FuelLevel: TFuelLevel;
 
     Space: TSpace;
+    Moon: TMoon;
 
     b2Ship: Tb2Body;
 
@@ -110,6 +112,11 @@ begin
   Material.Shader := Default.SpriteShader;
   Material.AddTexture(Atlas, 'uDiffuse');
 
+  MoonMaterial := TglrMaterial.Create();
+  MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderV.txt'), stVertex);
+  MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderF.txt'), stFragment);
+  MoonMaterial.Shader.Link();
+
   World := Tglrb2World.Create(TVector2.From(0, 0.1), false, 1 / 40, 8);
 
   Ship := TglrSprite.Create();
@@ -139,15 +146,20 @@ begin
   Space := TSpace.Create(dfVec2f(Render.Width, Render.Height), Atlas.GetRegion('particle.png'), Material, 3);
   Space.Camera := Scene.Camera;
   //Scene.Root.Childs.Add(Space.fBatch);
+
+  Moon := TMoon.Create(MoonMaterial, nil);
+  Moon.MaxY := Render.Height;
 end;
 
 procedure TGame.OnFinish;
 begin
   Space.Free();
+  Moon.Free();
   Scene.Free();
 
   FuelLevel.Free();
   Material.Free();
+  MoonMaterial.Free();
 end;
 
 procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -166,6 +178,7 @@ begin
   Scene.RenderScene();
   Render.Params.ModelViewProj := Render.Params.ViewProj;
   Space.RenderSelf();
+  Moon.RenderSelf();
 end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
