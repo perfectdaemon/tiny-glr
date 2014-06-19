@@ -226,7 +226,7 @@ begin
       if (wParam > 0) then
         Core.InputReceived(itWheel, kWheelUp, LOWORD(lParam), HIWORD(lParam), 1 * (HIWORD(wParam) div WHEEL_DELTA))
       else
-        Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), -1 * (HIWORD(wParam) div WHEEL_DELTA));
+        Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), -1 * (HIWORD(-wParam) div WHEEL_DELTA));
 
     else
       Result := DefWindowProcA(hWnd, message, wParam, lParam);
