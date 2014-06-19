@@ -161,7 +161,6 @@ var
   i: Integer;
 begin
   aStream.Read(count, SizeOf(Word));
-  count := 21;
   SetLength(Vertices, count);
   SetLength(VerticesPoints, count);
   aStream.Read(Vertices[0], count * SizeOf(TdfVec2f));
