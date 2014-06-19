@@ -2148,7 +2148,7 @@ begin
 
     //Read magic header
     bytesRead := stream.Read(WordBuf, SizeOf(Word));
-    if (WordBuf <> PACK_FILE_MAGIC) or (WordBuf <> PACK_FILE_MAGIC_LZO) or (bytesRead < SizeOf(Word)) then
+    if ((WordBuf <> PACK_FILE_MAGIC) and (WordBuf <> PACK_FILE_MAGIC_LZO)) or (bytesRead < SizeOf(Word)) then
     begin
       Log.Write(lError, #9 + packFilesList[i] + ': not a correct pack file');
       SetLength(fPackFiles, Length(fPackFiles) - 1);
