@@ -18,7 +18,7 @@ type
 
   Tglrb2World = class;
 
-  Tglrb2SimulationEvent = procedure (const FixedDeltaTime: Double);
+  Tglrb2SimulationEvent = procedure (const FixedDeltaTime: Double) of object;
 
   Tglrb2OnContactEvent   = procedure (var contact: Tb2Contact) of object;
   Tglrb2OnPreSolveEvent  = procedure (var contact: Tb2Contact; const oldManifold: Tb2Manifold) of object;
@@ -84,6 +84,8 @@ type
     class function CircleSensor(b2World: Tb2World; aPos: TdfVec2f; aSize: Single; mask, cat: Word; IsStatic: Boolean): Tb2Body;
 
     class function ChainStatic(b2World: Tb2World; aPos: TdfVec2f; aVertices: array of TdfVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
+
+    class function Polygon(b2World: Tb2World; aPos: TdfVec2f; aVertices: array of TdfVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
   end;
 
 
@@ -421,6 +423,53 @@ begin
   Result.SetSleepingAllowed(True);
 end;
 
+class function Box2D.Polygon(b2World: Tb2World; aPos: TdfVec2f;
+  aVertices: array of TdfVec2f; d, f, r: Double; mask, category: UInt16;
+  group: SmallInt): Tb2Body;
+var
+  BodyDef: Tb2BodyDef;
+  ShapeDef: Tb2PolygonShape;
+  FixtureDef: Tb2FixtureDef;
+  Ar: TVectorArray;
+  i: Integer;
+begin
+  SetLength(Ar, Length(aVertices));
+  for i := 0 to High(aVertices) do
+    Ar[i] := ConvertGLToB2(aVertices[i] * C_COEF);
+
+  FixtureDef := Tb2FixtureDef.Create;
+  ShapeDef := Tb2PolygonShape.Create;
+  BodyDef := Tb2BodyDef.Create;
+
+  with BodyDef do
+  begin
+    bodyType := b2_dynamicBody;
+    position := ConvertGLToB2(aPos * C_COEF);
+    //angle := aRot * deg2rad;
+  end;
+
+  with ShapeDef do
+  begin
+    ShapeDef.SetVertices(@Ar[0], Length(Ar));
+//    SetAsBox(aSize.x * 0.5 * C_COEF, aSize.y * 0.5 * C_COEF);
+  end;
+
+  with FixtureDef do
+  begin
+    shape := ShapeDef;
+    density := d;
+    friction := f;
+    restitution := r;
+    filter.maskBits := mask;
+    filter.categoryBits := category;
+    filter.groupIndex := group;
+  end;
+
+  Result := b2World.CreateBody(BodyDef);
+  Result.CreateFixture(FixtureDef);
+  Result.SetSleepingAllowed(False);
+end;
+
 class function Box2D.BoxSensor(b2World: Tb2World; aPos: TdfVec2f; aSize: TdfVec2f;
   aRot: Single; mask, cat: Word; IsStatic: Boolean): Tb2Body;
 var
@@ -514,7 +563,7 @@ var
   i: Integer;
 begin
   inherited;
-  for i := 0 to High(world.FOnBeginContact) do
+  for i := 0 to High(world.FOnEndContact) do
     world.FOnEndContact[i](contact);
 end;
 
