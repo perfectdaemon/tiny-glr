@@ -198,6 +198,7 @@ begin
 
   Scene := TglrScene.Create();
   Scene.Camera.ProjectionMode := pmOrtho;
+  Scene.Camera.ProjectionModePivot := pCenter;
   Scene.Camera.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
   Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
   Scene.Root.Childs.Add(SpriteBatch);
@@ -250,6 +251,9 @@ begin
     else if (aType = itKeyUp) and (aKey = kL) then
       Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
 
+
+  if aType = itWheel then
+    Scene.Camera.Scale := Scene.Camera.Scale + (aOtherParam * 0.1);
 end;
 
 procedure TGame.OnPause;
