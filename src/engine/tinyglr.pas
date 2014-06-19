@@ -2920,7 +2920,7 @@ begin
   if SType = stMemory then
   begin
     Result := Min(FPos + BufSize, FSize) - FPos;
-    Move(Mem^, Buf, Result);
+    Move((Mem + FPos)^, Buf, Result);
   end else if SType = stFile then
     BlockRead(F, Buf, BufSize, Result);
   Inc(FPos, Result);
@@ -2931,7 +2931,7 @@ begin
   if SType = stMemory then
   begin
     Result := Min(FPos + BufSize, FSize) - FPos;
-    Move(Buf, Mem^, Result);
+    Move(Buf, (Mem + FPos)^, Result);
   end else if SType = stFile then
     BlockWrite(F, Buf, BufSize, Result);
 
