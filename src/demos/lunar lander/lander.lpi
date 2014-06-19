@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="8">
+    <Units Count="10">
       <Unit0>
         <Filename Value="lander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -72,6 +72,16 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uMoon"/>
       </Unit7>
+      <Unit8>
+        <Filename Value="umain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uMain"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\..\engine\box2d\UPhysics2DTypes.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="UPhysics2DTypes"/>
+      </Unit9>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -89,6 +99,7 @@
       <SyntaxOptions>
         <SyntaxMode Value="Delphi"/>
         <IncludeAssertionCode Value="True"/>
+        <CPPInline Value="False"/>
         <UseAnsiStrings Value="False"/>
       </SyntaxOptions>
     </Parsing>
