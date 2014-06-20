@@ -92,6 +92,8 @@ begin
   s := FontGen.SaveBmpToStream();
   s.Position := 0;
   g.LoadFromStream(s, s.Size);
+  Panel1.Canvas.Brush.Color := clDefault;
+  Panel1.Canvas.Clear();
   Panel1.Canvas.Brush.Color := clBlack;
   Panel1.Canvas.FillRect(0, 0, FontGen.TexWidth, FontGen.TexHeight);
   Panel1.Canvas.Draw(0, 0, g);
