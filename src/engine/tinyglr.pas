@@ -622,6 +622,7 @@ type
     procedure Rotate(delta: Single; Axis: TdfVec3f);
 
     function GetViewport(): TglrViewportParams;
+    function WindowPosToCameraPos(aPos: TdfVec2f): TdfVec2f;
 
     procedure Update;
 
@@ -1774,6 +1775,16 @@ begin
     FOV := fFOV;
     ZNear := fZNear;
     ZFar := fZFar;
+  end;
+end;
+
+function TglrCamera.WindowPosToCameraPos(aPos: TdfVec2f): TdfVec2f;
+begin
+  Result := dfVec2f(Position) + aPos * (1 / fScale);
+  case fProjectionPivot of
+    pTopLeft: ;
+    pCenter:      Result -= dfVec2f(fW / 2, fH / 2) * (1 / fScale);
+    pBottomRight: Result -= dfVec2f(fW,     fH)     * (1 / fScale);
   end;
 end;
 
