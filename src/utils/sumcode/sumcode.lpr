@@ -7,7 +7,7 @@ uses
   var
     i: Integer;
   begin
-    for i := 0 to Paramcount - 1 do
+    for i := 0 to Paramcount do
       if LowerCase(aFileName) = LowerCase(ParamStr(i)) then
         Exit(True);
     Exit(False);
