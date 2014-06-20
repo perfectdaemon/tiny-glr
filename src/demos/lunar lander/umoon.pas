@@ -32,7 +32,10 @@ type
     destructor Destroy(); override;
 
     procedure UpdateData();
+
     procedure AddVertex(aPos: TdfVec2f; aIndex: Integer = -1);
+    function GetVertexIndexAtPos(aPos: TdfVec2f): Integer;
+
     procedure RenderSelf();
 
     procedure LoadLevel(const aStream: TglrStream; aFreeStreamOnFinish: Boolean = True);
@@ -147,6 +150,16 @@ begin
   fBatch.Childs.Add(VerticesPoints[aIndex]);
 end;
 
+function TMoon.GetVertexIndexAtPos(aPos: TdfVec2f): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+  for i := 0 to Length(Vertices) - 1 do
+    if (Vertices[i] - aPos).LengthQ < 49 then
+    Exit(i);
+end;
+
 procedure TMoon.RenderSelf;
 begin
   fMaterial.Bind();
@@ -173,6 +186,9 @@ begin
     fBatch.Childs.Add(VerticesPoints[i]);
   end;
   UpdateData();
+
+  if aFreeStreamOnFinish then
+    aStream.Free();
 end;
 
 function TMoon.SaveLevel: TglrStream;
