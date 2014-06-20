@@ -211,7 +211,7 @@ begin
 
 
     WM_RBUTTONDOWN, WM_RBUTTONUP, WM_RBUTTONDBLCLK:
-      if (message = WM_LBUTTONUP) then
+      if (message = WM_RBUTTONUP) then
         Core.InputReceived(itTouchUp, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
       else
         Core.InputReceived(itTouchDown, kRightButton, LOWORD(lParam), HIWORD(lParam), 0);
