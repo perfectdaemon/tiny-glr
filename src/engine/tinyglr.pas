@@ -519,6 +519,7 @@ type
     class var fGame: TglrGame;
     class var fAppView: TglrAppView;
     class var fFPS: Single;
+    class var fDT: Double;
     class function GetFPSText(): AnsiString; static;
   public
     class var Input: TglrInput;
@@ -538,6 +539,7 @@ type
 
     class property FPS: Single read fFPS;
     class property FPSText: AnsiString read GetFPSText; //preformatted with 1 digit after delimiter
+    class property DeltaTime: Double read fDT;
   end;
 
   {$ENDREGION}
@@ -787,6 +789,7 @@ type
   public
     Text: WideString;
     LetterSpacing, LineSpacing: Single;
+    Color: TdfVec4f;
     constructor Create(const aText: WideString = ''); virtual;
     destructor Destroy(); override;
 
@@ -991,7 +994,7 @@ begin
           fVData[count * 4 + k] := quad[k];
           fVData[count * 4 + k].vec += dfVec3f(x, y, 0);
           fVData[count * 4 + k].vec := child.AbsoluteMatrix * fVData[count * 4 + k].vec;
-          fVData[count * 4 + k].col := dfVec4f(1, 1, 1, 1);
+          fVData[count * 4 + k].col := child.Color;
         end;
 
         for k := 0 to 5 do
@@ -1121,6 +1124,7 @@ begin
   Text := aText;
   LineSpacing := 2.0;
   LetterSpacing := 1.0;
+  Color := dfVec4f(1, 1, 1, 1);
 end;
 
 destructor TglrText.Destroy;
@@ -2445,7 +2449,8 @@ end;
 
 class procedure Core.Update(const dt: Double);
 begin
-  fFPS := 1 / dt;
+  fDT := dt;
+  fFPS := 1 / fDT;
   fGame.OnUpdate(dt);
 end;
 
