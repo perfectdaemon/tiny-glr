@@ -25,29 +25,12 @@ type
     procedure Update(const dt: Double);
   end;
 
-  (*
-    {"x":0,"y":1.350000023841858},
-		{"x":0.25,"y":1.4250000715255737},
-		{"x":0.45000001788139343,"y":1.4500000476837158},
-		{"x":0.5250000357627869,"y":1.5},
-		{"x":0.625,"y":1.5750000476837158},
-		{"x":0.675000011920929,"y":1.6750000715255737},
-		{"x":0.625,"y":1.774999976158142},
-		{"x":0.5250000357627869,"y":1.850000023841858},
-		{"x":0.45000001788139343,"y":1.899999976158142},
-		{"x":0.25,"y":1.9250000715255737},{"x":0,"y":2},
-		{"x":0.17499999701976776,"y":1.774999976158142},
-		{"x":0.02500000037252903,"y":1.7000000476837158},
-		{"x":0.02500000037252903,"y":1.649999976158142},
-		{"x":0.17499999701976776,"y":1.5750000476837158}
-
-  *)
-
-
   { TGame }
 
   TGame = class (TglrGame)
   protected
+    fEditorText: TglrText;
+    fMoonVertex: Integer;
     procedure PhysicsAfter(const FixedDeltaTime: Double);
     procedure PhysicsContactBegin(var contact: Tb2Contact);
   public
@@ -170,6 +153,8 @@ begin
   Material.Shader := Default.SpriteShader;
   Material.AddTexture(Atlas, 'uDiffuse');
 
+  Font := TglrFont.Create(FileSystem.ReadResource('lander/Hattori Hanzo17b.bmp'));
+
   MoonMaterial := TglrMaterial.Create();
   MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderV.txt'), stVertex);
   MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderF.txt'), stFragment);
@@ -196,19 +181,30 @@ begin
   SpriteBatch.Childs.Add(Flame);
   SpriteBatch.Childs.Add(Ship);
 
+  fEditorText := TglrText.Create();
+  fEditorText.Position := dfVec3f(Render.Width / 2 - 150, 20, 5);
+  fEditorText.LetterSpacing := 1.2;
+
+  FontBatch := TglrFontBatch.Create(Font);
+  FontBatch.Childs.Add(fEditorText);
+
   Scene := TglrScene.Create();
   Scene.Camera.ProjectionMode := pmOrtho;
   Scene.Camera.ProjectionModePivot := pCenter;
-  Scene.Camera.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  Scene.Camera.SetCamera(
+    dfVec3f(Render.Width / 2, Render.Height / 2, 100),
+    dfVec3f(Render.Width / 2, Render.Height / 2, 0),
+    dfVec3f(0, 1, 0));
   Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
   Scene.Root.Childs.Add(SpriteBatch);
+  Scene.Root.Childs.Add(FontBatch);
 
   FuelLevel := TFuelLevel.Create();
 
   Space := TSpace.Create(dfVec2f(Render.Width, Render.Height), Atlas.GetRegion('particle.png'), Material, 3);
   Space.Camera := Scene.Camera;
 
-  Moon := TMoon.Create(MoonMaterial, nil, Atlas.GetRegion('flag.png'), SpriteBatch);
+  Moon := TMoon.Create(MoonMaterial, nil, Atlas.GetRegion('fuel_level.png'), SpriteBatch);
   Moon.MaxY := Render.Height;
   Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
 end;
@@ -232,28 +228,62 @@ begin
   FuelLevel.Free();
   Material.Free();
   MoonMaterial.Free();
+  Font.Free();
 end;
 
 procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
   aOtherParam: Integer);
 var
-  s: TglrStream;
-  c: Word;
+  i: Integer;
 begin
   if (aType = itKeyUp) and (aKey = kE) then
+  begin
     Moon.EditMode := not Moon.EditMode;
+    if Moon.EditMode then
+      fEditorText.Text := UTF8Decode('В режиме редактора')
+    else
+      fEditorText.Text := '';
+  end;
 
   if Moon.EditMode then
+  begin
     if (aType = itKeyUp) and (aKey = kS) then
     begin
       FileSystem.WriteResource('lander/level1.bin', Moon.SaveLevel())
+      fEditorText.Text := UTF8Decode('Успешно сохранено');
     end
     else if (aType = itKeyUp) and (aKey = kL) then
+    begin
       Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
+      fEditorText.Text := UTF8Decode('Успешно загружено');
+    end;
+
+    if (aType = itTouchDown) and (aKey = kLeftButton) then
+    begin
+      fMoonVertex := Moon.GetVertexIndexAtPos(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos));
+    end;
+
+    if (aType = itTouchMove) and (aKey = kLeftButton) then
+    begin
+      if fMoonVertex <> -1 then
+      begin
+        Moon.Vertices[fMoonVertex] := Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos);
+        Moon.VerticesPoints[fMoonVertex].Position := dfVec3f(Moon.Vertices[fMoonVertex], Moon.VerticesPoints[fMoonVertex].Position.z);
+        Moon.UpdateData();
+      end;
+    end;
+
+    if (aType = itTouchUp) and (aKey = kLeftButton) then
+    begin
+      fMoonVertex := -1;
+    end;
+  end;
 
 
   if aType = itWheel then
     Scene.Camera.Scale := Scene.Camera.Scale + (aOtherParam * 0.1);
+
+
 end;
 
 procedure TGame.OnPause;
@@ -283,7 +313,7 @@ procedure TGame.OnUpdate(const dt: Double);
 begin
   World.Update(dt);
 
-  Box2d.SyncObjects(b2Ship, Ship, True);
+  //Box2d.SyncObjects(b2Ship, Ship, True);
 
   Ship.Rotation := LerpAngles(Ship.Rotation, (Core.Input.MousePos - dfVec2f(Ship.Position)).GetRotationAngle(), 5 * dt);
   FuelLevel.Update(dt);
