@@ -34,6 +34,7 @@ type
     procedure UpdateData();
 
     procedure AddVertex(aPos: TdfVec2f; aIndex: Integer = -1);
+    procedure DeleteVertex(aIndex: Integer);
     function GetVertexIndexAtPos(aPos: TdfVec2f): Integer;
 
     procedure RenderSelf();
@@ -75,9 +76,6 @@ begin
   fBatch := aBatch;
 
   b2Body := nil;
-
-  //debug
-  MaxY := Render.Height;
 end;
 
 destructor TMoon.Destroy;
@@ -124,7 +122,7 @@ begin
   //box2d
   if Assigned(b2Body) then
     b2Body.Free();
-  b2Body := Box2d.ChainStatic(Game.World, dfVec2f(0, 0), Vertices, 1.0, 1.0, 0.2, $0001, $0002, 2);
+  b2Body := Box2d.ChainStatic(Game.World, dfVec2f(0, 0), Vertices, 1.0, 1.5, 0.0, $0001, $0002, 2);
 end;
 
 procedure TMoon.AddVertex(aPos: TdfVec2f; aIndex: Integer);
@@ -148,6 +146,27 @@ begin
   VerticesPoints[aIndex].Position := dfVec3f(Vertices[aIndex], 10);
   VerticesPoints[aIndex].SetTextureRegion(fPointTR, False);
   fBatch.Childs.Add(VerticesPoints[aIndex]);
+end;
+
+procedure TMoon.DeleteVertex(aIndex: Integer);
+begin
+  if (aIndex < 0) or (aIndex > High(Vertices)) then
+  begin
+    Log.Write(lError, 'Moon.DeleteVertex: Index '
+      + Convert.ToString(aIndex)
+      + ' is out of bounds [0; '
+      + Convert.ToString(High(Vertices)) + ']');
+    Exit();
+  end;
+
+  fBatch.Childs.Delete(VerticesPoints[aIndex], True);
+  if aIndex <> High(Vertices) then
+  begin
+    Move(Vertices[aIndex + 1], Vertices[aIndex], (High(Vertices) - aIndex) * SizeOf(TdfVec2f));
+    Move(VerticesPoints[aIndex + 1], VerticesPoints[aIndex], (High(VerticesPoints) - aIndex) * SizeOf(TglrSprite));
+  end;
+  SetLength(Vertices, Length(Vertices) - 1);
+  SetLength(VerticesPoints, Length(VerticesPoints) - 1);
 end;
 
 function TMoon.GetVertexIndexAtPos(aPos: TdfVec2f): Integer;

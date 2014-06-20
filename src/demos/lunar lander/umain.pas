@@ -10,6 +10,7 @@ uses
 const
   MAX_FUEL = 100.0;
   FUEL_PER_SEC = 3.0;
+  SAFE_SPEED = 0.35;
 
 type
 
@@ -29,8 +30,9 @@ type
 
   TGame = class (TglrGame)
   protected
-    fEditorText: TglrText;
+    fEditorText, fDebugText: TglrText;
     fMoonVertex: Integer;
+    function GetShipDistanceToNearestMoonVertex(): Single;
     procedure PhysicsAfter(const FixedDeltaTime: Double);
     procedure PhysicsContactBegin(var contact: Tb2Contact);
   public
@@ -112,36 +114,17 @@ end;
 
 
 procedure TGame.OnStart;
-{
+
 var
-  landerV: array[0..14] of TdfVec2f = (
-    (x: 0; y: 1.350000023841858),
-		(x:0.25;y:1.4250000715255737),
-		(x:0.45000001788139343;y:1.4500000476837158),
-		(x:0.5250000357627869;y:1.5),
-		(x:0.625;y:1.5750000476837158),
-		(x:0.675000011920929;y:1.6750000715255737),
-		(x:0.625;y:1.774999976158142),
-		(x:0.5250000357627869;y:1.850000023841858),
-		(x:0.45000001788139343;y:1.899999976158142),
-		(x:0.25;y:1.9250000715255737),
-    (x:0;y:2),
-		(x:0.17499999701976776;y:1.774999976158142),
-		(x:0.02500000037252903;y:1.7000000476837158),
-		(x:0.02500000037252903;y:1.649999976158142),
-		(x:0.17499999701976776;y:1.5750000476837158));
-
+  landerV: array[0..3] of TdfVec2f =
+    (
+      (x: -0.5; y:  0.5),
+      (x:  0.5; y:  0.22),
+      (x:  0.5; y: -0.22),
+      (x: -0.5; y: -0.5)
+    );
   i: Integer;
-  }
 begin
-  {
-  for i := 0 to Length(landerV) - 1 do
-  begin
-    landerV[i].y -= 1.34;
-    landerV[i] *= 64;
-  end;
-  }
-
   Render.SetClearColor(0.1, 0.1, 0.13);
 
   Atlas := TglrTextureAtlas.Create(
@@ -168,8 +151,12 @@ begin
   Ship.SetTextureRegion(Atlas.GetRegion('lander.png'));
   Ship.Position := dfVec3f(200, 200, 1);
 
+  for i := 0 to 3 do
+    landerV[i] *= Ship.Width;
+
   //b2Ship := Box2d.{Circle}Polygon(World, dfVec2f(Ship.Position), landerV, 0.5, 0.2, 0.0, $0002, $0001, 1);
-  b2Ship := Box2d.Circle(World, Ship.Width * 0.5 * 0.85, dfVec2f(Ship.Position), 0.5, 0.2, 0.0, $0002, $0001, 1);
+  b2Ship := Box2d.Polygon(World, dfVec2f(Ship.Position), landerV, 0.5, 1.0, 0.0, $0002, $0001, 1);
+  b2Ship.AngularDamping := 1.0;
 
   Flame := TglrSprite.Create();
   Flame.SetTextureRegion(Atlas.GetRegion('flame.png'));
@@ -185,8 +172,13 @@ begin
   fEditorText.Position := dfVec3f(Render.Width / 2 - 150, 20, 5);
   fEditorText.LetterSpacing := 1.2;
 
+  fDebugText := TglrText.Create();
+  fDebugText.Position.z := 10;
+  fDebugText.LetterSpacing := 1.2;
+
   FontBatch := TglrFontBatch.Create(Font);
   FontBatch.Childs.Add(fEditorText);
+  FontBatch.Childs.Add(fDebugText);
 
   Scene := TglrScene.Create();
   Scene.Camera.ProjectionMode := pmOrtho;
@@ -205,8 +197,23 @@ begin
   Space.Camera := Scene.Camera;
 
   Moon := TMoon.Create(MoonMaterial, nil, Atlas.GetRegion('fuel_level.png'), SpriteBatch);
-  Moon.MaxY := Render.Height;
+  Moon.MaxY := Render.Height * 3;
   Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
+end;
+
+function TGame.GetShipDistanceToNearestMoonVertex: Single;
+var
+  i: Integer;
+  s: Single;
+begin
+  Result := 1 / 0;
+  for i := 0 to Length(Moon.Vertices) - 1 do
+  begin
+    s := (dfVec2f(Ship.Position) - Moon.Vertices[i]).Length;
+    if s < Result then
+      Result := s;
+  end;
+  Result -= (Ship.Width / 2);
 end;
 
 procedure TGame.PhysicsAfter(const FixedDeltaTime: Double);
@@ -235,6 +242,8 @@ procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
   aOtherParam: Integer);
 var
   i: Integer;
+  absMousePos: TdfVec2f;
+  vertexAdded: Boolean;
 begin
   if (aType = itKeyUp) and (aKey = kE) then
   begin
@@ -245,11 +254,16 @@ begin
       fEditorText.Text := '';
   end;
 
-  if Moon.EditMode then
+  if not Moon.EditMode then
+  begin
+
+  end
+  //Editor mode
+  else
   begin
     if (aType = itKeyUp) and (aKey = kS) then
     begin
-      FileSystem.WriteResource('lander/level1.bin', Moon.SaveLevel())
+      FileSystem.WriteResource('lander/level1.bin', Moon.SaveLevel());
       fEditorText.Text := UTF8Decode('Успешно сохранено');
     end
     else if (aType = itKeyUp) and (aKey = kL) then
@@ -263,6 +277,31 @@ begin
       fMoonVertex := Moon.GetVertexIndexAtPos(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos));
     end;
 
+    if (aType = itTouchDown) and (aKey = kRightButton) then
+    begin
+      i := Moon.GetVertexIndexAtPos(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos));
+      if i = -1 then
+      begin
+        absMousePos := Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos);
+        vertexAdded := False;
+        for i := 0 to Length(Moon.Vertices) - 1 do
+          if Moon.Vertices[i].x > absMousePos.x then
+          begin
+            Moon.AddVertex(absMousePos, i);
+            vertexAdded := True;
+            break;
+          end;
+        if not vertexAdded then
+          Moon.AddVertex(absMousePos);
+      end
+      else
+      //delete vertex
+      begin
+        Moon.DeleteVertex(i);
+      end;
+      Moon.UpdateData();
+    end;
+
     if (aType = itTouchMove) and (aKey = kLeftButton) then
     begin
       if fMoonVertex <> -1 then
@@ -273,17 +312,20 @@ begin
       end;
     end;
 
+    if (aType = itTouchMove) and (aKey = kMiddleButton) then
+    begin
+      Ship.Position := dfVec3f(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos), Ship.Position.z)
+    end;
+
     if (aType = itTouchUp) and (aKey = kLeftButton) then
     begin
       fMoonVertex := -1;
     end;
+
+    if aType = itWheel then
+      Scene.Camera.Scale := Scene.Camera.Scale + (aOtherParam * 0.1);
+
   end;
-
-
-  if aType = itWheel then
-    Scene.Camera.Scale := Scene.Camera.Scale + (aOtherParam * 0.1);
-
-
 end;
 
 procedure TGame.OnPause;
@@ -293,10 +335,12 @@ end;
 
 procedure TGame.OnRender;
 begin
-  Scene.RenderScene();
-  Render.Params.ModelViewProj := Render.Params.ViewProj;
+  Scene.Camera.Update();
   Space.RenderSelf();
   Moon.RenderSelf();
+  //Render.Params.ModelViewProj := Render.Params.ViewProj;
+  Scene.RenderScene();
+
 end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
@@ -310,26 +354,60 @@ begin
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
+var
+  v: TdfVec2f;
+  scale: Single;
+  speed: Single;
 begin
-  World.Update(dt);
+  if not Moon.EditMode then
+  begin
+    if Core.Input.KeyDown[kLeft] then
+      b2Ship.ApplyAngularImpulse(- Core.DeltaTime * 5)
+    else if Core.Input.KeyDown[kRight] then
+      b2Ship.ApplyAngularImpulse(  Core.DeltaTime * 5);
 
-  //Box2d.SyncObjects(b2Ship, Ship, True);
+    Flame.Visible := (Core.Input.KeyDown[kUp] or Core.Input.KeyDown[kDown] or Core.Input.KeyDown[kSpace])
+      and (FuelLevel.Level > 0);
+    if Flame.Visible then
+    begin
+      FuelLevel.Level -= dt * FUEL_PER_SEC;
 
-  Ship.Rotation := LerpAngles(Ship.Rotation, (Core.Input.MousePos - dfVec2f(Ship.Position)).GetRotationAngle(), 5 * dt);
-  FuelLevel.Update(dt);
-  Flame.Visible := (Core.Input.Touch[1].IsDown); //left button
-  if Flame.Visible then
-    FuelLevel.Level -= dt * FUEL_PER_SEC;
+      v := dfVec2f(Ship.Rotation) * dt;
+      b2Ship.ApplyLinearImpulse(TVector2.From(v.x, v.y), b2Ship.GetWorldCenter);
+    end;
 
-  if Core.Input.KeyDown[kUp] then
-    Scene.Camera.Translate(-dt * 200, 0, 0)
-  else if Core.Input.KeyDown[kDown] then
-    Scene.Camera.Translate(dt * 200, 0, 0);
+    Box2d.SyncObjects(b2Ship, Ship);
+    World.Update(dt);
 
-  if Core.Input.KeyDown[kLeft] then
-    Scene.Camera.Translate(0, -dt * 200, 0)
-  else if Core.Input.KeyDown[kRight] then
-    Scene.Camera.Translate(0, dt * 200, 0);
+    //fEditorText.Text := Convert.ToString(GetShipDistanceToNearestMoonVertex());
+    scale := 1.0; // * (1 / Clamp(b2Ship.GetLinearVelocity.SqrLength, 1.0, 1.85)); //no speed clamp
+    scale *=  (1 / Clamp(GetShipDistanceToNearestMoonVertex() * 0.01, 0.9, 2.0));
+    Scene.Camera.Scale := Lerp(Scene.Camera.Scale, scale, 5 * dt);
+    with Scene.Camera do
+      Position := dfVec3f(dfVec2f(Ship.Position), Position.z);
+//        Position := dfVec3f(dfVec2f(Position.Lerp(Ship.Position, 5 * dt)), Position.z);
+    FuelLevel.Update(dt);
+
+    speed := b2Ship.GetLinearVelocity.Length;
+    if speed > SAFE_SPEED then
+      fDebugText.Color := dfVec4f(1, 0.3, 0.3, 1.0)
+    else
+      fDebugText.Color := dfVec4f(0.3, 1.0, 0.3, 1.0);
+    fDebugText.Position := Ship.Position + dfVec3f(60, -10, 10);
+    fDebugText.Text := Convert.ToString(speed, 2);
+  end
+  else
+  begin
+    if Core.Input.KeyDown[kUp] then
+      Scene.Camera.Translate(-dt * 200, 0, 0)
+    else if Core.Input.KeyDown[kDown] then
+      Scene.Camera.Translate(dt * 200, 0, 0);
+
+    if Core.Input.KeyDown[kLeft] then
+      Scene.Camera.Translate(0, -dt * 200, 0)
+    else if Core.Input.KeyDown[kRight] then
+      Scene.Camera.Translate(0, dt * 200, 0);
+  end;
 end;
 
 end.
