@@ -30,8 +30,13 @@ type
 
   TGame = class (TglrGame)
   protected
-    fEditorText, fDebugText: TglrText;
-    fMoonVertex: Integer;
+    fShipEngineDirection: TdfVec2f;
+    fCameraScale: Single;
+    fShipLinearSpeed: Single;
+
+    fEditorText, fDebugText, fHudMainText: TglrText;
+    fSelectedMoonVertex: Integer;
+
     function GetShipDistanceToNearestMoonVertex(): Single;
     procedure PhysicsAfter(const FixedDeltaTime: Double);
     procedure PhysicsContactBegin(var contact: Tb2Contact);
@@ -39,7 +44,7 @@ type
     //Resources
     Atlas: TglrTextureAtlas;
     Font: TglrFont;
-    FontBatch: TglrFontBatch;
+    FontBatch, FontBatchHud: TglrFontBatch;
     SpriteBatch: TglrSpriteBatch;
     Material, MoonMaterial: TglrMaterial;
 
@@ -57,7 +62,7 @@ type
     b2Ship: Tb2Body;
 
     //Scenes
-    Scene: TglrScene;
+    Scene, SceneHud: TglrScene;
 
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -157,6 +162,7 @@ begin
   //b2Ship := Box2d.{Circle}Polygon(World, dfVec2f(Ship.Position), landerV, 0.5, 0.2, 0.0, $0002, $0001, 1);
   b2Ship := Box2d.Polygon(World, dfVec2f(Ship.Position), landerV, 0.5, 1.0, 0.0, $0002, $0001, 1);
   b2Ship.AngularDamping := 1.0;
+  b2Ship.UserData := Ship;
 
   Flame := TglrSprite.Create();
   Flame.SetTextureRegion(Atlas.GetRegion('flame.png'));
@@ -176,9 +182,17 @@ begin
   fDebugText.Position.z := 10;
   fDebugText.LetterSpacing := 1.2;
 
+  fHudMainText := TglrText.Create();
+  fHudMainText.Position := dfVec3f(Render.Width / 2 - 50, Render.Height / 2 - 15, 5);
+  fHudMainText.LetterSpacing := 1.2;
+  fHudMainText.LineSpacing := 1.5;
+
   FontBatch := TglrFontBatch.Create(Font);
   FontBatch.Childs.Add(fEditorText);
   FontBatch.Childs.Add(fDebugText);
+
+  FontBatchHud := TglrFontBatch.Create(Font);
+  FontBatchHud.Childs.Add(fHudMainText);
 
   Scene := TglrScene.Create();
   Scene.Camera.ProjectionMode := pmOrtho;
@@ -190,6 +204,16 @@ begin
   Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
   Scene.Root.Childs.Add(SpriteBatch);
   Scene.Root.Childs.Add(FontBatch);
+
+  SceneHud := TglrScene.Create();
+  SceneHud.Camera.ProjectionMode := pmOrtho;
+  SceneHud.Camera.ProjectionModePivot := pTopLeft;
+  SceneHud.Camera.SetCamera(
+    dfVec3f(0, 0, 100),
+    dfVec3f(0, 0, 0),
+    dfVec3f(0, 1, 0));
+  SceneHud.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
+  SceneHud.Root.Childs.Add(FontBatchHud);
 
   FuelLevel := TFuelLevel.Create();
 
@@ -222,8 +246,30 @@ begin
 end;
 
 procedure TGame.PhysicsContactBegin(var contact: Tb2Contact);
+var
+  b1, b2: Tb2Body;
 begin
-
+  b1 := contact.m_fixtureA.GetBody;
+  b2 := contact.m_fixtureB.GetBody;
+  if ((b1.UserData = Ship) and (b2.UserData = Moon))
+    or ((b2.UserData = Ship) and (b1.UserData = Moon)) then
+  begin
+    if fShipLinearSpeed > SAFE_SPEED then
+    begin
+      fHudMainText.Text := UTF8Decode('Разбился');
+      fHudMainText.Color := dfVec4f(1, 0.1, 0.1, 1);
+    end
+    else if fShipLinearSpeed > 0.10 then
+    begin
+      fHudMainText.Text := UTF8Decode('Пойдет');
+      fHudMainText.Color := dfVec4f(1, 1, 0.1, 1);
+    end
+    else
+    begin
+      fHudMainText.Text := UTF8Decode('Сел!');
+      fHudMainText.Color := dfVec4f(0.1, 1, 0.1, 1);
+    end;
+  end;
 end;
 
 procedure TGame.OnFinish;
@@ -231,6 +277,7 @@ begin
   Space.Free();
   Moon.Free();
   Scene.Free();
+  SceneHud.Free();
 
   FuelLevel.Free();
   Material.Free();
@@ -274,7 +321,7 @@ begin
 
     if (aType = itTouchDown) and (aKey = kLeftButton) then
     begin
-      fMoonVertex := Moon.GetVertexIndexAtPos(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos));
+      fSelectedMoonVertex := Moon.GetVertexIndexAtPos(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos));
     end;
 
     if (aType = itTouchDown) and (aKey = kRightButton) then
@@ -304,10 +351,10 @@ begin
 
     if (aType = itTouchMove) and (aKey = kLeftButton) then
     begin
-      if fMoonVertex <> -1 then
+      if fSelectedMoonVertex <> -1 then
       begin
-        Moon.Vertices[fMoonVertex] := Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos);
-        Moon.VerticesPoints[fMoonVertex].Position := dfVec3f(Moon.Vertices[fMoonVertex], Moon.VerticesPoints[fMoonVertex].Position.z);
+        Moon.Vertices[fSelectedMoonVertex] := Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos);
+        Moon.VerticesPoints[fSelectedMoonVertex].Position := dfVec3f(Moon.Vertices[fSelectedMoonVertex], Moon.VerticesPoints[fSelectedMoonVertex].Position.z);
         Moon.UpdateData();
       end;
     end;
@@ -319,7 +366,7 @@ begin
 
     if (aType = itTouchUp) and (aKey = kLeftButton) then
     begin
-      fMoonVertex := -1;
+      fSelectedMoonVertex := -1;
     end;
 
     if aType = itWheel then
@@ -340,7 +387,7 @@ begin
   Moon.RenderSelf();
   //Render.Params.ModelViewProj := Render.Params.ViewProj;
   Scene.RenderScene();
-
+  SceneHud.RenderScene();
 end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
@@ -354,10 +401,6 @@ begin
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
-var
-  v: TdfVec2f;
-  scale: Single;
-  speed: Single;
 begin
   if not Moon.EditMode then
   begin
@@ -372,29 +415,29 @@ begin
     begin
       FuelLevel.Level -= dt * FUEL_PER_SEC;
 
-      v := dfVec2f(Ship.Rotation) * dt;
-      b2Ship.ApplyLinearImpulse(TVector2.From(v.x, v.y), b2Ship.GetWorldCenter);
+      fShipEngineDirection := dfVec2f(Ship.Rotation) * dt;
+      b2Ship.ApplyLinearImpulse(TVector2.From(fShipEngineDirection.x, fShipEngineDirection.y), b2Ship.GetWorldCenter);
     end;
 
     Box2d.SyncObjects(b2Ship, Ship);
     World.Update(dt);
 
     //fEditorText.Text := Convert.ToString(GetShipDistanceToNearestMoonVertex());
-    scale := 1.0; // * (1 / Clamp(b2Ship.GetLinearVelocity.SqrLength, 1.0, 1.85)); //no speed clamp
-    scale *=  (1 / Clamp(GetShipDistanceToNearestMoonVertex() * 0.01, 0.9, 2.0));
-    Scene.Camera.Scale := Lerp(Scene.Camera.Scale, scale, 5 * dt);
+    fCameraScale := 1.0; // * (1 / Clamp(b2Ship.GetLinearVelocity.SqrLength, 1.0, 1.85)); //no fShipLinearSpeed clamp
+    fCameraScale *=  (1 / Clamp(GetShipDistanceToNearestMoonVertex() * 0.01, 0.9, 2.0));
+    Scene.Camera.Scale := Lerp(Scene.Camera.Scale, fCameraScale, 5 * dt);
     with Scene.Camera do
       Position := dfVec3f(dfVec2f(Ship.Position), Position.z);
 //        Position := dfVec3f(dfVec2f(Position.Lerp(Ship.Position, 5 * dt)), Position.z);
     FuelLevel.Update(dt);
 
-    speed := b2Ship.GetLinearVelocity.Length;
-    if speed > SAFE_SPEED then
+    fShipLinearSpeed := b2Ship.GetLinearVelocity.Length;
+    if fShipLinearSpeed > SAFE_SPEED then
       fDebugText.Color := dfVec4f(1, 0.3, 0.3, 1.0)
     else
       fDebugText.Color := dfVec4f(0.3, 1.0, 0.3, 1.0);
     fDebugText.Position := Ship.Position + dfVec3f(60, -10, 10);
-    fDebugText.Text := Convert.ToString(speed, 2);
+    fDebugText.Text := Convert.ToString(fShipLinearSpeed, 2);
   end
   else
   begin

@@ -5,7 +5,7 @@ unit uMoon;
 interface
 
 uses
-  tinyglr, glrMath, uPhysics2d ;
+  tinyglr, glrMath, uPhysics2d;
 
 type
 
@@ -123,6 +123,7 @@ begin
   if Assigned(b2Body) then
     b2Body.Free();
   b2Body := Box2d.ChainStatic(Game.World, dfVec2f(0, 0), Vertices, 1.0, 1.5, 0.0, $0001, $0002, 2);
+  b2Body.UserData := Self;
 end;
 
 procedure TMoon.AddVertex(aPos: TdfVec2f; aIndex: Integer);
