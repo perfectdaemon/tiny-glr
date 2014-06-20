@@ -11,6 +11,7 @@ const
   //(для внутренних расчетов)
   //Категорически не рекомендуется изменять без понимания, ЗАЧЕМ
   C_COEF = 1 / 40;
+  C_COEF_INV = 40;
 
 type
 
@@ -183,7 +184,7 @@ class procedure Box2D.SyncObjects(b2Body: Tb2Body; renderObject: TglrSprite;
 var
   pos2d: TdfVec2f;
 begin
-  pos2d := dfVec2f(b2Body.GetPosition.x, b2Body.GetPosition.y) * (1 / C_COEF);
+  pos2d := dfVec2f(b2Body.GetPosition.x, b2Body.GetPosition.y) * C_COEF_INV;
   renderObject.Position.x := pos2d.x;
   renderObject.Position.y := pos2d.y;
   if not aPositionsOnly then
