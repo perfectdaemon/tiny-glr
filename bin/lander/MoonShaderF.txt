@@ -4,5 +4,5 @@ uniform vec4 uColor;
 
 void main(void)
 {
-  gl_FragColor = uColor; //* texture2D( uDiffuse, texCoord0 );
+  gl_FragColor = uColor * texture2D( uDiffuse, texCoord0 );
 }

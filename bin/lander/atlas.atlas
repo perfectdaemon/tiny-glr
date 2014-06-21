@@ -1,7 +1,8 @@
 textures: atlas.png
 lander.png	1	1	84	81	0	0	84	81	
-particle.png	87	1	36	36	0	0	36	36	
-flag.png	1	84	48	35	0	0	35	48	r
-flame.png	87	39	33	30	0	0	30	33	r
-fuel_level_back.png	1	121	106	21	0	0	106	21	
-fuel_level.png	1	144	102	6	0	0	102	6	
+flag.png	87	1	35	47	0	0	35	48	
+flame.png	1	84	45	33	0	0	45	33	
+particle.png	99	50	28	24	4	5	36	36	r
+fuel_level_back.png	1	119	106	21	0	0	106	21	
+fuel_level.png	1	142	102	6	0	0	102	6	
+blank.png	124	1	2	2	0	0	2	2	
