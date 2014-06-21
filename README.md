@@ -11,7 +11,7 @@ Tiny crossplatform (Win, Mac, Linux, Android, iOS) game development framework bu
 
 ###Current roadmap###
  - [x] Early development
- - [ ] Some little game to prove framework' abilities
+ - [x] Some little game to prove framework' abilities (see src/demos/lunar lander)
  - [ ] 0.1 version 
  - [ ] [My Multitetris game](https://github.com/perfectdaemon/glr/tree/master/src/demos/Project%20MutilTetris) port 
  - [ ] 0.2 version 
