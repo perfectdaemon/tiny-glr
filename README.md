@@ -26,13 +26,14 @@ Tiny crossplatform (Win, Mac, Linux, Android, iOS) game development framework bu
 * Texture formats: bmp (24/32 bit), tga (24/32 bit)
 * Pack files
 * 2D (Sprites, Bitmap Fonts)
+* Texture atlases ([Cheetah](https://github.com/scriptum/Cheetah-Texture-Packer) texture atlases supported)
 
 ###Current toolset###
 * Resource packer
 * Font generator
 
 ###In progress###
-* Texture atlases
+
 * 3D base functionality (mesh, skeletal, morph, 3ds, fbx, obj, smd)
 * Particles
 * Sound and physics engines support
