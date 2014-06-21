@@ -28,6 +28,8 @@ type
     destructor Destroy(); override;
 
     procedure Loop(); override;
+    procedure Quit; override;
+
   end;
   PglrWindow = ^TglrWindow;
 
@@ -315,6 +317,11 @@ begin
       SwapBuffers(fDC);
     end;
   until Self.fShouldQuit;
+end;
+
+procedure TglrWindow.Quit;
+begin
+  Self.fShouldQuit := True;
 end;
 
 

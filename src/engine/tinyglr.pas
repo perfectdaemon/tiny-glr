@@ -417,6 +417,7 @@ type
     destructor Destroy(); override; abstract;
 
     procedure Loop(); virtual; abstract;
+    procedure Quit(); virtual; abstract;
   end;
 
   {$ENDREGION}
@@ -533,6 +534,8 @@ type
     class procedure Loop();
     class procedure Pause();
     class procedure Resume();
+
+    class procedure Quit();
 
     class procedure Update(const dt: Double);
     class procedure RenderAll();
@@ -2445,6 +2448,11 @@ end;
 class procedure Core.Resume();
 begin
   fGame.OnResume();
+end;
+
+class procedure Core.Quit;
+begin
+  fAppView.Quit();
 end;
 
 class procedure Core.Update(const dt: Double);
