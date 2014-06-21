@@ -68,6 +68,8 @@ type
     class procedure SyncObjects(b2Body: Tb2Body; renderObject: TglrSprite;
       aPositionsOnly: Boolean = False);
 
+    class procedure ReverseSyncObjects(renderObject: TglrSprite; b2Body: Tb2Body);
+
     class function ConvertB2ToGL(aVec: TVector2): TdfVec2f;
     class function ConvertGLToB2(aVec: TdfVec2f): TVector2;
 
@@ -189,6 +191,16 @@ begin
   renderObject.Position.y := pos2d.y;
   if not aPositionsOnly then
     renderObject.Rotation := b2Body.GetAngle * rad2deg;
+end;
+
+class procedure Box2D.ReverseSyncObjects(renderObject: TglrSprite;
+  b2Body: Tb2Body);
+var
+  p: TdfVec2f;
+begin
+  p := dfVec2f(renderObject.AbsoluteMatrix.Pos) * C_COEF;
+  b2Body.SetTransform(ConvertGLToB2(p), renderObject.Rotation * deg2rad);
+//  SyncObjects(b2Body, renderObject);
 end;
 
 class function Box2D.ConvertB2ToGL(aVec: TVector2): TdfVec2f;
