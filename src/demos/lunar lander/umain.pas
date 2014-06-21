@@ -10,7 +10,8 @@ uses
 const
   MAX_FUEL = 100.0;
   FUEL_PER_SEC = 3.0;
-  SAFE_SPEED = 0.35;
+  SAFE_SPEED = 0.75;
+  LAND_SPEED = 0.10;
 
 type
 
@@ -26,10 +27,16 @@ type
     procedure Update(const dt: Double);
   end;
 
+  TGameStatus = (sPlay, sPause);
+  TGameEndReason = (rWin, rCrash, rAway);
+
   { TGame }
 
   TGame = class (TglrGame)
   protected
+    fGameStatus: TGameStatus;
+    fPoint1, fPoint2: Byte;
+
     fShipEngineDirection: TdfVec2f;
     fCameraScale: Single;
     fShipLinearSpeed: Single;
@@ -37,9 +44,15 @@ type
     fEditorText, fDebugText, fHudMainText: TglrText;
     fSelectedMoonVertex: Integer;
 
+    fTrigger1, fTrigger2: TglrSprite;
+    fb2Trigger1, fb2Trigger2: Tb2Body;
+
     function GetShipDistanceToNearestMoonVertex(): Single;
     procedure PhysicsAfter(const FixedDeltaTime: Double);
     procedure PhysicsContactBegin(var contact: Tb2Contact);
+    procedure PhysicsContactEnd(var contact: Tb2Contact);
+
+    procedure OnGameEnd(aReason: TGameEndReason);
   public
     //Resources
     Atlas: TglrTextureAtlas;
@@ -47,6 +60,7 @@ type
     FontBatch, FontBatchHud: TglrFontBatch;
     SpriteBatch: TglrSpriteBatch;
     Material, MoonMaterial: TglrMaterial;
+    MoonTexture: TglrTexture;
 
     World: Tglrb2World;
 
@@ -121,12 +135,14 @@ end;
 procedure TGame.OnStart;
 
 var
-  landerV: array[0..3] of TdfVec2f =
+  landerV: array[0..5] of TdfVec2f =
     (
-      (x: -0.5; y:  0.5),
-      (x:  0.5; y:  0.22),
-      (x:  0.5; y: -0.22),
-      (x: -0.5; y: -0.5)
+      (x: -0.5; y: 0.48),
+      (x:    0; y: 0.35),
+      (x: 0.48; y: 0.12),
+      (x:    0; y:-0.35),
+      (x: 0.48; y:-0.12),
+      (x: -0.5; y:-0.48)
     );
   i: Integer;
 begin
@@ -143,36 +159,66 @@ begin
 
   Font := TglrFont.Create(FileSystem.ReadResource('lander/Hattori Hanzo17b.bmp'));
 
+  MoonTexture := TglrTexture.Create(FileSystem.ReadResource('lander/moon.tga'), 'tga');
+//  MoonTexture.SetWrapS(wClampToEdge);
+  MoonTexture.SetWrapS(wRepeat);
+  MoonTexture.SetWrapR(wRepeat);
+  MoonTexture.SetWrapT(wRepeat);
+
   MoonMaterial := TglrMaterial.Create();
   MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderV.txt'), stVertex);
   MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderF.txt'), stFragment);
   MoonMaterial.Shader.Link();
+  MoonMaterial.AddTexture(MoonTexture, 'uDiffuse');
+  MoonMaterial.Color := dfVec4f(0.70, 0.70, 0.55, 1.0);
 
   World := Tglrb2World.Create(TVector2.From(0, 9.8 * C_COEF), false, 1 / 40, 8);
   World.AddOnBeginContact(Self.PhysicsContactBegin);
+  World.AddOnEndContact(Self.PhysicsContactEnd);
   World.OnAfterSimulation := Self.PhysicsAfter;
 
   Ship := TglrSprite.Create();
   Ship.SetTextureRegion(Atlas.GetRegion('lander.png'));
-  Ship.Position := dfVec3f(200, 200, 1);
+  Ship.Position := dfVec3f(200, 100, 2);
 
-  for i := 0 to 3 do
+  fTrigger1 := TglrSprite.Create();
+  fTrigger1.SetTextureRegion(Atlas.GetRegion('blank.png'), False);
+  fTrigger1.SetSize(10, 10);
+  fTrigger1.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
+  fTrigger1.Parent := Ship;
+  fTrigger1.Position := dfVec3f(-0.5 * Ship.Width, 0.5 * Ship.Height, 1);
+
+  fTrigger2 := TglrSprite.Create();
+  fTrigger2.SetTextureRegion(Atlas.GetRegion('blank.png'), False);
+  fTrigger2.SetSize(10, 10);
+  fTrigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
+  fTrigger2.Parent := Ship;
+  fTrigger2.Position := dfVec3f(-0.5 * Ship.Width, - 0.5 * Ship.Height, 1);
+
+  fb2Trigger1 := Box2D.BoxSensor(World, dfVec2f(fTrigger1.Position), dfVec2f(fTrigger1.Width, fTrigger1.Height), 0, $0002, $0001, False);
+  fb2Trigger1.UserData := @fPoint1;
+  fb2Trigger2 := Box2D.BoxSensor(World, dfVec2f(fTrigger2.Position), dfVec2f(fTrigger2.Width, fTrigger2.Height), 0, $0002, $0001, False);
+  fb2Trigger2.UserData := @fPoint2;
+
+  for i := 0 to Length(landerV) - 1 do
     landerV[i] *= Ship.Width;
 
-  //b2Ship := Box2d.{Circle}Polygon(World, dfVec2f(Ship.Position), landerV, 0.5, 0.2, 0.0, $0002, $0001, 1);
   b2Ship := Box2d.Polygon(World, dfVec2f(Ship.Position), landerV, 0.5, 1.0, 0.0, $0002, $0001, 1);
   b2Ship.AngularDamping := 1.0;
   b2Ship.UserData := Ship;
 
   Flame := TglrSprite.Create();
   Flame.SetTextureRegion(Atlas.GetRegion('flame.png'));
-  Flame.Position := dfVec3f(-50, 0, -5);
+  Flame.Position := dfVec3f(-50, 0, -1);
+  Flame.SetVerticesColor(dfVec4f(0.9, 0.85, 0.1, 1.0));
   Flame.Parent := Ship;
 
   SpriteBatch := TglrSpriteBatch.Create();
   SpriteBatch.Material := Material;
   SpriteBatch.Childs.Add(Flame);
   SpriteBatch.Childs.Add(Ship);
+  SpriteBatch.Childs.Add(fTrigger1);
+  SpriteBatch.Childs.Add(fTrigger2);
 
   fEditorText := TglrText.Create();
   fEditorText.Position := dfVec3f(Render.Width / 2 - 150, 20, 5);
@@ -183,7 +229,7 @@ begin
   fDebugText.LetterSpacing := 1.2;
 
   fHudMainText := TglrText.Create();
-  fHudMainText.Position := dfVec3f(Render.Width / 2 - 50, Render.Height / 2 - 15, 5);
+  fHudMainText.Position := dfVec3f(50, 50, 15);
   fHudMainText.LetterSpacing := 1.2;
   fHudMainText.LineSpacing := 1.5;
 
@@ -217,12 +263,18 @@ begin
 
   FuelLevel := TFuelLevel.Create();
 
-  Space := TSpace.Create(dfVec2f(Render.Width, Render.Height), Atlas.GetRegion('particle.png'), Material, 3);
+  Space := TSpace.Create(dfVec2f(-1.5 * Render.Width, -1.5 * Render.Height),
+    dfVec2f(3 * Render.Width, 3 * Render.Height),
+    Atlas.GetRegion('particle.png'), Material, 3);
   Space.Camera := Scene.Camera;
 
-  Moon := TMoon.Create(MoonMaterial, nil, Atlas.GetRegion('fuel_level.png'), SpriteBatch);
+  Moon := TMoon.Create(MoonMaterial, nil, Atlas.GetRegion('blank.png'), SpriteBatch);
   Moon.MaxY := Render.Height * 3;
   Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
+
+  fGameStatus := sPlay;
+  fPoint1 := 0;
+  fPoint2 := 0;
 end;
 
 function TGame.GetShipDistanceToNearestMoonVertex: Single;
@@ -248,27 +300,97 @@ end;
 procedure TGame.PhysicsContactBegin(var contact: Tb2Contact);
 var
   b1, b2: Tb2Body;
+  //vel1, vel2, imp: TVector2;
+  //worldManifold: Tb2WorldManifold;
 begin
   b1 := contact.m_fixtureA.GetBody;
   b2 := contact.m_fixtureB.GetBody;
+  //contact.GetWorldManifold(worldManifold);
+
+
   if ((b1.UserData = Ship) and (b2.UserData = Moon))
     or ((b2.UserData = Ship) and (b1.UserData = Moon)) then
   begin
-    if fShipLinearSpeed > SAFE_SPEED then
+    //vel1 := b1.GetLinearVelocityFromWorldPoint(worldManifold.points[0]);
+    //vel2 := b2.GetLinearVelocityFromWorldPoint(worldManifold.points[0]);
+    //imp := vel1 - vel2;
+
+    if {imp.Length} fShipLinearSpeed > SAFE_SPEED then
     begin
-      fHudMainText.Text := UTF8Decode('Разбился');
-      fHudMainText.Color := dfVec4f(1, 0.1, 0.1, 1);
+      OnGameEnd(rCrash);
     end
-    else if fShipLinearSpeed > 0.10 then
+    else if fShipLinearSpeed > LAND_SPEED then
     begin
-      fHudMainText.Text := UTF8Decode('Пойдет');
+      fHudMainText.Text := UTF8Decode('Осторожно!');
       fHudMainText.Color := dfVec4f(1, 1, 0.1, 1);
     end
     else
     begin
-      fHudMainText.Text := UTF8Decode('Сел!');
-      fHudMainText.Color := dfVec4f(0.1, 1, 0.1, 1);
+//      OnGameEnd(rWin);
     end;
+  end
+
+  else if ( (contact.m_fixtureA.IsSensor) and (b2.UserData = Moon) ) then
+  begin
+    Byte(b1.UserData^) += 1;
+  end
+  else if ( (contact.m_fixtureB.IsSensor) and (b1.UserData = Moon) ) then
+  begin
+    Byte(b2.UserData^) += 1;
+  end;
+
+end;
+
+procedure TGame.PhysicsContactEnd(var contact: Tb2Contact);
+var
+  b1, b2: Tb2Body;
+begin
+  b1 := contact.m_fixtureA.GetBody;
+  b2 := contact.m_fixtureB.GetBody;
+
+  if ( (contact.m_fixtureA.IsSensor) and (b2.UserData = Moon) ) then
+  begin
+    Byte(b1.UserData^) -= 1;
+  end
+  else if ( (contact.m_fixtureB.IsSensor) and (b1.UserData = Moon) ) then
+  begin
+    Byte(b2.UserData^) -= 1;
+  end;
+end;
+
+procedure TGame.OnGameEnd(aReason: TGameEndReason);
+var
+  scores: Integer;
+begin
+  fGameStatus := sPause;
+  if aReason = rWin then
+  begin
+    scores := Ceil((FuelLevel.Level / MAX_FUEL) * 1000);
+    fHudMainText.Text := UTF8Decode('Очки: ' + Convert.ToString(Scores)
+    + #13#10#13#10'Вы успешно прилунились!'
+    + #13#10'Пора искать селенитов!'
+    + #13#10'Но, может еще разок?'
+    + #13#10#13#10'Enter — рестарт');
+    fHudMainText.Color := dfVec4f(0.1, 1, 0.1, 1);
+    //throw flag
+  end
+  else if aReason = rCrash then
+  begin
+    fHudMainText.Text := UTF8Decode('Потрачено!'
+    + #13#10#13#10'Аппарат разбит, вы погибли!'
+    + #13#10'Незамедлительно возвращайтесь на Землю,'
+    + #13#10'где на вас наложат штраф.'
+    + #13#10#13#10'Enter — рестарт');
+    fHudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
+  end
+  else if aReason = rAway then
+  begin
+    fHudMainText.Text := UTF8Decode('Вы покинули зону посадки!'
+    + #13#10#13#10'ЦУП негодует, вы разжалованы, осуждены и'
+    + #13#10'будете уничтожены с помощью боевого лазера!'
+    + #13#10'Пожалуйста, оставайтесь на месте.'
+    + #13#10#13#10'Enter — рестарт');
+    fHudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
   end;
 end;
 
@@ -283,6 +405,7 @@ begin
   Material.Free();
   MoonMaterial.Free();
   Font.Free();
+  World.Free();
 end;
 
 procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -303,6 +426,15 @@ begin
 
   if not Moon.EditMode then
   begin
+
+    if fGameStatus = sPause then
+    begin
+      if (aType = itKeyDown) and (aKey = kReturn) then
+      begin
+        Game.OnFinish();
+        Game.OnStart();
+      end;
+    end;
 
   end
   //Editor mode
@@ -404,40 +536,71 @@ procedure TGame.OnUpdate(const dt: Double);
 begin
   if not Moon.EditMode then
   begin
-    if Core.Input.KeyDown[kLeft] then
-      b2Ship.ApplyAngularImpulse(- Core.DeltaTime * 5)
-    else if Core.Input.KeyDown[kRight] then
-      b2Ship.ApplyAngularImpulse(  Core.DeltaTime * 5);
 
-    Flame.Visible := (Core.Input.KeyDown[kUp] or Core.Input.KeyDown[kDown] or Core.Input.KeyDown[kSpace])
-      and (FuelLevel.Level > 0);
-    if Flame.Visible then
+    if fGameStatus = sPlay then
     begin
-      FuelLevel.Level -= dt * FUEL_PER_SEC;
+      if Core.Input.KeyDown[kLeft] then
+        b2Ship.ApplyAngularImpulse(- Core.DeltaTime * 3)
+      else if Core.Input.KeyDown[kRight] then
+        b2Ship.ApplyAngularImpulse(  Core.DeltaTime * 3);
 
-      fShipEngineDirection := dfVec2f(Ship.Rotation) * dt;
-      b2Ship.ApplyLinearImpulse(TVector2.From(fShipEngineDirection.x, fShipEngineDirection.y), b2Ship.GetWorldCenter);
+      Flame.Visible := (Core.Input.KeyDown[kUp] or Core.Input.KeyDown[kDown] or Core.Input.KeyDown[kSpace])
+        and (FuelLevel.Level > 0);
+      if Flame.Visible then
+      begin
+        FuelLevel.Level -= dt * FUEL_PER_SEC;
+
+        fShipEngineDirection := dfVec2f(Ship.Rotation) * dt;
+        b2Ship.ApplyLinearImpulse(TVector2.From(fShipEngineDirection.x, fShipEngineDirection.y), b2Ship.GetWorldCenter);
+      end;
+
+      Box2d.SyncObjects(b2Ship, Ship);
+      World.Update(dt);
+
+      //fEditorText.Text := Convert.ToString(GetShipDistanceToNearestMoonVertex());
+      fCameraScale := 1.0; // * (1 / Clamp(b2Ship.GetLinearVelocity.SqrLength, 1.0, 1.85)); //no fShipLinearSpeed clamp
+      fCameraScale *=  (1 / Clamp(GetShipDistanceToNearestMoonVertex() * 0.01, 0.9, 2.0));
+      Scene.Camera.Scale := Lerp(Scene.Camera.Scale, fCameraScale, 5 * dt);
+      with Scene.Camera do
+        Position := dfVec3f(dfVec2f(Ship.Position), Position.z);
+  //        Position := dfVec3f(dfVec2f(Position.Lerp(Ship.Position, 5 * dt)), Position.z);
+      FuelLevel.Update(dt);
+
+      fShipLinearSpeed := b2Ship.GetLinearVelocity.Length;
+      if fShipLinearSpeed > SAFE_SPEED then
+        fDebugText.Color := dfVec4f(1, 0.3, 0.3, 1.0)
+      else
+        fDebugText.Color := dfVec4f(0.3, 1.0, 0.3, 1.0);
+      fDebugText.Position := Ship.Position + dfVec3f(60, -10, 10);
+      fDebugText.Text := Convert.ToString(fShipLinearSpeed, 2)
+        + #13#10 + Convert.ToString(fPoint1) + ' ' + Convert.ToString(fPoint2);
+
+      if (Ship.Position.x > Moon.Vertices[High(Moon.Vertices)].x) or
+         (Ship.Position.x < Moon.Vertices[0].x) then
+        OnGameEnd(rAway);
+
+      Box2d.ReverseSyncObjects(fTrigger1, fb2Trigger1);
+      Box2d.ReverseSyncObjects(fTrigger2, fb2Trigger2);
+//      Box2D.SyncObjects(fb2Trigger1, fTrigger1);
+//      Box2D.SyncObjects(fb2Trigger2, fTrigger2);
+
+      if fPoint1 > 0 then
+        fTrigger1.SetVerticesColor(dfVec4f(0, 1, 0, 0.5))
+      else
+        fTrigger1.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
+
+      if fPoint2 > 0 then
+        fTrigger2.SetVerticesColor(dfVec4f(0, 1, 0, 0.5))
+      else
+        fTrigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
+      if (fShipLinearSpeed < LAND_SPEED) and (fPoint1 > 0) and (fPoint2 > 0) then
+        OnGameEnd(rWin);
+    end
+    else if fGameStatus = sPause then
+    begin
+
     end;
 
-    Box2d.SyncObjects(b2Ship, Ship);
-    World.Update(dt);
-
-    //fEditorText.Text := Convert.ToString(GetShipDistanceToNearestMoonVertex());
-    fCameraScale := 1.0; // * (1 / Clamp(b2Ship.GetLinearVelocity.SqrLength, 1.0, 1.85)); //no fShipLinearSpeed clamp
-    fCameraScale *=  (1 / Clamp(GetShipDistanceToNearestMoonVertex() * 0.01, 0.9, 2.0));
-    Scene.Camera.Scale := Lerp(Scene.Camera.Scale, fCameraScale, 5 * dt);
-    with Scene.Camera do
-      Position := dfVec3f(dfVec2f(Ship.Position), Position.z);
-//        Position := dfVec3f(dfVec2f(Position.Lerp(Ship.Position, 5 * dt)), Position.z);
-    FuelLevel.Update(dt);
-
-    fShipLinearSpeed := b2Ship.GetLinearVelocity.Length;
-    if fShipLinearSpeed > SAFE_SPEED then
-      fDebugText.Color := dfVec4f(1, 0.3, 0.3, 1.0)
-    else
-      fDebugText.Color := dfVec4f(0.3, 1.0, 0.3, 1.0);
-    fDebugText.Position := Ship.Position + dfVec3f(60, -10, 10);
-    fDebugText.Text := Convert.ToString(fShipLinearSpeed, 2);
   end
   else
   begin

@@ -112,7 +112,9 @@ begin
       fIndCount += 6;
     end;
     data[fVecCount].vec     := dfVec3f(Vertices[i].x, MaxY, 5);
+    data[fVecCount].tex     := dfVec2f((data[0].vec.x - data[fVecCount].vec.x) / (fMaterial.Textures[0].Texture.Width), 0);
     data[fVecCount + 1].vec := dfVec3f(Vertices[i], 5);
+    data[fVecCount + 1].tex := dfVec2f(data[fVecCount].tex.x, (data[fVecCount + 1].vec.y - MaxY) / fMaterial.Textures[0].Texture.Width);
     fVecCount += 2;
   end;
 

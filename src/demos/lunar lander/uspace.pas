@@ -8,7 +8,7 @@ uses
   tinyglr, glrmath;
 
 const
-  STARS_PER_LAYER = 50;
+  STARS_PER_LAYER = 100;
 
 type
   TSpacePatch = record
@@ -26,7 +26,7 @@ type
     fPatch: TSpacePatch;
   public
     Camera: TglrCamera;
-    constructor Create(aPatchSize: TdfVec2f; StarTR: PglrTextureRegion;
+    constructor Create(aPatchStart, aPatchSize: TdfVec2f; StarTR: PglrTextureRegion;
       aMaterial: TglrMaterial; aParallaxLevels: Integer = 3); virtual;
     destructor Destroy(); override;
 
@@ -40,7 +40,7 @@ const
   colorBlue:  TdfVec4f = (x: 74/255; y: 151/255;  z: 215/255; w: 1.0);
   colorRed:   TdfVec4f = (x: 215/255; y: 109/255;  z: 74/255; w: 1.0);
 
-constructor TSpace.Create(aPatchSize: TdfVec2f; StarTR: PglrTextureRegion;
+constructor TSpace.Create(aPatchStart, aPatchSize: TdfVec2f; StarTR: PglrTextureRegion;
   aMaterial: TglrMaterial; aParallaxLevels: Integer);
 var
   i: Integer;
@@ -59,7 +59,8 @@ begin
   for i := 0 to fCount - 1 do
   begin
     z := - (i div STARS_PER_LAYER) / aParallaxLevels;
-    pos := dfVec3f(Random(Round(aPatchSize.x)), Random(Round(aPatchSize.y)), z);
+    pos := dfVec3f(aPatchStart.x + Random(Round(aPatchSize.x)),
+      aPatchStart.y + Random(Round(aPatchSize.y)), z);
     fPatch.Initials[i] := dfVec2f(pos);
     z := Random();
     if z < 0.3 then
@@ -75,7 +76,7 @@ begin
     begin
       Position := pos;
       SetTextureRegion(StarTR);
-      SetSize(3, 3);
+      SetSize(6, 6);
       SetVerticesColor(col);
     end;
     fBatch.Childs.Add(fPatch.Stars[i]);
