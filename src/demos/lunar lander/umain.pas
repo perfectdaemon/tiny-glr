@@ -29,11 +29,15 @@ type
 
   TGameStatus = (sPlay, sPause);
   TGameEndReason = (rWin, rCrash, rAway);
+  TEditType = (etVertices, etLandingZones);
 
   { TGame }
 
   TGame = class (TglrGame)
   protected
+    fIGDCFlag: TglrSprite;
+    fMoveFlag: Boolean;
+
     fGameStatus: TGameStatus;
     fPoint1, fPoint2: Byte;
 
@@ -42,10 +46,11 @@ type
     fShipLinearSpeed: Single;
 
     fEditorText, fDebugText, fHudMainText: TglrText;
-    fSelectedMoonVertex: Integer;
+    fSelectedObjectIndex: Integer;
 
     fTrigger1, fTrigger2: TglrSprite;
     fb2Trigger1, fb2Trigger2: Tb2Body;
+    fEditType: TEditType;
 
     function GetShipDistanceToNearestMoonVertex(): Single;
     procedure PhysicsAfter(const FixedDeltaTime: Double);
@@ -182,22 +187,22 @@ begin
   Ship.Position := dfVec3f(200, 100, 2);
 
   fTrigger1 := TglrSprite.Create();
-  fTrigger1.SetTextureRegion(Atlas.GetRegion('blank.png'), False);
+  fTrigger1.SetTextureRegion(Atlas.GetRegion('star.png'), False);
   fTrigger1.SetSize(10, 10);
   fTrigger1.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
   fTrigger1.Parent := Ship;
   fTrigger1.Position := dfVec3f(-0.5 * Ship.Width, 0.5 * Ship.Height, 1);
 
   fTrigger2 := TglrSprite.Create();
-  fTrigger2.SetTextureRegion(Atlas.GetRegion('blank.png'), False);
+  fTrigger2.SetTextureRegion(Atlas.GetRegion('star.png'), False);
   fTrigger2.SetSize(10, 10);
   fTrigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
   fTrigger2.Parent := Ship;
   fTrigger2.Position := dfVec3f(-0.5 * Ship.Width, - 0.5 * Ship.Height, 1);
 
-  fb2Trigger1 := Box2D.BoxSensor(World, dfVec2f(fTrigger1.Position), dfVec2f(fTrigger1.Width, fTrigger1.Height), 0, $0002, $0001, False);
+  fb2Trigger1 := Box2D.BoxSensor(World, dfVec2f(fTrigger1.Position), dfVec2f(fTrigger1.Width * 1.2, fTrigger1.Height), 0, $0002, $0001, False);
   fb2Trigger1.UserData := @fPoint1;
-  fb2Trigger2 := Box2D.BoxSensor(World, dfVec2f(fTrigger2.Position), dfVec2f(fTrigger2.Width, fTrigger2.Height), 0, $0002, $0001, False);
+  fb2Trigger2 := Box2D.BoxSensor(World, dfVec2f(fTrigger2.Position), dfVec2f(fTrigger2.Width * 1.2, fTrigger2.Height), 0, $0002, $0001, False);
   fb2Trigger2.UserData := @fPoint2;
 
   for i := 0 to Length(landerV) - 1 do
@@ -220,25 +225,28 @@ begin
   SpriteBatch.Childs.Add(fTrigger1);
   SpriteBatch.Childs.Add(fTrigger2);
 
+  //Text for editor purposes
   fEditorText := TglrText.Create();
   fEditorText.Position := dfVec3f(Render.Width / 2 - 150, 20, 5);
   fEditorText.LetterSpacing := 1.2;
 
+  //Text at spaceship' right
   fDebugText := TglrText.Create();
   fDebugText.Position.z := 10;
   fDebugText.LetterSpacing := 1.2;
 
+  //Text for win/lose
   fHudMainText := TglrText.Create();
   fHudMainText.Position := dfVec3f(50, 50, 15);
   fHudMainText.LetterSpacing := 1.2;
   fHudMainText.LineSpacing := 1.5;
 
   FontBatch := TglrFontBatch.Create(Font);
-  FontBatch.Childs.Add(fEditorText);
   FontBatch.Childs.Add(fDebugText);
 
   FontBatchHud := TglrFontBatch.Create(Font);
   FontBatchHud.Childs.Add(fHudMainText);
+  FontBatchHud.Childs.Add(fEditorText);
 
   Scene := TglrScene.Create();
   Scene.Camera.ProjectionMode := pmOrtho;
@@ -265,16 +273,22 @@ begin
 
   Space := TSpace.Create(dfVec2f(-1.5 * Render.Width, -1.5 * Render.Height),
     dfVec2f(3 * Render.Width, 3 * Render.Height),
-    Atlas.GetRegion('particle.png'), Material, 3);
+    Atlas.GetRegion('star.png'), Material, 3);
   Space.Camera := Scene.Camera;
 
-  Moon := TMoon.Create(MoonMaterial, nil, Atlas.GetRegion('blank.png'), SpriteBatch);
-  Moon.MaxY := Render.Height * 3;
+  Moon := TMoon.Create(MoonMaterial, Atlas.GetRegion('blank.png'), SpriteBatch, FontBatch);
+  Moon.MaxY := Render.Height * 2;
   Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
+
+  fIGDCFlag := TglrSprite.Create(1, 1, dfVec2f(0, 1));
+  fIGDCFlag.SetTextureRegion(Atlas.GetRegion('flag.png'));
+  fIGDCFlag.Visible := False;
+  SpriteBatch.Childs.Add(fIGDCFlag);
 
   fGameStatus := sPlay;
   fPoint1 := 0;
   fPoint2 := 0;
+  fMoveFlag := False;
 end;
 
 function TGame.GetShipDistanceToNearestMoonVertex: Single;
@@ -361,34 +375,46 @@ end;
 procedure TGame.OnGameEnd(aReason: TGameEndReason);
 var
   scores: Integer;
+  i1, i2: Integer;
 begin
   fGameStatus := sPause;
   if aReason = rWin then
   begin
     scores := Ceil((FuelLevel.Level / MAX_FUEL) * 1000);
-    fHudMainText.Text := UTF8Decode('Очки: ' + Convert.ToString(Scores)
+    i1 := Moon.GetLandingZoneAtPos(dfVec2f(fTrigger1.AbsoluteMatrix.Pos));
+    i2 := Moon.GetLandingZoneAtPos(dfVec2f(fTrigger2.AbsoluteMatrix.Pos));
+    if (i1 = i2) and (i1 <> -1) then
+      scores *= Moon.LandingZones[i1].Multiply;
+    fHudMainText.Text := UTF8Decode('Очки: ' + Convert.ToString(scores)
     + #13#10#13#10'Вы успешно прилунились!'
     + #13#10'Пора искать селенитов!'
     + #13#10'Но, может еще разок?'
     + #13#10#13#10'Enter — рестарт');
     fHudMainText.Color := dfVec4f(0.1, 1, 0.1, 1);
-    //throw flag
+
+    fMoveFlag := True;
+    fIGDCFlag.Position := Ship.Position + dfVec3f(0, 40, -1);
+    fIGDCFlag.Visible := True;
+    FuelLevel.sBack.Visible := False;
+    FuelLevel.sLevel.Visible := False;
+    fDebugText.Visible := False;
   end
   else if aReason = rCrash then
   begin
     fHudMainText.Text := UTF8Decode('Потрачено!'
     + #13#10#13#10'Аппарат разбит, вы погибли!'
-    + #13#10'Незамедлительно возвращайтесь на Землю,'
-    + #13#10'где на вас наложат штраф.'
+    + #13#10'ЦУП воет и не знает, кого винить!'
+    + #13#10'А пока там неразбериха — давайте еще раз...'
     + #13#10#13#10'Enter — рестарт');
     fHudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
+    fDebugText.Visible := False;
   end
   else if aReason = rAway then
   begin
     fHudMainText.Text := UTF8Decode('Вы покинули зону посадки!'
     + #13#10#13#10'ЦУП негодует, вы разжалованы, осуждены и'
-    + #13#10'будете уничтожены с помощью боевого лазера!'
-    + #13#10'Пожалуйста, оставайтесь на месте.'
+    + #13#10'будете уничтожены с помощью Большого Боевого Лазера!'
+    + #13#10'Пожалуйста, оставайтесь на месте!'
     + #13#10#13#10'Enter — рестарт');
     fHudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
   end;
@@ -419,13 +445,20 @@ begin
   begin
     Moon.EditMode := not Moon.EditMode;
     if Moon.EditMode then
-      fEditorText.Text := UTF8Decode('В режиме редактора')
+    begin
+      fEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Поверхность');
+      fEditType := etVertices;
+      fSelectedObjectIndex := -1;
+    end
     else
       fEditorText.Text := '';
   end;
 
   if not Moon.EditMode then
   begin
+
+    if (aType = itKeyDown) and (aKey = kEscape) then
+      Core.Quit();
 
     if fGameStatus = sPause then
     begin
@@ -440,70 +473,102 @@ begin
   //Editor mode
   else
   begin
-    if (aType = itKeyUp) and (aKey = kS) then
-    begin
-      FileSystem.WriteResource('lander/level1.bin', Moon.SaveLevel());
-      fEditorText.Text := UTF8Decode('Успешно сохранено');
-    end
-    else if (aType = itKeyUp) and (aKey = kL) then
-    begin
-      Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
-      fEditorText.Text := UTF8Decode('Успешно загружено');
-    end;
+    if aType = itKeyUp then
+      case aKey of
+        kT: begin
+              if fEditType = etVertices then
+              begin
+                fEditType := etLandingZones;
+                fEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Зоны посадки');
+              end
+              else if fEditType = etLandingZones then
+              begin
+                fEditType := etVertices;
+                fEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Поверхность');
+              end;
+            end;
+
+        kS: begin
+              FileSystem.WriteResource('lander/level1.bin', Moon.SaveLevel());
+              fEditorText.Text := UTF8Decode('Успешно сохранено');
+            end;
+        kL: begin
+              Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
+              fEditorText.Text := UTF8Decode('Успешно загружено');
+            end;
+
+        k2, k3, k4, k5:
+          if (fEditType = etLandingZones) and (fSelectedObjectIndex <> -1) then
+          begin
+            Moon.LandingZones[fSelectedObjectIndex].Multiply := Ord(aKey) - Ord(k0);
+            Moon.LandingZones[fSelectedObjectIndex].Update();
+          end;
+
+      end;
+
+    absMousePos := Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos);
 
     if (aType = itTouchDown) and (aKey = kLeftButton) then
-    begin
-      fSelectedMoonVertex := Moon.GetVertexIndexAtPos(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos));
-    end;
+      case fEditType of
+        etVertices:     fSelectedObjectIndex := Moon.GetVertexIndexAtPos(absMousePos);
+        etLandingZones: fSelectedObjectIndex := Moon.GetLandingZoneAtPos(absMousePos);
+      end;
+
 
     if (aType = itTouchDown) and (aKey = kRightButton) then
-    begin
-      i := Moon.GetVertexIndexAtPos(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos));
-      if i = -1 then
+      if fEditType = etVertices then
       begin
-        absMousePos := Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos);
-        vertexAdded := False;
-        for i := 0 to Length(Moon.Vertices) - 1 do
-          if Moon.Vertices[i].x > absMousePos.x then
-          begin
-            Moon.AddVertex(absMousePos, i);
-            vertexAdded := True;
-            break;
-          end;
-        if not vertexAdded then
-          Moon.AddVertex(absMousePos);
+        i := Moon.GetVertexIndexAtPos(absMousePos);
+
+        if i = -1 then
+        begin
+          vertexAdded := False;
+          for i := 0 to Length(Moon.Vertices) - 1 do
+            if Moon.Vertices[i].x > absMousePos.x then
+            begin
+              Moon.AddVertex(absMousePos, i);
+              vertexAdded := True;
+              break;
+            end;
+          if not vertexAdded then
+            Moon.AddVertex(absMousePos);
+        end
+        else
+          Moon.DeleteVertex(i);
+
+        Moon.UpdateData();
       end
-      else
-      //delete vertex
+
+      else if fEditType = etLandingZones then
       begin
-        Moon.DeleteVertex(i);
+        i := Moon.GetLandingZoneAtPos(absMousePos);
+        if i = -1 then
+          Moon.AddLandingZone(absMousePos, dfVec2f(100, 50), 2)
+        else
+          Moon.DeleteLandingZone(i);
       end;
-      Moon.UpdateData();
-    end;
 
     if (aType = itTouchMove) and (aKey = kLeftButton) then
-    begin
-      if fSelectedMoonVertex <> -1 then
-      begin
-        Moon.Vertices[fSelectedMoonVertex] := Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos);
-        Moon.VerticesPoints[fSelectedMoonVertex].Position := dfVec3f(Moon.Vertices[fSelectedMoonVertex], Moon.VerticesPoints[fSelectedMoonVertex].Position.z);
-        Moon.UpdateData();
-      end;
-    end;
+      if fSelectedObjectIndex <> -1 then
+        if fEditType = etVertices then
+        begin
+          Moon.Vertices[fSelectedObjectIndex] := absMousePos;
+          Moon.VerticesPoints[fSelectedObjectIndex].Position :=
+            dfVec3f(Moon.Vertices[fSelectedObjectIndex], Moon.VerticesPoints[fSelectedObjectIndex].Position.z);
+          Moon.UpdateData();
+        end
+        else if fEditType = etLandingZones then
+        begin
+          Moon.LandingZones[fSelectedObjectIndex].Pos := absMousePos;
+          Moon.LandingZones[fSelectedObjectIndex].Update();
+        end;
 
-    if (aType = itTouchMove) and (aKey = kMiddleButton) then
-    begin
-      Ship.Position := dfVec3f(Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos), Ship.Position.z)
-    end;
 
     if (aType = itTouchUp) and (aKey = kLeftButton) then
-    begin
-      fSelectedMoonVertex := -1;
-    end;
+      fSelectedObjectIndex := -1;
 
     if aType = itWheel then
       Scene.Camera.Scale := Scene.Camera.Scale + (aOtherParam * 0.1);
-
   end;
 end;
 
@@ -572,8 +637,7 @@ begin
       else
         fDebugText.Color := dfVec4f(0.3, 1.0, 0.3, 1.0);
       fDebugText.Position := Ship.Position + dfVec3f(60, -10, 10);
-      fDebugText.Text := Convert.ToString(fShipLinearSpeed, 2)
-        + #13#10 + Convert.ToString(fPoint1) + ' ' + Convert.ToString(fPoint2);
+      fDebugText.Text := Convert.ToString(fShipLinearSpeed, 2);
 
       if (Ship.Position.x > Moon.Vertices[High(Moon.Vertices)].x) or
          (Ship.Position.x < Moon.Vertices[0].x) then
@@ -593,26 +657,48 @@ begin
         fTrigger2.SetVerticesColor(dfVec4f(0, 1, 0, 0.5))
       else
         fTrigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
-      if (fShipLinearSpeed < LAND_SPEED) and (fPoint1 > 0) and (fPoint2 > 0) then
+      if (fShipLinearSpeed < LAND_SPEED) and (fPoint1 > 0) and (fPoint2 > 0) and not Flame.Visible then
         OnGameEnd(rWin);
     end
     else if fGameStatus = sPause then
     begin
-
+      if fMoveFlag then
+      begin
+        fIGDCFlag.Position.y -= dt * 40;
+        if (Ship.Position.y - fIGDCFlag.Position.y) > Ship.Height / 2 - 15 then
+          fMoveFlag := False;
+      end;
     end;
 
   end
   else
   begin
-    if Core.Input.KeyDown[kUp] then
-      Scene.Camera.Translate(-dt * 200, 0, 0)
-    else if Core.Input.KeyDown[kDown] then
-      Scene.Camera.Translate(dt * 200, 0, 0);
+    if fSelectedObjectIndex = -1 then
+    begin
+      if Core.Input.KeyDown[kUp] then
+        Scene.Camera.Translate(-dt * 200, 0, 0)
+      else if Core.Input.KeyDown[kDown] then
+        Scene.Camera.Translate(dt * 200, 0, 0);
 
-    if Core.Input.KeyDown[kLeft] then
-      Scene.Camera.Translate(0, -dt * 200, 0)
-    else if Core.Input.KeyDown[kRight] then
-      Scene.Camera.Translate(0, dt * 200, 0);
+      if Core.Input.KeyDown[kLeft] then
+        Scene.Camera.Translate(0, -dt * 200, 0)
+      else if Core.Input.KeyDown[kRight] then
+        Scene.Camera.Translate(0, dt * 200, 0);
+    end
+    else if (fEditType = etLandingZones) then
+    begin
+      if Core.Input.KeyDown[kUp] then
+        Moon.LandingZones[fSelectedObjectIndex].Size.y += dt * 30
+      else if Core.Input.KeyDown[kDown] then
+        Moon.LandingZones[fSelectedObjectIndex].Size.y -= dt * 30;
+
+      if Core.Input.KeyDown[kLeft] then
+        Moon.LandingZones[fSelectedObjectIndex].Size.x += dt * 30
+      else if Core.Input.KeyDown[kRight] then
+        Moon.LandingZones[fSelectedObjectIndex].Size.x -= dt * 30;
+
+      Moon.LandingZones[fSelectedObjectIndex].Update();
+    end;
   end;
 end;
 

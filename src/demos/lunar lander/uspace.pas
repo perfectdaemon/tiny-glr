@@ -76,7 +76,7 @@ begin
     begin
       Position := pos;
       SetTextureRegion(StarTR);
-      SetSize(6, 6);
+      SetSize(6 * (1 + pos.z), 6  * (1 + pos.z));
       SetVerticesColor(col);
     end;
     fBatch.Childs.Add(fPatch.Stars[i]);

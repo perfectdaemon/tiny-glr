@@ -9,6 +9,16 @@ uses
 
 type
 
+  { TLandingZone }
+
+  TLandingZone = packed record
+    Pos, Size: TdfVec2f;
+    Multiply: Byte;
+    Sprite: TglrSprite;
+    MultText: TglrText;
+    procedure Update();
+  end;
+
   { TMoon }
 
   TMoon = class
@@ -19,16 +29,18 @@ type
     fVB: TglrVertexBuffer;
     fIB: TglrIndexBuffer;
     fMaterial: TglrMaterial;
-    fTR, fPointTR: PglrTextureRegion;
+    fPointTR: PglrTextureRegion;
     fVecCount, fIndCount: Integer;
     fBatch: TglrSpriteBatch;
+    fFontBatch: TglrFontBatch;
   public
     MaxY: Single;
     Vertices: array of TdfVec2f;
     VerticesPoints: array of TglrSprite;
+    LandingZones: array of TLandingZone;
     b2Body: Tb2Body;
-    constructor Create(aMaterial: TglrMaterial; aTexRegion, aPointTexRegion: PglrTextureRegion;
-      aBatch: TglrSpriteBatch); virtual;
+    constructor Create(aMaterial: TglrMaterial; aPointTexRegion: PglrTextureRegion;
+      aBatch: TglrSpriteBatch; aFontBatch: TglrFontBatch); virtual;
     destructor Destroy(); override;
 
     procedure UpdateData();
@@ -36,6 +48,10 @@ type
     procedure AddVertex(aPos: TdfVec2f; aIndex: Integer = -1);
     procedure DeleteVertex(aIndex: Integer);
     function GetVertexIndexAtPos(aPos: TdfVec2f): Integer;
+
+    procedure AddLandingZone(aPos, aSize: TdfVec2f; aMultiply: Byte);
+    function GetLandingZoneAtPos(aPos: TdfVec2f): Integer;
+    procedure DeleteLandingZone(aIndex: Integer);
 
     procedure RenderSelf();
 
@@ -51,6 +67,16 @@ uses
   uMain,
   uBox2DImport;
 
+{ TLandingZone }
+
+procedure TLandingZone.Update;
+begin
+  Sprite.SetSize(Size);
+  Sprite.Position := dfVec3f(Pos, 4);
+  MultText.Text := Convert.ToString(Multiply) + 'x';
+  MultText.Position := dfVec3f(Pos.x - 20, Pos.y - Size.y / 2 + 10, 5);
+end;
+
 { TMoon }
 
 procedure TMoon.SetEditMode(AValue: Boolean);
@@ -64,18 +90,23 @@ begin
     VerticesPoints[i].Visible := AValue;
 end;
 
-constructor TMoon.Create(aMaterial: TglrMaterial; aTexRegion,
-  aPointTexRegion: PglrTextureRegion; aBatch: TglrSpriteBatch);
+constructor TMoon.Create(aMaterial: TglrMaterial;
+  aPointTexRegion: PglrTextureRegion; aBatch: TglrSpriteBatch;
+  aFontBatch: TglrFontBatch);
 begin
   inherited Create();
   fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2);
   fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
   fMaterial := aMaterial;
-  fTR := aTexRegion;
   fPointTR := aPointTexRegion;
   fBatch := aBatch;
+  fFontBatch := aFontBatch;
 
   b2Body := nil;
+
+  SetLength(LandingZones, 0);
+  SetLength(Vertices, 0);
+  SetLength(VerticesPoints, 0);
 end;
 
 destructor TMoon.Destroy;
@@ -86,6 +117,11 @@ begin
   fIB.Free();
   for i := 0 to Length(VerticesPoints) - 1 do
     fBatch.Childs.Delete(VerticesPoints[i], True);
+  for i := 0 to Length(LandingZones) - 1 do
+  begin
+    fBatch.Childs.Delete(LandingZones[i].Sprite, True);
+    fFontBatch.Childs.Delete(LandingZones[i].MultText, True);
+  end;
   inherited Destroy;
 end;
 
@@ -182,6 +218,61 @@ begin
     Exit(i);
 end;
 
+procedure TMoon.AddLandingZone(aPos, aSize: TdfVec2f; aMultiply: Byte);
+var
+  i: Integer;
+begin
+  i := Length(LandingZones);
+  SetLength(LandingZones, i + 1);
+  with LandingZones[i] do
+  begin
+    Multiply := aMultiply;
+    Pos := aPos;
+    Size := aSize;
+
+    Sprite := TglrSprite.Create();
+    Sprite.SetTextureRegion(fPointTR, False);
+    Sprite.SetVerticesColor(dfVec4f(0, 1, 0, 0.1));
+    fBatch.Childs.Add(Sprite);
+
+    MultText := TglrText.Create();
+    fFontBatch.Childs.Add(MultText);
+
+    Update();
+  end;
+end;
+
+function TMoon.GetLandingZoneAtPos(aPos: TdfVec2f): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+  for i := 0 to Length(LandingZones) - 1 do
+    if (aPos.x > LandingZones[i].Pos.x - LandingZones[i].Size.x / 2)
+      and (aPos.x < LandingZones[i].Pos.x + LandingZones[i].Size.x / 2)
+      and (aPos.y > LandingZones[i].Pos.y - LandingZones[i].Size.y / 2)
+      and (aPos.y < LandingZones[i].Pos.y + LandingZones[i].Size.y / 2) then
+    Exit(i);
+end;
+
+procedure TMoon.DeleteLandingZone(aIndex: Integer);
+begin
+  if (aIndex < 0) or (aIndex > High(LandingZones)) then
+  begin
+    Log.Write(lError, 'Moon.DeleteLandingZoe: Index '
+      + Convert.ToString(aIndex)
+      + ' is out of bounds [0; '
+      + Convert.ToString(High(LandingZones)) + ']');
+    Exit();
+  end;
+
+  fBatch.Childs.Delete(LandingZones[aIndex].Sprite, True);
+  fFontBatch.Childs.Delete(LandingZones[aIndex].MultText, True);
+  if aIndex <> High(LandingZones) then
+    Move(LandingZones[aIndex + 1], LandingZones[aIndex], (High(LandingZones) - aIndex) * SizeOf(TLandingZone));
+  SetLength(LandingZones, Length(LandingZones) - 1);
+end;
+
 procedure TMoon.RenderSelf;
 begin
   fMaterial.Bind();
@@ -209,22 +300,47 @@ begin
   end;
   UpdateData();
 
+  count := 0;
+  aStream.Read(count, SizeOf(Word));
+  if count <> 0 then
+  begin
+    SetLength(LandingZones, count);
+    aStream.Read(LandingZones[0], count * SizeOf(TLandingZone));
+    for i := 0 to count - 1 do
+      with LandingZones[i] do
+      begin
+        Sprite := TglrSprite.Create();
+        Sprite.SetTextureRegion(fPointTR, False);
+        Sprite.SetVerticesColor(dfVec4f(0, 1, 0, 0.1));
+        fBatch.Childs.Add(Sprite);
+
+        MultText := TglrText.Create();
+        fFontBatch.Childs.Add(MultText);
+
+        Update();
+      end;
+  end;
+
   if aFreeStreamOnFinish then
     aStream.Free();
 end;
 
 function TMoon.SaveLevel: TglrStream;
 var
-  count: Word;
+  count, count2: Word;
   size: LongInt;
   p: Pointer;
 begin
   count := Length(Vertices);
-  size := SizeOf(Word) + count * SizeOf(TdfVec2f);
+  count2 := Length(LandingZones);
+  size := 2 * SizeOf(Word) + count * SizeOf(TdfVec2f) + count2 * SizeOf(TLandingZone);
   GetMem(p, size);
   Result := TglrStream.Init(p, size, True);
   Result.Write(count, SizeOf(Word));
   Result.Write(Vertices[0], count * SizeOf(TdfVec2f));
+  Result.Write(count2, SizeOf(Word));
+  if count2 <> 0 then
+    Result.Write(LandingZones[0], count2 * SizeOf(TLandingZone));
 end;
 
 end.
