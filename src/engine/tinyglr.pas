@@ -933,7 +933,7 @@ begin
   for i := 0 to fRegions.Count - 1 do
     if fRegions[i]^.Name = aName then
       Exit(fRegions[i]);
-  Log.Write(lError, 'TextureAtlas: Can not find requested region "' + aName + '" at atlas');
+  Log.Write(lCritical, 'TextureAtlas: Can not find requested region "' + aName + '" at atlas');
 end;
 
 { TglrFontBatch }
@@ -963,13 +963,13 @@ var
   quad: TglrQuadP3T2C4;
 begin
   count := 0;
-  x := 0;
-  y := 0;
   for i := 0 to Childs.Count - 1 do
     if not (Childs[i] is TglrText) then
       Log.Write(lWarning, 'FontBatch: Child node is not a Text')
     else
     begin
+      x := 0;
+      y := 0;
       child := Childs[i] as TglrText;
       if (not child.Visible) or (child.Text = '') then
         continue;
