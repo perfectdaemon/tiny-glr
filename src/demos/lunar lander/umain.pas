@@ -46,6 +46,7 @@ type
     fShipLinearSpeed: Single;
 
     fEditorText, fDebugText, fHudMainText: TglrText;
+    fShipSpeedVec: TglrSprite;
     fSelectedObjectIndex: Integer;
 
     fTrigger1, fTrigger2: TglrSprite;
@@ -218,12 +219,16 @@ begin
   Flame.SetVerticesColor(dfVec4f(0.9, 0.85, 0.1, 1.0));
   Flame.Parent := Ship;
 
+  fShipSpeedVec := TglrSprite.Create();
+  fShipSpeedVec.SetTextureRegion(Atlas.GetRegion('arrow.png'));
+
   SpriteBatch := TglrSpriteBatch.Create();
   SpriteBatch.Material := Material;
   SpriteBatch.Childs.Add(Flame);
   SpriteBatch.Childs.Add(Ship);
   SpriteBatch.Childs.Add(fTrigger1);
   SpriteBatch.Childs.Add(fTrigger2);
+  SpriteBatch.Childs.Add(fShipSpeedVec);
 
   //Text for editor purposes
   fEditorText := TglrText.Create();
@@ -398,6 +403,7 @@ begin
     FuelLevel.sBack.Visible := False;
     FuelLevel.sLevel.Visible := False;
     fDebugText.Visible := False;
+    fShipSpeedVec.Visible := False;
   end
   else if aReason = rCrash then
   begin
@@ -408,6 +414,7 @@ begin
     + #13#10#13#10'Enter — рестарт');
     fHudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
     fDebugText.Visible := False;
+    fShipSpeedVec.Visible := False;
   end
   else if aReason = rAway then
   begin
@@ -638,6 +645,10 @@ begin
         fDebugText.Color := dfVec4f(0.3, 1.0, 0.3, 1.0);
       fDebugText.Position := Ship.Position + dfVec3f(60, -10, 10);
       fDebugText.Text := Convert.ToString(fShipLinearSpeed, 2);
+
+      fShipSpeedVec.Position := fDebugText.Position + dfVec3f(20, -20, 0);
+      fShipSpeedVec.SetVerticesColor(fDebugText.Color);
+      fShipSpeedVec.Rotation := Box2d.ConvertB2ToGL(b2Ship.GetLinearVelocity).GetRotationAngle();
 
       if (Ship.Position.x > Moon.Vertices[High(Moon.Vertices)].x) or
          (Ship.Position.x < Moon.Vertices[0].x) then

@@ -3,7 +3,8 @@ lander.png	1	1	84	81	0	0	84	81
 particle.png	87	1	36	36	0	0	36	36	
 flag.png	1	84	48	35	0	0	35	48	r
 flame.png	51	84	45	33	0	0	45	33	
+arrow.png	98	39	24	24	0	0	24	24	
 fuel_level_back.png	1	121	106	21	0	0	106	21	
-star.png	87	39	17	17	0	0	17	17	
-blank.png	109	39	16	16	0	0	16	16	
+star.png	87	65	17	17	0	0	17	17	
+blank.png	109	65	16	16	0	0	16	16	
 fuel_level.png	1	144	102	6	0	0	102	6	
