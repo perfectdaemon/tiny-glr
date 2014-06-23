@@ -638,9 +638,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2"
-     inkscape:cx="389.77894"
-     inkscape:cy="772.20275"
+     inkscape:zoom="1"
+     inkscape:cx="234.03071"
+     inkscape:cy="780.6491"
      inkscape:current-layer="layer1"
      inkscape:document-units="px"
      showgrid="false"
@@ -659,7 +659,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -685,7 +685,7 @@
        sodipodi:rx="29.5"
        sodipodi:ry="29.5"
        d="m 94,196.5 a 29.5,29.5 0 1 1 -59,0 29.5,29.5 0 1 1 59,0 z"
-       transform="matrix(0.50348433,0,0,0.50348433,183.63664,-51.959054)"
+       transform="matrix(0.50348433,0,0,0.50348433,-335.36336,-78.959054)"
        inkscape:label="#path3763" />
     <g
        id="player"
@@ -753,7 +753,7 @@
        sodipodi:nodetypes="cccc"
        inkscape:connector-curvature="0"
        id="flame"
-       d="m 230.90803,-39.63512 c -7.6839,12.4085 -28.42529,13.09762 -39.26539,16.28097 10.8449,3.30052 31.63619,3.895 39.26539,16.280919 5.80169,-10.080409 9.04474,-20.501959 0,-32.561889 z"
+       d="m -288.09197,-66.63512 c -7.6839,12.4085 -28.42529,13.09762 -39.26539,16.28097 10.8449,3.30052 31.63619,3.895 39.26539,16.280919 5.80169,-10.080409 9.04474,-20.501959 0,-32.561889 z"
        style="fill:#ffffff;fill-opacity:1;stroke:none"
        inkscape:label="#path5673" />
     <g
@@ -883,13 +883,13 @@
        id="fuel_level"
        width="101.5"
        height="5.5"
-       x="284.5589"
-       y="-42.375107"
+       x="-234.4411"
+       y="-69.375107"
        inkscape:label="#rect3833" />
     <g
        id="fuel_level_back"
        inkscape:label="#g3852"
-       transform="translate(-264.94112,51.98276)">
+       transform="translate(-783.94112,24.98276)">
       <rect
          inkscape:label="#rect3829"
          transform="matrix(0,-1,1,0,0,0)"
@@ -916,7 +916,7 @@
     <g
        id="lander"
        inkscape:label="#g3855"
-       transform="translate(95,73)">
+       transform="translate(-424,46)">
       <path
          sodipodi:nodetypes="cccc"
          inkscape:connector-curvature="0"
@@ -960,7 +960,7 @@
     <g
        id="flag"
        inkscape:label="#g3865"
-       transform="translate(497,-11)">
+       transform="translate(-22,-38)">
       <rect
          y="40.806152"
          x="-95.193878"
@@ -992,8 +992,8 @@
        id="blank"
        width="16"
        height="16"
-       x="243.25497"
-       y="0.91387939"
+       x="-275.74503"
+       y="-26.086121"
        inkscape:label="#rect3071" />
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:none"
@@ -1076,11 +1076,11 @@
        sodipodi:rx="8.5"
        sodipodi:ry="8.5"
        d="m 90,84.5 a 8.5,8.5 0 1 1 -17,0 8.5,8.5 0 1 1 17,0 z"
-       transform="translate(192.25,-74)"
+       transform="translate(-326.75,-101)"
        inkscape:label="#path3907" />
     <path
        style="fill:#ffffff;fill-opacity:1;stroke:none"
-       d="M 382.75,-3.0000005 406.25,8.7499997 382.75,20.5 c 7.16666,-7.5 7.16667,-15.3333336 0,-23.5000005 z"
+       d="m -136.25,-30.000001 23.5,11.750001 -23.5,11.75 c 7.16666,-7.5 7.16667,-15.333334 0,-23.500001 z"
        id="arrow"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cccc"
