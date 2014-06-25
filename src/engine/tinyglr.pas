@@ -825,6 +825,69 @@ type
 
   {$ENDREGION}
 
+  {$REGION 'Particles'}
+
+  TglrParticleEmitter2D = class (TglrSpriteBatch)
+  protected
+    type
+      PglrSingleKeyFrame = ^TglrSingleKeyFrame;
+      TglrSingleKeyFrame = record
+        t: Single; // 0..1
+        value: Single;
+      end;
+      PglrVec2KeyFrame = ^TglrVec2KeyFrame;
+      TglrVec2KeyFrame = record
+        t: Single;
+        value: TdfVec2f;
+      end;
+      PglrVec3KeyFrame = ^TglrVec3KeyFrame;
+      TglrVec3KeyFrame = record
+        t: Single;
+        value: TdfVec3f;
+      end;
+      PglrVec4KeyFrame = ^TglrVec4KeyFrame;
+      TglrVec4KeyFrame = record
+        t: Single;
+        value: TdfVec4f;
+      end;
+      PglrVec32KeyFrame = ^TglrVec32KeyFrame;
+      TglrVec32KeyFrame = record
+        t: Single;
+        v1, v2: TdfVec3f;
+      end;
+
+      TglrSingleDynamics = TglrList<PglrSingleKeyFrame>;
+      TglrVec2Dynamics = TglrList<PglrVec2KeyFrame>;
+      TglrVec3Dynamics = TglrList<PglrVec3KeyFrame>;
+      TglrVec4Dynamics = TglrList<PglrVec4KeyFrame>;
+      TglrVec32Dynamics = TglrList<PglrVec32KeyFrame>;
+    var
+
+  public
+    Size: TglrVec2Dynamics;
+    Velocity: TglrVec2Dynamics;
+    EmitterShapeBox: TglrVec2Dynamics;
+    EmitterShapeCircle: TglrSingleDynamics;
+    Color: TglrVec4Dynamics;
+    {
+    constructor Create(); virtual; overload;
+    constructor Create(const aStream: TglrStream;
+      aFreeStreamOnFinish: Boolean = True); virtual; overload;
+    destructor Destroy(); override;
+
+    //Particle start parameters
+    procedure SetEmitterShapeAsBox(aSize: TdfVec3f);
+    procedure SetEmitterShapeAsSphere(aRad: Single);
+    procedure SetVelocityDispersion(aVec1, aVec2: TdfVec3f);
+
+    //Particle every-step parameters
+
+    procedure Update(const dt: Double)
+    }
+  end;
+
+  {$ENDREGION}
+
   {$REGION 'Default'}
 
   { Default }
