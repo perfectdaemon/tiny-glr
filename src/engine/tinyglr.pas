@@ -521,6 +521,7 @@ type
     class var fAppView: TglrAppView;
     class var fFPS: Single;
     class var fDT: Double;
+    class var fReady: Boolean;
     class function GetFPSText(): AnsiString; static;
   public
     class var Input: TglrInput;
@@ -543,6 +544,7 @@ type
     class property FPS: Single read fFPS;
     class property FPSText: AnsiString read GetFPSText; //preformatted with 1 digit after delimiter
     class property DeltaTime: Double read fDT;
+    class property IsReady: Boolean read fReady;
   end;
 
   {$ENDREGION}
@@ -2480,6 +2482,7 @@ begin
   Log.Init(LOG_FILE);
   Input := TglrInput.Create();
   FileSystem.Init(aInitParams.PackFilesPath);
+  fReady := False;
 
   fAppView :=
   {$IFDEF WINDOWS}TglrWindow{$ENDIF}
@@ -2497,8 +2500,10 @@ end;
 class procedure Core.Loop();
 begin
   fGame.OnStart();
+  fReady := True;
   Log.Write(lInformation, 'Appication loop started');
   fAppView.Loop();
+  fReady := False;
   fGame.OnFinish();
   Log.Write(lInformation, 'Appication loop finished');
 end;
@@ -3125,7 +3130,7 @@ var
   pSize, anisotropy: Integer;
 
 begin
-  gl.GenTextures(1, @Self.Id);
+  gl.GenTextures(1, @Id);
   Target := GL_TEXTURE_2D;
 
   Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load started');
@@ -3146,7 +3151,7 @@ begin
 
   Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load completed');
 
-  Freemem(data);
+  Freemem(data, Width * Height * pSize);
   if (aFreeStreamOnFinish) then
     aStream.Free();
 end;

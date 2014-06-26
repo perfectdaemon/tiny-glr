@@ -185,6 +185,8 @@ function TglrWindow.WndProc(hWnd: HWND; message: UINT; wParam: WPARAM;
   lParam: LPARAM): LRESULT; stdcall;
 begin
   Result := 0;
+  if not Core.IsReady then
+    Exit(DefWindowProcA(hWnd, message, wParam, lParam));
   case (message) of
     WM_ACTIVATEAPP:
       if (wParam = 0) then
