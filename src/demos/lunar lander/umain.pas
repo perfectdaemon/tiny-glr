@@ -165,11 +165,11 @@ begin
 
   Font := TglrFont.Create(FileSystem.ReadResource('lander/Hattori Hanzo17b.bmp'));
 
-  MoonTexture := TglrTexture.Create(FileSystem.ReadResource('lander/moon.tga'), 'tga');
+  MoonTexture := TglrTexture.Create(FileSystem.ReadResource('lander/moon.tga'), 'tga', True);
 //  MoonTexture.SetWrapS(wClampToEdge);
   MoonTexture.SetWrapS(wRepeat);
-  MoonTexture.SetWrapR(wRepeat);
-  MoonTexture.SetWrapT(wRepeat);
+//  MoonTexture.SetWrapR(wRepeat);
+//  MoonTexture.SetWrapT(wRepeat);
 
   MoonMaterial := TglrMaterial.Create();
   MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderV.txt'), stVertex);
