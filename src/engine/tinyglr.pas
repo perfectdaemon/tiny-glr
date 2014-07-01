@@ -58,7 +58,6 @@ type
 
   TglrList<T> = class
     procedure Init(Capacity: LongInt);
-    procedure Free(FreeItems: Boolean = False);
   private
     FItems    : array of T;
     FCount    : LongInt;
@@ -69,21 +68,34 @@ type
     procedure SortFragment(CompareFunc: TglrListCompareFunc; L, R: LongInt);
   public
     constructor Create(aCapacity: LongInt = 1); virtual;
+    destructor Destroy(); override;
 
     function IndexOf(Item: T): LongInt;
     function Add(Item: T): LongInt;
-    procedure DeleteByIndex(Index: LongInt; FreeItem: Boolean = False);
-    procedure Delete(Item: T; FreeItem: Boolean = False);
-    procedure DeleteSafe(Item: T; FreeItem: Boolean = False);
-    procedure DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean = False);
+    procedure DeleteByIndex(Index: LongInt);
+    procedure Delete(Item: T);
+    procedure DeleteSafe(Item: T);
+    procedure DeleteSafeByIndex(Index: LongInt);
     procedure Insert(Index: LongInt; Item: T);
     procedure Sort(CompareFunc: TglrListCompareFunc);
     property Count: LongInt read FCount;
     property Items[Index: LongInt]: T read GetItem write SetItem; default;
   end;
 
+  { TglrObjectList }
+
+  TglrObjectList<T> = class (TglrList<T>)
+    procedure Free(aFreeObjects: Boolean = False);
+  public
+    procedure DeleteByIndex(Index: LongInt; FreeItem: Boolean = False); reintroduce;
+    procedure Delete(Item: T; FreeItem: Boolean = False); reintroduce;
+    procedure DeleteSafe(Item: T; FreeItem: Boolean = False); reintroduce;
+    procedure DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean = False); reintroduce;
+  end;
+
   TglrStringList = TglrList<AnsiString>;
   TglrWordList = TglrList<Word>;
+
 
   { FileSystem }
 
@@ -554,7 +566,7 @@ type
   { TglrNode }
 
   TglrNode = class;
-  TglrNodeList = TglrList<TglrNode>;
+  TglrNodeList = TglrObjectList<TglrNode>;
 
   TglrNode = class
   protected
@@ -829,63 +841,77 @@ type
 
   {$REGION 'Particles'}
 
+  { TglrParticleEmitter2D }
+
+  TglrParticleEmitterShapeType2D = (peBox, peCircle);
+
   TglrParticleEmitter2D = class (TglrSpriteBatch)
   protected
     type
-      PglrSingleKeyFrame = ^TglrSingleKeyFrame;
+      TglrParticle2D = packed record
+        enabled: Boolean;
+        pos: TdfVec3f;
+        size: TdfVec2f;
+        rot: Single;
+        color: TdfVec4f;
+        velocity: TdfVec2f;
+      end;
+
       TglrSingleKeyFrame = record
         t: Single; // 0..1
         value: Single;
       end;
-      PglrVec2KeyFrame = ^TglrVec2KeyFrame;
+      TglrIntKeyFrame = record
+        t: Single; // 0..1
+        value: Integer;
+      end;
       TglrVec2KeyFrame = record
         t: Single;
         value: TdfVec2f;
       end;
-      PglrVec3KeyFrame = ^TglrVec3KeyFrame;
       TglrVec3KeyFrame = record
         t: Single;
         value: TdfVec3f;
       end;
-      PglrVec4KeyFrame = ^TglrVec4KeyFrame;
       TglrVec4KeyFrame = record
         t: Single;
         value: TdfVec4f;
       end;
-      PglrVec32KeyFrame = ^TglrVec32KeyFrame;
       TglrVec32KeyFrame = record
         t: Single;
         v1, v2: TdfVec3f;
       end;
 
-      TglrSingleDynamics = TglrList<PglrSingleKeyFrame>;
-      TglrVec2Dynamics = TglrList<PglrVec2KeyFrame>;
-      TglrVec3Dynamics = TglrList<PglrVec3KeyFrame>;
-      TglrVec4Dynamics = TglrList<PglrVec4KeyFrame>;
-      TglrVec32Dynamics = TglrList<PglrVec32KeyFrame>;
-    var
+      TglrSingleDynamics = TglrList<TglrSingleKeyFrame>;
+      TglrIntegerDynamics = TglrList<TglrIntKeyFrame>;
+      TglrVec2Dynamics = TglrList<TglrVec2KeyFrame>;
+      TglrVec3Dynamics = TglrList<TglrVec3KeyFrame>;
+      TglrVec4Dynamics = TglrList<TglrVec4KeyFrame>;
+      TglrVec32Dynamics = TglrList<TglrVec32KeyFrame>;
+      TglrParticles2D = TglrList<TglrParticle2D>;
 
+    var
+      fParticles: TglrParticles2D;
   public
+    // Dynamics
     Size: TglrVec2Dynamics;
     Velocity: TglrVec2Dynamics;
+    VelocityDispersionAngle: TglrSingleDynamics;
     EmitterShapeBox: TglrVec2Dynamics;
     EmitterShapeCircle: TglrSingleDynamics;
     Color: TglrVec4Dynamics;
-    {
-    constructor Create(); virtual; overload;
+    EmitterShapeType: TglrParticleEmitterShapeType2D;
+    LifetimeMinMax: TglrVec2Dynamics;
+    ParticlesCount: TglrIntegerDynamics;
+
+    Enabled: Boolean;
+
+    constructor Create(); override; overload;
     constructor Create(const aStream: TglrStream;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
     destructor Destroy(); override;
 
-    //Particle start parameters
-    procedure SetEmitterShapeAsBox(aSize: TdfVec3f);
-    procedure SetEmitterShapeAsSphere(aRad: Single);
-    procedure SetVelocityDispersion(aVec1, aVec2: TdfVec3f);
-
-    //Particle every-step parameters
-
-    procedure Update(const dt: Double)
-    }
+    procedure Update(const dt: Double);
   end;
 
   {$ENDREGION}
@@ -942,6 +968,117 @@ begin
       start := i + 1;
     end;
   Result.Add(Copy(aLine, start, i - start)); // add last
+end;
+
+{ TglrClassList<T> }
+
+procedure TglrObjectList<T>.Free(aFreeObjects: Boolean);
+var
+  i: Integer;
+begin
+  for i := 0 to Count - 1 do
+    TObject(FItems[i]).Free();
+  inherited Free();
+end;
+
+procedure TglrObjectList<T>.DeleteByIndex(Index: LongInt; FreeItem: Boolean);
+begin
+  BoundsCheck(Index);
+  if FreeItem then
+    TObject(FItems[Index]).Free;
+  if Index <> fCount - 1 then
+    Move(FItems[Index + 1], FItems[Index], (FCount - Index - 1) * SizeOf(T));
+  Dec(FCount);
+  if Length(FItems) - FCount + 1 > FCapacity then
+    SetLength(FItems, Length(FItems) - FCapacity);
+end;
+
+procedure TglrObjectList<T>.Delete(Item: T; FreeItem: Boolean);
+var
+  i: Integer;
+begin
+  i := IndexOf(Item);
+  if i <> -1 then
+    DeleteByIndex(i, FreeItem)
+  else
+    Log.Write(lError, 'List: No item found at list, delete is impossible');
+end;
+
+procedure TglrObjectList<T>.DeleteSafe(Item: T; FreeItem: Boolean);
+var
+  i: Integer;
+begin
+  i := IndexOf(Item);
+  if i <> -1 then
+    DeleteSafeByIndex(i, FreeItem)
+  else
+    Log.Write(lError, 'List: No item found at list, delete is impossible');
+
+end;
+
+procedure TglrObjectList<T>.DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean);
+var
+  i: Integer;
+begin
+  BoundsCheck(Index);
+  if FreeItem then
+    TObject(FItems[Index]).Free;
+  for i := Index to FCount - 2 do
+    FItems[i] := FItems[i + 1];
+
+  Dec(FCount);
+  if Length(FItems) - FCount + 1 > FCapacity then
+    SetLength(FItems, Length(FItems) - FCapacity);
+end;
+
+{ TglrParticleEmitter2D }
+
+constructor TglrParticleEmitter2D.Create;
+begin
+  inherited Create();
+  EmitterShapeType := peBox;
+  Color := TglrVec4Dynamics.Create();
+  EmitterShapeBox := TglrVec2Dynamics.Create();
+  EmitterShapeCircle := TglrSingleDynamics.Create();
+  Size := TglrVec2Dynamics.Create();
+  Velocity := TglrVec2Dynamics.Create();
+  VelocityDispersionAngle := TglrSingleDynamics.Create();
+  LifetimeMinMax := TglrVec2Dynamics.Create();
+  ParticlesCount := TglrIntegerDynamics.Create();
+
+  Enabled := True;
+
+  fParticles := TglrParticles2D.Create(128);
+end;
+
+constructor TglrParticleEmitter2D.Create(const aStream: TglrStream;
+  aFreeStreamOnFinish: Boolean);
+begin
+  Create();
+
+  if aFreeStreamOnFinish then
+    aStream.Free();
+end;
+
+destructor TglrParticleEmitter2D.Destroy;
+begin
+  Color.Free();
+  EmitterShapeBox.Free();
+  EmitterShapeCircle.Free();
+  Size.Free();
+  Velocity.Free();
+  VelocityDispersionAngle.Free();
+  LifetimeMinMax.Free();
+  ParticlesCount.Free();
+  inherited Destroy;
+end;
+
+procedure TglrParticleEmitter2D.Update(const dt: Double);
+begin
+  if Enabled then
+  begin
+    // create new
+  end;
 end;
 
 constructor TglrTextureAtlas.Create(aImageStream, aInfoStream: TglrStream;
@@ -2120,10 +2257,7 @@ begin
 end;
 
 procedure TglrNode.RenderSelf();
-var
-  m, m1: TdfMat4f;
 begin
-//  Matrix.Pos := Position;
   Render.Params.Model := AbsoluteMatrix;
   Render.Params.CalculateMVP();
 
@@ -3179,17 +3313,6 @@ begin
   FCapacity := Capacity;
 end;
 
-procedure TglrList<T>.Free(FreeItems: Boolean);
-var
-  i : LongInt;
-begin
-  if FreeItems then
-    for i := 0 to Count - 1 do
-      TObject(FItems[i]).Free;
-  SetLength(FItems, 0);
-  FCount := 0;
-end;
-
 procedure TglrList<T>.BoundsCheck(Index: LongInt);
 begin
   if (Index < 0) or (Index >= FCount) then
@@ -3243,12 +3366,19 @@ begin
   Init(aCapacity);
 end;
 
+destructor TglrList<T>.Destroy;
+begin
+  SetLength(FItems, 0);
+  FCount := 0;
+  inherited Destroy;
+end;
+
 function TglrList<T>.IndexOf(Item: T): LongInt;
 var
   i : LongInt;
 begin
   for i := 0 to FCount - 1 do
-    if FItems[i] = Item then
+    if @FItems[i] = @Item then
     begin
       Result := i;
       Exit;
@@ -3265,11 +3395,9 @@ begin
   Inc(FCount);
 end;
 
-procedure TglrList<T>.DeleteByIndex(Index: LongInt; FreeItem: Boolean);
+procedure TglrList<T>.DeleteByIndex(Index: LongInt);
 begin
   BoundsCheck(Index);
-  if FreeItem then
-    TObject(FItems[Index]).Free;
   if Index <> fCount - 1 then
     Move(FItems[Index + 1], FItems[Index], (FCount - Index - 1) * SizeOf(T));
   Dec(FCount);
@@ -3277,36 +3405,33 @@ begin
     SetLength(FItems, Length(FItems) - FCapacity);
 end;
 
-procedure TglrList<T>.Delete(Item: T; FreeItem: Boolean);
+procedure TglrList<T>.Delete(Item: T);
 var
   i: Integer;
 begin
   i := IndexOf(Item);
   if i <> -1 then
-    DeleteByIndex(i, FreeItem)
+    DeleteByIndex(i)
   else
     Log.Write(lError, 'List: No item found at list, delete is impossible');
 end;
 
-procedure TglrList<T>.DeleteSafe(Item: T; FreeItem: Boolean);
+procedure TglrList<T>.DeleteSafe(Item: T);
 var
   i: Integer;
 begin
   i := IndexOf(Item);
   if i <> -1 then
-    DeleteSafeByIndex(i, FreeItem)
+    DeleteSafeByIndex(i)
   else
     Log.Write(lError, 'List: No item found at list, delete is impossible');
-
 end;
 
-procedure TglrList<T>.DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean);
+procedure TglrList<T>.DeleteSafeByIndex(Index: LongInt);
 var
   i: Integer;
 begin
   BoundsCheck(Index);
-  if FreeItem then
-    TObject(FItems[Index]).Free;
   for i := Index to FCount - 2 do
     FItems[i] := FItems[i + 1];
 
