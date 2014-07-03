@@ -53,6 +53,11 @@ type
     fb2Trigger1, fb2Trigger2: Tb2Body;
     fEditType: TEditType;
 
+    // debug purposes only
+    fEmitter: TglrParticleEmitter2D;
+    procedure InitParticles();
+    procedure DeinitParticles();
+
     function GetShipDistanceToNearestMoonVertex(): Single;
     procedure PhysicsAfter(const FixedDeltaTime: Double);
     procedure PhysicsContactBegin(var contact: Tb2Contact);
@@ -294,6 +299,53 @@ begin
   fPoint1 := 0;
   fPoint2 := 0;
   fMoveFlag := False;
+
+  InitParticles();
+end;
+
+procedure TGame.InitParticles;
+var
+  i: TglrIntKeyFrame;
+  s: TglrSingleKeyFrame;
+  v: TglrVec2KeyFrame;
+  v2: TglrVec22KeyFrame;
+  c: TglrVec4KeyFrame;
+begin
+  fEmitter := TglrParticleEmitter2D.Create();
+  fEmitter.EmitterShapeType := peCircle;
+
+  i.t := 0;
+  i.value := 50;
+  fEmitter.ParticlesCount.Add(i);
+
+  v.t := 0;
+  v.value := dfVec2f(2, 5);
+  fEmitter.LifetimeMinMax.Add(v);
+
+  v2.t := 0;
+  v2.v1 := dfVec2f(15, 15);
+  v2.v2 := dfVec2f(25, 25);
+  fEmitter.Size.Add(v2);
+
+  c.t := 0;
+  c.value := dfVec4f(1, 0.5, 0.5, 1.0);
+  fEmitter.Color.Add(c);
+  c.t := 1.0;
+  c.value := dfVec4f(1, 0.5, 0.5, 0.0);
+  fEmitter.Color.Add(c);
+
+  v.t := 0;
+  v.value := dfVec2f(0, 5);
+  fEmitter.Velocity.Add(v);
+
+  s.t := 0;
+  s.value := 20;
+  fEmitter.VelocityDispersionAngle.Add(s);
+end;
+
+procedure TGame.DeinitParticles;
+begin
+  fEmitter.Free();
 end;
 
 function TGame.GetShipDistanceToNearestMoonVertex: Single;
@@ -429,6 +481,8 @@ end;
 
 procedure TGame.OnFinish;
 begin
+  DeinitParticles();
+
   Space.Free();
   Moon.Free();
   Scene.Free();
@@ -591,6 +645,8 @@ begin
   Moon.RenderSelf();
   //Render.Params.ModelViewProj := Render.Params.ViewProj;
   Scene.RenderScene();
+  Material.Bind();
+  fEmitter.RenderSelf();
   SceneHud.RenderScene();
 end;
 
@@ -629,7 +685,6 @@ begin
       Box2d.SyncObjects(b2Ship, Ship);
       World.Update(dt);
 
-      //fEditorText.Text := Convert.ToString(GetShipDistanceToNearestMoonVertex());
       fCameraScale := 1.0; // * (1 / Clamp(b2Ship.GetLinearVelocity.SqrLength, 1.0, 1.85)); //no fShipLinearSpeed clamp
       fCameraScale *=  (1 / Clamp(GetShipDistanceToNearestMoonVertex() * 0.01, 0.9, 2.0));
       Scene.Camera.Scale := Lerp(Scene.Camera.Scale, fCameraScale, 5 * dt);
@@ -656,8 +711,6 @@ begin
 
       Box2d.ReverseSyncObjects(fTrigger1, fb2Trigger1);
       Box2d.ReverseSyncObjects(fTrigger2, fb2Trigger2);
-//      Box2D.SyncObjects(fb2Trigger1, fTrigger1);
-//      Box2D.SyncObjects(fb2Trigger2, fTrigger2);
 
       if fPoint1 > 0 then
         fTrigger1.SetVerticesColor(dfVec4f(0, 1, 0, 0.5))
@@ -670,6 +723,8 @@ begin
         fTrigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
       if (fShipLinearSpeed < LAND_SPEED) and (fPoint1 > 0) and (fPoint2 > 0) and not Flame.Visible then
         OnGameEnd(rWin);
+
+      //fEmitter.Update(dt);
     end
     else if fGameStatus = sPause then
     begin
