@@ -729,24 +729,6 @@ type
     procedure Unbind();
   end;
 
-  { TglrSpriteBatch }
-
-  TglrSpriteBatch = class (TglrNode)
-  protected
-    fVData: array[0..65535] of TglrVertexP3T2C4;
-    fIData: array[0..65535] of Word;
-    fVB: TglrVertexBuffer;
-    fIB: TglrIndexBuffer;
-  public
-    Material: TglrMaterial;
-    constructor Create(); override;
-    destructor Destroy(); override;
-
-    procedure RenderSelf(); override;
-
-    procedure SortFarthestFirst();
-  end;
-
   { TglrSprite }
 const
   SpriteIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
@@ -782,6 +764,28 @@ type
     procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean = True);
 
     procedure RenderSelf(); override;
+  end;
+
+  { TglrSpriteBatch }
+
+  TglrSpriteBatch = class (TglrNode)
+  protected
+    fVData: array[0..65535] of TglrVertexP3T2C4;
+    fIData: array[0..65535] of Word;
+    fVB: TglrVertexBuffer;
+    fIB: TglrIndexBuffer;
+  public
+    Material: TglrMaterial;
+    constructor Create(); override;
+    destructor Destroy(); override;
+
+    procedure Start();
+    procedure Draw(aSprite: TglrSprite);
+    procedure Finish();
+
+    procedure RenderSelf(); override;
+
+    procedure SortFarthestFirst();
   end;
 
   { TglrFont }
@@ -1516,6 +1520,21 @@ begin
   fVB.Free();
   fIB.Free();
   inherited Destroy;
+end;
+
+procedure TglrSpriteBatch.Start;
+begin
+
+end;
+
+procedure TglrSpriteBatch.Draw(aSprite: TglrSprite);
+begin
+
+end;
+
+procedure TglrSpriteBatch.Finish;
+begin
+
 end;
 
 procedure TglrSpriteBatch.RenderSelf;
