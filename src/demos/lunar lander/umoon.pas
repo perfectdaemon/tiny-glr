@@ -117,7 +117,10 @@ begin
   fVB.Free();
   fIB.Free();
   for i := 0 to Length(LandingZones) - 1 do
+  begin
     LandingZones[i].MultText.Free();
+    LandingZones[i].Sprite.Free();
+  end;
   for i := 0 to Length(VerticesPoints) - 1 do
     VerticesPoints[i].Free();
 

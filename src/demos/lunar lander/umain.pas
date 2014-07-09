@@ -176,10 +176,9 @@ begin
   Font := TglrFont.Create(FileSystem.ReadResource('lander/Hattori Hanzo17b.bmp'));
 
   MoonTexture := TglrTexture.Create(FileSystem.ReadResource('lander/moon.tga'), 'tga', True);
-//  MoonTexture.SetWrapS(wClampToEdge);
   MoonTexture.SetWrapS(wRepeat);
-//  MoonTexture.SetWrapR(wRepeat);
-//  MoonTexture.SetWrapT(wRepeat);
+  MoonTexture.SetWrapR(wRepeat);
+  MoonTexture.SetWrapT(wRepeat);
 
   MoonMaterial := TglrMaterial.Create();
   MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderV.txt'), stVertex);
@@ -251,11 +250,8 @@ begin
   HudMainText.LineSpacing := 1.5;
 
   FontBatch := TglrFontBatch.Create(Font);
-//  FontBatch.Childs.Add(DebugText);
 
   FontBatchHud := TglrFontBatch.Create(Font);
-//  FontBatchHud.Childs.Add(HudMainText);
-//  FontBatchHud.Childs.Add(HudEditorText);
 
   Scene := TglrScene.Create();
   Scene.Camera.ProjectionMode := pmOrtho;
@@ -265,8 +261,6 @@ begin
     dfVec3f(Render.Width / 2, Render.Height / 2, 0),
     dfVec3f(0, 1, 0));
   Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
-//  Scene.Root.Childs.Add(SpriteBatch);
-//  Scene.Root.Childs.Add(FontBatch);
 
   SceneHud := TglrScene.Create();
   SceneHud.Camera.ProjectionMode := pmOrtho;
@@ -276,7 +270,6 @@ begin
     dfVec3f(0, 0, 0),
     dfVec3f(0, 1, 0));
   SceneHud.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
-//  SceneHud.Root.Childs.Add(FontBatchHud);
 
   FuelLevel := TFuelLevel.Create();
 
@@ -298,7 +291,7 @@ begin
   fPoint2 := 0;
   fMoveFlag := False;
 
-  InitParticles();
+//  InitParticles();
 end;
 
 procedure TGame.InitParticles;
@@ -479,7 +472,7 @@ end;
 
 procedure TGame.OnFinish;
 begin
-  DeinitParticles();
+  //DeinitParticles();
 
   Space.Free();
   Moon.Free();
@@ -489,15 +482,28 @@ begin
   FuelLevel.Free();
   Material.Free();
   MoonMaterial.Free();
+  Atlas.Free();
+  MoonTexture.Free();
   Font.Free();
+  World.DestroyBody(b2Ship);
+  World.DestroyBody(b2Trigger1);
+  World.DestroyBody(b2Trigger2);
   World.Free();
 
-  Flame.Free();
-  Ship.Free();
   Trigger1.Free();
   Trigger2.Free();
+  Flame.Free();
+  Ship.Free();
   ShipSpeedVec.Free();
   IGDCFlag.Free();
+
+  HudEditorText.Free();
+  HudMainText.Free();
+  DebugText.Free();
+
+  SpriteBatch.Free();
+  FontBatch.Free();
+  FontBatchHud.Free();
 end;
 
 procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
