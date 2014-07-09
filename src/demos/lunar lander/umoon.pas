@@ -28,7 +28,7 @@ type
   protected
     fVB: TglrVertexBuffer;
     fIB: TglrIndexBuffer;
-    fMaterial: TglrMaterial;
+    fMoonMaterial, fMaterial: TglrMaterial;
     fPointTR: PglrTextureRegion;
     fVecCount, fIndCount: Integer;
     fBatch: TglrSpriteBatch;
@@ -39,7 +39,7 @@ type
     VerticesPoints: array of TglrSprite;
     LandingZones: array of TLandingZone;
     b2Body: Tb2Body;
-    constructor Create(aMaterial: TglrMaterial; aPointTexRegion: PglrTextureRegion;
+    constructor Create(aMoonMaterial, aMaterial: TglrMaterial; aPointTexRegion: PglrTextureRegion;
       aBatch: TglrSpriteBatch; aFontBatch: TglrFontBatch); virtual;
     destructor Destroy(); override;
 
@@ -90,13 +90,14 @@ begin
     VerticesPoints[i].Visible := AValue;
 end;
 
-constructor TMoon.Create(aMaterial: TglrMaterial;
+constructor TMoon.Create(aMoonMaterial, aMaterial: TglrMaterial;
   aPointTexRegion: PglrTextureRegion; aBatch: TglrSpriteBatch;
   aFontBatch: TglrFontBatch);
 begin
   inherited Create();
   fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2);
   fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
+  fMoonMaterial := aMoonMaterial;
   fMaterial := aMaterial;
   fPointTR := aPointTexRegion;
   fBatch := aBatch;
@@ -115,13 +116,11 @@ var
 begin
   fVB.Free();
   fIB.Free();
-  for i := 0 to Length(VerticesPoints) - 1 do
-    fBatch.Childs.Delete(VerticesPoints[i], True);
   for i := 0 to Length(LandingZones) - 1 do
-  begin
-    fBatch.Childs.Delete(LandingZones[i].Sprite, True);
-    fFontBatch.Childs.Delete(LandingZones[i].MultText, True);
-  end;
+    LandingZones[i].MultText.Free();
+  for i := 0 to Length(VerticesPoints) - 1 do
+    VerticesPoints[i].Free();
+
   inherited Destroy;
 end;
 
@@ -148,9 +147,9 @@ begin
       fIndCount += 6;
     end;
     data[fVecCount].vec     := dfVec3f(Vertices[i].x, MaxY, 5);
-    data[fVecCount].tex     := dfVec2f((data[0].vec.x - data[fVecCount].vec.x) / (fMaterial.Textures[0].Texture.Width), 0);
+    data[fVecCount].tex     := dfVec2f((data[0].vec.x - data[fVecCount].vec.x) / (fMoonMaterial.Textures[0].Texture.Width), 0);
     data[fVecCount + 1].vec := dfVec3f(Vertices[i], 5);
-    data[fVecCount + 1].tex := dfVec2f(data[fVecCount].tex.x, (data[fVecCount + 1].vec.y - MaxY) / fMaterial.Textures[0].Texture.Width);
+    data[fVecCount + 1].tex := dfVec2f(data[fVecCount].tex.x, (data[fVecCount + 1].vec.y - MaxY) / fMoonMaterial.Textures[0].Texture.Width);
     fVecCount += 2;
   end;
 
@@ -184,7 +183,6 @@ begin
   VerticesPoints[aIndex] := TglrSprite.Create(15, 15, dfVec2f(0.5, 0.5));
   VerticesPoints[aIndex].Position := dfVec3f(Vertices[aIndex], 10);
   VerticesPoints[aIndex].SetTextureRegion(fPointTR, False);
-  fBatch.Childs.Add(VerticesPoints[aIndex]);
 end;
 
 procedure TMoon.DeleteVertex(aIndex: Integer);
@@ -198,7 +196,6 @@ begin
     Exit();
   end;
 
-  fBatch.Childs.Delete(VerticesPoints[aIndex], True);
   if aIndex <> High(Vertices) then
   begin
     Move(Vertices[aIndex + 1], Vertices[aIndex], (High(Vertices) - aIndex) * SizeOf(TdfVec2f));
@@ -233,10 +230,8 @@ begin
     Sprite := TglrSprite.Create();
     Sprite.SetTextureRegion(fPointTR, False);
     Sprite.SetVerticesColor(dfVec4f(0, 1, 0, 0.1));
-    fBatch.Childs.Add(Sprite);
 
     MultText := TglrText.Create();
-    fFontBatch.Childs.Add(MultText);
 
     Update();
   end;
@@ -266,18 +261,31 @@ begin
     Exit();
   end;
 
-  fBatch.Childs.Delete(LandingZones[aIndex].Sprite, True);
-  fFontBatch.Childs.Delete(LandingZones[aIndex].MultText, True);
   if aIndex <> High(LandingZones) then
     Move(LandingZones[aIndex + 1], LandingZones[aIndex], (High(LandingZones) - aIndex) * SizeOf(TLandingZone));
   SetLength(LandingZones, Length(LandingZones) - 1);
 end;
 
 procedure TMoon.RenderSelf;
+var
+  i: Integer;
 begin
-  fMaterial.Bind();
+  fMoonMaterial.Bind();
   Render.DrawTriangles(fVB, fIB, 0, fIndCount);
-  fMaterial.Unbind();
+//  fMoonMaterial.Unbind();
+  fMaterial.Bind();
+  fBatch.Start();
+  fFontBatch.Start();
+  if fEditMode then
+    fBatch.Draw(VerticesPoints);
+  for i := 0 to Length(LandingZones) - 1 do
+  begin
+    fBatch.Draw(LandingZones[i].Sprite);
+    fFontBatch.Draw(LandingZones[i].MultText);
+  end;
+  fBatch.Finish();
+  fFontBatch.Finish();
+//  fMaterial.Unbind();
 end;
 
 procedure TMoon.LoadLevel(const aStream: TglrStream;
@@ -296,7 +304,6 @@ begin
     VerticesPoints[i].Position := dfVec3f(Vertices[i], 10);
     VerticesPoints[i].SetTextureRegion(fPointTR, False);
     VerticesPoints[i].Visible := False;
-    fBatch.Childs.Add(VerticesPoints[i]);
   end;
   UpdateData();
 
@@ -312,10 +319,8 @@ begin
         Sprite := TglrSprite.Create();
         Sprite.SetTextureRegion(fPointTR, False);
         Sprite.SetVerticesColor(dfVec4f(0, 1, 0, 0.1));
-        fBatch.Childs.Add(Sprite);
 
         MultText := TglrText.Create();
-        fFontBatch.Childs.Add(MultText);
 
         Update();
       end;

@@ -22,7 +22,7 @@ type
     sBack, sLevel: TglrSprite;
     sLevelOrigWidth: Single;
     constructor Create();
-    destructor Destroy();
+    destructor Destroy(); override;
 
     procedure Update(const dt: Double);
   end;
@@ -35,7 +35,6 @@ type
 
   TGame = class (TglrGame)
   protected
-    fIGDCFlag: TglrSprite;
     fMoveFlag: Boolean;
 
     fGameStatus: TGameStatus;
@@ -45,12 +44,8 @@ type
     fCameraScale: Single;
     fShipLinearSpeed: Single;
 
-    fEditorText, fDebugText, fHudMainText: TglrText;
-    fShipSpeedVec: TglrSprite;
     fSelectedObjectIndex: Integer;
 
-    fTrigger1, fTrigger2: TglrSprite;
-    fb2Trigger1, fb2Trigger2: Tb2Body;
     fEditType: TEditType;
 
     // debug purposes only
@@ -68,23 +63,32 @@ type
     //Resources
     Atlas: TglrTextureAtlas;
     Font: TglrFont;
-    FontBatch, FontBatchHud: TglrFontBatch;
-    SpriteBatch: TglrSpriteBatch;
     Material, MoonMaterial: TglrMaterial;
     MoonTexture: TglrTexture;
 
-    World: Tglrb2World;
+    //Batches
+    FontBatch, FontBatchHud: TglrFontBatch;
+    SpriteBatch: TglrSpriteBatch;
+
+    //Texts
+    HudEditorText, DebugText, HudMainText: TglrText;
 
     //Sprites
     Ship: TglrSprite;
     Flame: TglrSprite;
+    ShipSpeedVec: TglrSprite;
+    Trigger1, Trigger2: TglrSprite;
+    IGDCFlag: TglrSprite;
 
+    //Box2D
+    World: Tglrb2World;
+    b2Ship: Tb2Body;
+    b2Trigger1, b2Trigger2: Tb2Body;
+
+    //Special Objects
     FuelLevel: TFuelLevel;
-
     Space: TSpace;
     Moon: TMoon;
-
-    b2Ship: Tb2Body;
 
     //Scenes
     Scene, SceneHud: TglrScene;
@@ -120,15 +124,16 @@ begin
   sLevel.Height := sLevel.Height * 0.9;
 
   sLevelOrigWidth := sLevel.Width;
-  Game.SpriteBatch.Childs.Add(sBack);
-  Game.SpriteBatch.Childs.Add(sLevel);
+  //Game.SpriteBatch.Childs.Add(sBack);
+  //Game.SpriteBatch.Childs.Add(sLevel);
 
   Level := MAX_FUEL;
 end;
 
 destructor TFuelLevel.Destroy;
 begin
-
+  sBack.Free();
+  sLevel.Free();
   inherited;
 end;
 
@@ -192,24 +197,24 @@ begin
   Ship.SetTextureRegion(Atlas.GetRegion('lander.png'));
   Ship.Position := dfVec3f(200, 100, 2);
 
-  fTrigger1 := TglrSprite.Create();
-  fTrigger1.SetTextureRegion(Atlas.GetRegion('star.png'), False);
-  fTrigger1.SetSize(10, 10);
-  fTrigger1.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
-  fTrigger1.Parent := Ship;
-  fTrigger1.Position := dfVec3f(-0.5 * Ship.Width, 0.5 * Ship.Height, 1);
+  Trigger1 := TglrSprite.Create();
+  Trigger1.SetTextureRegion(Atlas.GetRegion('star.png'), False);
+  Trigger1.SetSize(10, 10);
+  Trigger1.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
+  Trigger1.Parent := Ship;
+  Trigger1.Position := dfVec3f(-0.5 * Ship.Width, 0.5 * Ship.Height, 1);
 
-  fTrigger2 := TglrSprite.Create();
-  fTrigger2.SetTextureRegion(Atlas.GetRegion('star.png'), False);
-  fTrigger2.SetSize(10, 10);
-  fTrigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
-  fTrigger2.Parent := Ship;
-  fTrigger2.Position := dfVec3f(-0.5 * Ship.Width, - 0.5 * Ship.Height, 1);
+  Trigger2 := TglrSprite.Create();
+  Trigger2.SetTextureRegion(Atlas.GetRegion('star.png'), False);
+  Trigger2.SetSize(10, 10);
+  Trigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
+  Trigger2.Parent := Ship;
+  Trigger2.Position := dfVec3f(-0.5 * Ship.Width, - 0.5 * Ship.Height, 1);
 
-  fb2Trigger1 := Box2D.BoxSensor(World, dfVec2f(fTrigger1.Position), dfVec2f(fTrigger1.Width * 1.2, fTrigger1.Height), 0, $0002, $0001, False);
-  fb2Trigger1.UserData := @fPoint1;
-  fb2Trigger2 := Box2D.BoxSensor(World, dfVec2f(fTrigger2.Position), dfVec2f(fTrigger2.Width * 1.2, fTrigger2.Height), 0, $0002, $0001, False);
-  fb2Trigger2.UserData := @fPoint2;
+  b2Trigger1 := Box2D.BoxSensor(World, dfVec2f(Trigger1.Position), dfVec2f(Trigger1.Width * 1.2, Trigger1.Height), 0, $0002, $0001, False);
+  b2Trigger1.UserData := @fPoint1;
+  b2Trigger2 := Box2D.BoxSensor(World, dfVec2f(Trigger2.Position), dfVec2f(Trigger2.Width * 1.2, Trigger2.Height), 0, $0002, $0001, False);
+  b2Trigger2.UserData := @fPoint2;
 
   for i := 0 to Length(landerV) - 1 do
     landerV[i] *= Ship.Width;
@@ -224,39 +229,33 @@ begin
   Flame.SetVerticesColor(dfVec4f(0.9, 0.85, 0.1, 1.0));
   Flame.Parent := Ship;
 
-  fShipSpeedVec := TglrSprite.Create();
-  fShipSpeedVec.SetTextureRegion(Atlas.GetRegion('arrow.png'));
+  ShipSpeedVec := TglrSprite.Create();
+  ShipSpeedVec.SetTextureRegion(Atlas.GetRegion('arrow.png'));
 
   SpriteBatch := TglrSpriteBatch.Create();
-  SpriteBatch.Material := Material;
-  SpriteBatch.Childs.Add(Flame);
-  SpriteBatch.Childs.Add(Ship);
-  SpriteBatch.Childs.Add(fTrigger1);
-  SpriteBatch.Childs.Add(fTrigger2);
-  SpriteBatch.Childs.Add(fShipSpeedVec);
 
   //Text for editor purposes
-  fEditorText := TglrText.Create();
-  fEditorText.Position := dfVec3f(Render.Width / 2 - 150, 20, 5);
-  fEditorText.LetterSpacing := 1.2;
+  HudEditorText := TglrText.Create();
+  HudEditorText.Position := dfVec3f(Render.Width / 2 - 150, 20, 5);
+  HudEditorText.LetterSpacing := 1.2;
 
   //Text at spaceship' right
-  fDebugText := TglrText.Create();
-  fDebugText.Position.z := 10;
-  fDebugText.LetterSpacing := 1.2;
+  DebugText := TglrText.Create();
+  DebugText.Position.z := 10;
+  DebugText.LetterSpacing := 1.2;
 
   //Text for win/lose
-  fHudMainText := TglrText.Create();
-  fHudMainText.Position := dfVec3f(50, 50, 15);
-  fHudMainText.LetterSpacing := 1.2;
-  fHudMainText.LineSpacing := 1.5;
+  HudMainText := TglrText.Create();
+  HudMainText.Position := dfVec3f(50, 50, 15);
+  HudMainText.LetterSpacing := 1.2;
+  HudMainText.LineSpacing := 1.5;
 
   FontBatch := TglrFontBatch.Create(Font);
-  FontBatch.Childs.Add(fDebugText);
+//  FontBatch.Childs.Add(DebugText);
 
   FontBatchHud := TglrFontBatch.Create(Font);
-  FontBatchHud.Childs.Add(fHudMainText);
-  FontBatchHud.Childs.Add(fEditorText);
+//  FontBatchHud.Childs.Add(HudMainText);
+//  FontBatchHud.Childs.Add(HudEditorText);
 
   Scene := TglrScene.Create();
   Scene.Camera.ProjectionMode := pmOrtho;
@@ -266,8 +265,8 @@ begin
     dfVec3f(Render.Width / 2, Render.Height / 2, 0),
     dfVec3f(0, 1, 0));
   Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
-  Scene.Root.Childs.Add(SpriteBatch);
-  Scene.Root.Childs.Add(FontBatch);
+//  Scene.Root.Childs.Add(SpriteBatch);
+//  Scene.Root.Childs.Add(FontBatch);
 
   SceneHud := TglrScene.Create();
   SceneHud.Camera.ProjectionMode := pmOrtho;
@@ -277,7 +276,7 @@ begin
     dfVec3f(0, 0, 0),
     dfVec3f(0, 1, 0));
   SceneHud.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
-  SceneHud.Root.Childs.Add(FontBatchHud);
+//  SceneHud.Root.Childs.Add(FontBatchHud);
 
   FuelLevel := TFuelLevel.Create();
 
@@ -286,14 +285,13 @@ begin
     Atlas.GetRegion('star.png'), Material, 3);
   Space.Camera := Scene.Camera;
 
-  Moon := TMoon.Create(MoonMaterial, Atlas.GetRegion('blank.png'), SpriteBatch, FontBatch);
+  Moon := TMoon.Create(MoonMaterial, Material, Atlas.GetRegion('blank.png'), SpriteBatch, FontBatch);
   Moon.MaxY := Render.Height * 2;
   Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
 
-  fIGDCFlag := TglrSprite.Create(1, 1, dfVec2f(0, 1));
-  fIGDCFlag.SetTextureRegion(Atlas.GetRegion('flag.png'));
-  fIGDCFlag.Visible := False;
-  SpriteBatch.Childs.Add(fIGDCFlag);
+  IGDCFlag := TglrSprite.Create(1, 1, dfVec2f(0, 1));
+  IGDCFlag.SetTextureRegion(Atlas.GetRegion('flag.png'));
+  IGDCFlag.Visible := False;
 
   fGameStatus := sPlay;
   fPoint1 := 0;
@@ -392,8 +390,8 @@ begin
     end
     else if fShipLinearSpeed > LAND_SPEED then
     begin
-      fHudMainText.Text := UTF8Decode('Осторожно!');
-      fHudMainText.Color := dfVec4f(1, 1, 0.1, 1);
+      HudMainText.Text := UTF8Decode('Осторожно!');
+      HudMainText.Color := dfVec4f(1, 1, 0.1, 1);
     end
     else
     begin
@@ -438,44 +436,44 @@ begin
   if aReason = rWin then
   begin
     scores := Ceil((FuelLevel.Level / MAX_FUEL) * 1000);
-    i1 := Moon.GetLandingZoneAtPos(dfVec2f(fTrigger1.AbsoluteMatrix.Pos));
-    i2 := Moon.GetLandingZoneAtPos(dfVec2f(fTrigger2.AbsoluteMatrix.Pos));
+    i1 := Moon.GetLandingZoneAtPos(dfVec2f(Trigger1.AbsoluteMatrix.Pos));
+    i2 := Moon.GetLandingZoneAtPos(dfVec2f(Trigger2.AbsoluteMatrix.Pos));
     if (i1 = i2) and (i1 <> -1) then
       scores *= Moon.LandingZones[i1].Multiply;
-    fHudMainText.Text := UTF8Decode('Очки: ' + Convert.ToString(scores)
+    HudMainText.Text := UTF8Decode('Очки: ' + Convert.ToString(scores)
     + #13#10#13#10'Вы успешно прилунились!'
     + #13#10'Пора искать селенитов!'
     + #13#10'Но, может еще разок?'
     + #13#10#13#10'Enter — рестарт');
-    fHudMainText.Color := dfVec4f(0.1, 1, 0.1, 1);
+    HudMainText.Color := dfVec4f(0.1, 1, 0.1, 1);
 
     fMoveFlag := True;
-    fIGDCFlag.Position := Ship.Position + dfVec3f(0, 40, -1);
-    fIGDCFlag.Visible := True;
+    IGDCFlag.Position := Ship.Position + dfVec3f(0, 40, -1);
+    IGDCFlag.Visible := True;
     FuelLevel.sBack.Visible := False;
     FuelLevel.sLevel.Visible := False;
-    fDebugText.Visible := False;
-    fShipSpeedVec.Visible := False;
+    DebugText.Visible := False;
+    ShipSpeedVec.Visible := False;
   end
   else if aReason = rCrash then
   begin
-    fHudMainText.Text := UTF8Decode('Потрачено!'
+    HudMainText.Text := UTF8Decode('Потрачено!'
     + #13#10#13#10'Аппарат разбит, вы погибли!'
     + #13#10'ЦУП воет и не знает, кого винить!'
     + #13#10'А пока там неразбериха — давайте еще раз...'
     + #13#10#13#10'Enter — рестарт');
-    fHudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
-    fDebugText.Visible := False;
-    fShipSpeedVec.Visible := False;
+    HudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
+    DebugText.Visible := False;
+    ShipSpeedVec.Visible := False;
   end
   else if aReason = rAway then
   begin
-    fHudMainText.Text := UTF8Decode('Вы покинули зону посадки!'
+    HudMainText.Text := UTF8Decode('Вы покинули зону посадки!'
     + #13#10#13#10'ЦУП негодует, вы разжалованы, осуждены и'
     + #13#10'будете уничтожены с помощью Большого Боевого Лазера!'
     + #13#10'Пожалуйста, оставайтесь на месте!'
     + #13#10#13#10'Enter — рестарт');
-    fHudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
+    HudMainText.Color := dfVec4f(1.0, 0.1, 0.1, 1);
   end;
 end;
 
@@ -493,6 +491,13 @@ begin
   MoonMaterial.Free();
   Font.Free();
   World.Free();
+
+  Flame.Free();
+  Ship.Free();
+  Trigger1.Free();
+  Trigger2.Free();
+  ShipSpeedVec.Free();
+  IGDCFlag.Free();
 end;
 
 procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -507,12 +512,12 @@ begin
     Moon.EditMode := not Moon.EditMode;
     if Moon.EditMode then
     begin
-      fEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Поверхность');
+      HudEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Поверхность');
       fEditType := etVertices;
       fSelectedObjectIndex := -1;
     end
     else
-      fEditorText.Text := '';
+      HudEditorText.Text := '';
   end;
 
   if not Moon.EditMode then
@@ -540,22 +545,22 @@ begin
               if fEditType = etVertices then
               begin
                 fEditType := etLandingZones;
-                fEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Зоны посадки');
+                HudEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Зоны посадки');
               end
               else if fEditType = etLandingZones then
               begin
                 fEditType := etVertices;
-                fEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Поверхность');
+                HudEditorText.Text := UTF8Decode('В режиме редактора'#13#10'Режим: Поверхность');
               end;
             end;
 
         kS: begin
               FileSystem.WriteResource('lander/level1.bin', Moon.SaveLevel());
-              fEditorText.Text := UTF8Decode('Успешно сохранено');
+              HudEditorText.Text := UTF8Decode('Успешно сохранено');
             end;
         kL: begin
               Moon.LoadLevel(FileSystem.ReadResource('lander/level1.bin'));
-              fEditorText.Text := UTF8Decode('Успешно загружено');
+              HudEditorText.Text := UTF8Decode('Успешно загружено');
             end;
 
         k2, k3, k4, k5:
@@ -646,8 +651,26 @@ begin
   //Render.Params.ModelViewProj := Render.Params.ViewProj;
   Scene.RenderScene();
   Material.Bind();
-  fEmitter.RenderSelf();
+  SpriteBatch.Start();
+    SpriteBatch.Draw(Flame);
+    SpriteBatch.Draw(Ship);
+    SpriteBatch.Draw(Trigger1);
+    SpriteBatch.Draw(Trigger2);
+    SpriteBatch.Draw(ShipSpeedVec);
+    SpriteBatch.Draw(IGDCFlag);
+    SpriteBatch.Draw(FuelLevel.sBack);
+    SpriteBatch.Draw(FuelLevel.sLevel);
+  SpriteBatch.Finish();
+
+  FontBatch.Start();
+    FontBatch.Draw(DebugText);
+  FontBatch.Finish();
+//  fEmitter.RenderSelf();
   SceneHud.RenderScene();
+  FontBatchHud.Start();
+    FontBatchHud.Draw(HudMainText);
+    FontBatchHud.Draw(HudEditorText);
+  FontBatchHud.Finish();
 end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
@@ -695,32 +718,32 @@ begin
 
       fShipLinearSpeed := b2Ship.GetLinearVelocity.Length;
       if fShipLinearSpeed > SAFE_SPEED then
-        fDebugText.Color := dfVec4f(1, 0.3, 0.3, 1.0)
+        DebugText.Color := dfVec4f(1, 0.3, 0.3, 1.0)
       else
-        fDebugText.Color := dfVec4f(0.3, 1.0, 0.3, 1.0);
-      fDebugText.Position := Ship.Position + dfVec3f(60, -10, 10);
-      fDebugText.Text := Convert.ToString(fShipLinearSpeed, 2);
+        DebugText.Color := dfVec4f(0.3, 1.0, 0.3, 1.0);
+      DebugText.Position := Ship.Position + dfVec3f(60, -10, 10);
+      DebugText.Text := Convert.ToString(fShipLinearSpeed, 2);
 
-      fShipSpeedVec.Position := fDebugText.Position + dfVec3f(20, -20, 0);
-      fShipSpeedVec.SetVerticesColor(fDebugText.Color);
-      fShipSpeedVec.Rotation := Box2d.ConvertB2ToGL(b2Ship.GetLinearVelocity).GetRotationAngle();
+      ShipSpeedVec.Position := DebugText.Position + dfVec3f(20, -20, 0);
+      ShipSpeedVec.SetVerticesColor(DebugText.Color);
+      ShipSpeedVec.Rotation := Box2d.ConvertB2ToGL(b2Ship.GetLinearVelocity).GetRotationAngle();
 
       if (Ship.Position.x > Moon.Vertices[High(Moon.Vertices)].x) or
          (Ship.Position.x < Moon.Vertices[0].x) then
         OnGameEnd(rAway);
 
-      Box2d.ReverseSyncObjects(fTrigger1, fb2Trigger1);
-      Box2d.ReverseSyncObjects(fTrigger2, fb2Trigger2);
+      Box2d.ReverseSyncObjects(Trigger1, b2Trigger1);
+      Box2d.ReverseSyncObjects(Trigger2, b2Trigger2);
 
       if fPoint1 > 0 then
-        fTrigger1.SetVerticesColor(dfVec4f(0, 1, 0, 0.5))
+        Trigger1.SetVerticesColor(dfVec4f(0, 1, 0, 0.5))
       else
-        fTrigger1.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
+        Trigger1.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
 
       if fPoint2 > 0 then
-        fTrigger2.SetVerticesColor(dfVec4f(0, 1, 0, 0.5))
+        Trigger2.SetVerticesColor(dfVec4f(0, 1, 0, 0.5))
       else
-        fTrigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
+        Trigger2.SetVerticesColor(dfVec4f(1, 0, 0, 0.5));
       if (fShipLinearSpeed < LAND_SPEED) and (fPoint1 > 0) and (fPoint2 > 0) and not Flame.Visible then
         OnGameEnd(rWin);
 
@@ -730,8 +753,8 @@ begin
     begin
       if fMoveFlag then
       begin
-        fIGDCFlag.Position.y -= dt * 40;
-        if (Ship.Position.y - fIGDCFlag.Position.y) > Ship.Height / 2 - 15 then
+        IGDCFlag.Position.y -= dt * 40;
+        if (Ship.Position.y - IGDCFlag.Position.y) > Ship.Height / 2 - 15 then
           fMoveFlag := False;
       end;
     end;

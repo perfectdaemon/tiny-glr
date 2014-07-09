@@ -23,6 +23,7 @@ type
   protected
     fCount: Integer;
     fBatch: TglrSpriteBatch;
+    fMaterial: TglrMaterial;
     fPatch: TSpacePatch;
   public
     Camera: TglrCamera;
@@ -50,7 +51,7 @@ var
 begin
   inherited Create();
   fBatch := TglrSpriteBatch.Create();
-  fBatch.Material := aMaterial;
+  fMaterial := aMaterial;
   fPatch.Position := dfVec2f(0, 0);
   fCount := STARS_PER_LAYER * aParallaxLevels;
   SetLength(fPatch.Stars, fCount);
@@ -79,12 +80,17 @@ begin
       SetSize(6 * (1 + pos.z), 6  * (1 + pos.z));
       SetVerticesColor(col);
     end;
-    fBatch.Childs.Add(fPatch.Stars[i]);
+    //fBatch.Childs.Add(fPatch.Stars[i]);
   end;
 end;
 
 destructor TSpace.Destroy;
+var
+  i: Integer;
 begin
+  fBatch.Free();
+  for i := 0 to fCount - 1 do
+    fPatch.Stars[i].Free();
   inherited Destroy;
 end;
 
@@ -92,10 +98,15 @@ procedure TSpace.RenderSelf;
 var
   i: Integer;
 begin
+  fMaterial.Bind();
+  fBatch.Start();
   for i := 0 to fCount - 1 do
     with fPatch.Stars[i] do
+    begin
       Position := dfVec3f(fPatch.Initials[i] - Position.z * dfVec2f(Camera.Position), Position.z);
-  fBatch.RenderSelf();
+      fBatch.Draw(fPatch.Stars[i]);
+    end;
+  fBatch.Finish();
 end;
 
 end.
