@@ -378,10 +378,13 @@ end;
 
 function LoadStringList(const Stream: TglrStream): TglrStringList;
 var
+  p: PAnsiChar;
   line: AnsiString;
   i, start: Integer;
 begin
-  line := LoadText(Stream);
+  p := LoadText(Stream);
+  line := p;
+  FreeMem(p);
   Result := TglrStringList.Create(32);
   start := 0;
   for i := 1 to Length(line) do
