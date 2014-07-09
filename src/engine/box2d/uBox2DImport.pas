@@ -35,6 +35,8 @@ type
     procedure PostSolve(var contact: Tb2Contact; const impulse: Tb2ContactImpulse); override;
   end;
 
+  { Tglrb2World }
+
   Tglrb2World = class(Tb2World)
   private
     FContactListener: Tglrb2ContactListener;
@@ -47,6 +49,7 @@ type
   public
     constructor Create(const gravity: TVector2; doSleep: Boolean;
       aStep: Single; aIterations: Integer); reintroduce;
+    destructor Destroy; override;
 
     procedure Update(const DeltaTime: Double);
 
@@ -128,6 +131,12 @@ begin
   FContactListener := Tglrb2ContactListener.Create();
   FContactListener.world := Self;
   Self.SetContactListener(FContactListener);
+end;
+
+destructor Tglrb2World.Destroy;
+begin
+  FContactListener.Free();
+  inherited Destroy;
 end;
 
 procedure Tglrb2World.RemoveOnBeginContact(aEvent: Tglrb2OnContactEvent);
