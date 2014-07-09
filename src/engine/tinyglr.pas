@@ -698,7 +698,7 @@ type
 
   {$ENDREGION}
 
-  {$REGION 'Material, Sprite, Mesh'}
+  {$REGION 'Material, Sprite, Font'}
 
   { TglrMaterial }
 
@@ -766,26 +766,26 @@ type
     procedure RenderSelf(); override;
   end;
 
+  TglrSpriteList = TglrObjectList<TglrSprite>;
+
   { TglrSpriteBatch }
 
-  TglrSpriteBatch = class (TglrNode)
+  TglrSpriteBatch = class
   protected
     fVData: array[0..65535] of TglrVertexP3T2C4;
     fIData: array[0..65535] of Word;
+    fCount: Word;
     fVB: TglrVertexBuffer;
     fIB: TglrIndexBuffer;
   public
-    Material: TglrMaterial;
-    constructor Create(); override;
+    constructor Create(); virtual;
     destructor Destroy(); override;
 
     procedure Start();
-    procedure Draw(aSprite: TglrSprite);
+    procedure Draw(aSprite: TglrSprite); overload;
+    procedure Draw(aSprites: array of TglrSprite); overload;
+    procedure Draw(aSprites: TglrSpriteList); overload;
     procedure Finish();
-
-    procedure RenderSelf(); override;
-
-    procedure SortFarthestFirst();
   end;
 
   { TglrFont }
@@ -845,25 +845,28 @@ type
 
   { TglrFontBatch }
 
-  TglrFontBatch = class (TglrNode)
+  TglrFontBatch = class
   protected
     fVData: array[0..65535] of TglrVertexP3T2C4;
     fIData: array[0..65535] of Word;
+    fCount: Word;
     fVB: TglrVertexBuffer;
     fIB: TglrIndexBuffer;
+    fFont: TglrFont;
   public
-    Font: TglrFont;
     constructor Create(aFont: TglrFont); virtual;
     destructor Destroy(); override;
 
-    procedure RenderSelf(); override;
+    procedure Start();
+    procedure Draw(aText: TglrText);
+    procedure Finish();
   end;
+
+  {$ENDREGION}
 
   TglrMesh = class (TglrNode)
 
   end;
-
-  {$ENDREGION}
 
   {$REGION 'Particles'}
 
@@ -973,6 +976,7 @@ type
     class procedure Deinit();
   public
     class var SpriteShader: TglrShaderProgram;
+//    class var BlankTexture: TglrTexture;
   end;
 
   {$ENDREGION}
@@ -1431,7 +1435,7 @@ begin
   inherited Create;
   if (aFont = nil) then
     Log.Write(lCritical, 'FontBatch: Null pointer provided, Font object expected');
-  Font := aFont;
+  fFont := aFont;
   fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2Col4);
   fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
 end;
@@ -1443,67 +1447,64 @@ begin
   inherited Destroy;
 end;
 
-procedure TglrFontBatch.RenderSelf;
-var
-  i, j, k, count: Integer;
-  x, y: Single;
-  child: TglrText;
-  quad: TglrQuadP3T2C4;
+procedure TglrFontBatch.Start;
 begin
-  count := 0;
-  for i := 0 to Childs.Count - 1 do
-    if not (Childs[i] is TglrText) then
-      Log.Write(lWarning, 'FontBatch: Child node is not a Text')
-    else
-    begin
-      x := 0;
-      y := 0;
-      child := Childs[i] as TglrText;
-      if (not child.Visible) or (child.Text = '') then
-        continue;
+  fCount := 0;
+end;
 
-      for j := 1 to Length(child.Text) do
-      begin
-        if (child.Text[j] = #10) then
-        begin
-          x := 0;
-          y += child.LineSpacing + Font.MaxCharHeight;
-          continue;
-        end;
-
-        if Font.Table[child.Text[j]] = nil then
-          continue;
-
-        quad := Font.GetCharQuad(child.Text[j]);
-        //Do not need it anymore - included in AbsoluteMatrix computing
-        //child.Matrix.Pos := child.Position;
-        for k := 0 to 3 do
-        begin
-          fVData[count * 4 + k] := quad[k];
-          fVData[count * 4 + k].vec += dfVec3f(x, y, 0);
-          fVData[count * 4 + k].vec := child.AbsoluteMatrix * fVData[count * 4 + k].vec;
-          fVData[count * 4 + k].col := child.Color;
-        end;
-
-        for k := 0 to 5 do
-          fIData[count * 6 + k] := SpriteIndices[k] + count * 4;
-
-        x += quad[0].vec.x + child.LetterSpacing;
-        count += 1;
-      end;
-
-    end;
-
-  if count = 0 then
+procedure TglrFontBatch.Draw(aText: TglrText);
+var
+  x, y: Single;
+  quad: TglrQuadP3T2C4;
+  j, k: Integer;
+begin
+  x := 0;
+  y := 0;
+  if (not aText.Visible) or (aText.Text = '') then
     Exit();
 
-  fVB.Update(@fVData[0], 0, count * 4);
-  fIB.Update(@fIData[0], 0, count * 6);
+  for j := 1 to Length(aText.Text) do
+  begin
+    if (aText.Text[j] = #10) then
+    begin
+      x := 0;
+      y += aText.LineSpacing + fFont.MaxCharHeight;
+      continue;
+    end;
+
+    if fFont.Table[aText.Text[j]] = nil then
+      continue;
+
+    quad := fFont.GetCharQuad(aText.Text[j]);
+    //Do not need it anymore - included in AbsoluteMatrix computing
+    //child.Matrix.Pos := child.Position;
+    for k := 0 to 3 do
+    begin
+      fVData[fCount * 4 + k] := quad[k];
+      fVData[fCount * 4 + k].vec += dfVec3f(x, y, 0);
+      fVData[fCount * 4 + k].vec := aText.AbsoluteMatrix * fVData[fCount * 4 + k].vec;
+      fVData[fCount * 4 + k].col := aText.Color;
+    end;
+
+    for k := 0 to 5 do
+      fIData[fCount * 6 + k] := SpriteIndices[k] + fCount * 4;
+
+    x += quad[0].vec.x + aText.LetterSpacing;
+    fCount += 1;
+  end;
+end;
+
+procedure TglrFontBatch.Finish;
+begin
+  if fCount = 0 then
+    Exit();
+  fVB.Update(@fVData[0], 0, fCount * 4);
+  fIB.Update(@fIData[0], 0, fCount * 6);
 
   Render.Params.ModelViewProj := Render.Params.ViewProj;
-  Font.Material.Bind();
-  Render.DrawTriangles(fVB, fIB, 0, 6 * count);
-  Font.Material.Unbind();
+  fFont.Material.Bind();
+  Render.DrawTriangles(fVB, fIB, 0, 6 * fCount);
+  //Font.Material.Unbind();
 end;
 
 { TglrSpriteBatch }
@@ -1524,75 +1525,51 @@ end;
 
 procedure TglrSpriteBatch.Start;
 begin
-
+  fCount := 0;
 end;
 
 procedure TglrSpriteBatch.Draw(aSprite: TglrSprite);
+var
+  i: Integer;
 begin
+  if (aSprite.Visible) then
+  begin
+    for i := 0 to 3 do
+    begin
+      fVData[fCount * 4 + i] := aSprite.Vertices[i];
+      fVData[fCount * 4 + i].vec := aSprite.AbsoluteMatrix * fVData[fCount * 4 + i].vec;
+    end;
 
+    for i := 0 to 5 do
+      fIData[fCount * 6 + i] := SpriteIndices[i] + fCount * 4;
+    fCount += 1;
+  end;
+end;
+
+procedure TglrSpriteBatch.Draw(aSprites: array of TglrSprite);
+var
+  i: Integer;
+begin
+  for i := 0 to Length(aSprites) - 1 do
+    Draw(aSprites[i]);
+end;
+
+procedure TglrSpriteBatch.Draw(aSprites: TglrSpriteList);
+var
+  i: Integer;
+begin
+  for i := 0 to aSprites.Count - 1 do
+    Draw(aSprites[i]);
 end;
 
 procedure TglrSpriteBatch.Finish;
 begin
-
-end;
-
-procedure TglrSpriteBatch.RenderSelf;
-var
-  i, j, count: Integer;
-  child: TglrSprite;
-begin
-  count := 0;
-  for i := 0 to Childs.Count - 1 do
-    if not (Childs[i] is TglrSprite) then
-      Log.Write(lWarning, 'SpriteBatch: Child node is not a sprite')
-    else
-      if Childs[i].Visible then
-      begin
-        child := (Childs[i] as TglrSprite);
-        //do not need it anymore. Included in AbsoluteMatrix computing
-        //child.Matrix.Pos := child.Position;
-        for j := 0 to 3 do
-        begin
-          fVData[count * 4 + j] := child.Vertices[j];
-          fVData[count * 4 + j].vec := child.AbsoluteMatrix * fVData[count * 4 + j].vec;
-        end;
-        for j := 0 to 5 do
-          fIData[count * 6 + j] := SpriteIndices[j] + count * 4;
-        count += 1;
-      end;
-  if count = 0 then
+  if fCount = 0 then
     Exit();
-  fVB.Update(@fVData[0], 0, count * 4);
-  fIB.Update(@fIData[0], 0, count * 6);
-
+  fVB.Update(@fVData[0], 0, fCount * 4);
+  fIB.Update(@fIData[0], 0, fCount * 6);
   Render.Params.ModelViewProj := Render.Params.ViewProj;
-  Material.Bind();
-  Render.DrawTriangles(fVB, fIB, 0, 6 * count);
-  Material.Unbind();
-end;
-
-procedure TglrSpriteBatch.SortFarthestFirst;
-var
-  i, j, max: Integer;
-  tmp: TglrNode;
-begin
-  for i := 0 to Childs.Count - 2 do
-  begin
-    max := i;
-    for j := i + 1 to Childs.Count - 2 do
-    begin
-      if Childs[j].Position.z > Childs[max].Position.z then
-        max := j;
-    end;
-
-    if max <> i then
-    begin
-      tmp := Childs[i];
-      Childs[i] := Childs[max];
-      Childs[max] := tmp;
-    end;
-  end;
+  Render.DrawTriangles(fVB, fIB, 0, fCount * 6);
 end;
 
 { TglrText }
@@ -1889,6 +1866,8 @@ begin
   SpriteShader.Attach(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
   SpriteShader.Link();
 
+//  BlankTexture := TglrTexture.Create();
+
   fInited := True;
 end;
 
@@ -1898,6 +1877,7 @@ begin
     Exit();
 
   SpriteShader.Free();
+//  BlankTexture.Free();
 end;
 
 { TglrMaterial }
