@@ -372,26 +372,6 @@ const
   TEXURE_SAMPLERS_MAX = 8;
 
 type
-
-  { TglrBatch }
-
-  TglrBatch<V, I> = class
-  protected
-    fVData: array[0..65535] of V;
-    fIData: array[0..65535] of I;
-    fVB: TglrVertexBuffer;
-    fIB: TglrIndexBuffer;
-  public
-    constructor Create(); virtual;
-    destructor Destroy(); virtual;
-
-    procedure Start();
-    procedure Finish();
-  end;
-
-  PglrBatch = ^TglrBatch;
-
-
   Render = class
   private
   protected
@@ -408,8 +388,6 @@ type
 
     class var fStatTextureBind, fTriCount, fDIPCount: Integer;
     class var fWidth, fHeight: Integer;
-
-    class var fBatch: PglrBatch;
   public
     class var Params: TglrRenderParams;
 
@@ -1078,57 +1056,6 @@ begin
   Dec(FCount);
   if Length(FItems) - FCount + 1 > FCapacity then
     SetLength(FItems, Length(FItems) - FCapacity);
-end;
-
-{ TglrBatch<V, I> }
-
-constructor TglrBatch<V, I>.Create;
-var
-  _vf: TglrVertexFormat;
-  _if: TglrIndexFormat;
-begin
-  inherited;
-  if V = TglrVertexP3T2C4 then
-    _vf := vfPos3Tex2Col4
-  else if V = TglrVertexP3T2N3 then
-    _vf := vfPos3Tex2Nor3
-  else if V = TglrVertexP3T2 then
-    _vf := vfPos3Tex2
-  else if V = TglrVertexP2T2 then
-    _vf := vfPos2Tex2
-  else
-    Log.Write(lCritical, 'TglrBatch: Unsupported vertex format');
-
-
-  if (I = Byte) then
-    _if := ifByte
-  else if (I = Word) then
-    _if := ifShort
-  else if (I = LongWord) then
-    _if := ifInt
-  else
-    Log.Write(lCritical, 'TglrBatch: Unsupported index format');
-
-  fVB := TglrVertexBuffer.Create(nil, 65536, _vf);
-  fIB := TglrIndexBuffer.Create(nil, 65536, _if);
-end;
-
-destructor TglrBatch<V, I>.Destroy;
-begin
-  fVB.Free();
-  fIB.Free();
-  inherited;
-end;
-
-procedure TglrBatch<V, I>.Start;
-begin
-  Render.fBatch := @Self;
-end;
-
-procedure TglrBatch<V, I>.Finish;
-begin
-  Render.fBatch := nil;
-  //Render all
 end;
 
 { TglrParticleEmitter2D }
@@ -3064,8 +2991,6 @@ begin
   Params.Color := dfVec4f(1, 1, 1, 1);
   Params.ViewProj.Identity;
   Params.Model.Identity;
-
-  fBatch := nil;
 end;
 
 class procedure Render.Clear(aClearMask: TglrClearMask);
@@ -3193,28 +3118,21 @@ end;
 class procedure Render.DrawTriangles(vBuffer: TglrVertexBuffer;
   iBuffer: TglrIndexBuffer; aStartIndex, aIndicesCount: Integer);
 begin
-  if (fBatch <> nil) then
+  if (fVB <> vBuffer.Id) then
   begin
-
-  end
-  else
-  begin
-    if (fVB <> vBuffer.Id) then
-    begin
-      fVB := vBuffer.Id;
-      vBuffer.Bind();
-    end;
-    if (fIB <> iBuffer.Id) then
-    begin
-      fIB := iBuffer.Id;
-      iBuffer.Bind();
-    end;
-
-    gl.DrawElements(GL_TRIANGLES, aIndicesCount, IF_FORMAT[iBuffer.Format], Pointer(aStartIndex * IF_STRIDE[iBuffer.Format]));
-
-    fDipCount += 1;
-    fTriCount += aIndicesCount div 3;
+    fVB := vBuffer.Id;
+    vBuffer.Bind();
   end;
+  if (fIB <> iBuffer.Id) then
+  begin
+    fIB := iBuffer.Id;
+    iBuffer.Bind();
+  end;
+
+  gl.DrawElements(GL_TRIANGLES, aIndicesCount, IF_FORMAT[iBuffer.Format], Pointer(aStartIndex * IF_STRIDE[iBuffer.Format]));
+
+  fDipCount += 1;
+  fTriCount += aIndicesCount div 3;
 end;
 
 class procedure Render.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
