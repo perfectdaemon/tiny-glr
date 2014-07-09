@@ -25,7 +25,7 @@
 program lander;
 
 uses
-//  heaptrc,
+  heaptrc,
   tinyglr,
   uMain;
 
@@ -33,7 +33,7 @@ var
   InitParams: TglrInitParams;
 
 begin
-//  SetHeapTraceOutput('heaptrace.log');
+  SetHeapTraceOutput('heaptrace.log');
   with InitParams do
   begin
     Width := 1000;
@@ -51,6 +51,6 @@ begin
   Core.Loop();
   Core.DeInit();
   Game.Free();
-//  DumpHeap();
+  DumpHeap();
 end.
 
