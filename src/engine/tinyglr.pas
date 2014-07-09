@@ -783,6 +783,7 @@ type
 
     var
       Material: TglrMaterial;
+      Texture: TglrTexture;
       Table: array [WideChar] of PglrCharData;
       CharData: array of TglrCharData;
 
@@ -1583,7 +1584,8 @@ begin
   Material := TglrMaterial.Create();
   if Default.fInited then;
     Material.Shader := Default.SpriteShader;
-  Material.AddTexture(TglrTexture.Create(aStream, 'bmp', False), 'uDiffuse');
+  Texture := TglrTexture.Create(aStream, 'bmp', False);
+  Material.AddTexture(Texture, 'uDiffuse');
 
   data := LoadFontData(aStream, charCount);
   SetLength(Self.CharData, charCount);
@@ -1604,6 +1606,7 @@ end;
 destructor TglrFont.Destroy;
 begin
   Material.Free();
+  Texture.Free();
   SetLength(CharData, 0);
   inherited Destroy;
 end;
@@ -1834,8 +1837,8 @@ destructor TglrMaterial.Destroy;
 var
   i: Integer;
 begin
-  for i := 0 to Length(Textures) - 1 do
-    Textures[i].Texture.Free();
+  //for i := 0 to Length(Textures) - 1 do
+  //  Textures[i].Texture.Free();
   SetLength(Textures, 0);
   //Wow, such a hack...
   if (Shader <> Default.SpriteShader) then
