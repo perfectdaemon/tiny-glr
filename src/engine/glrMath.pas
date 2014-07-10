@@ -93,8 +93,11 @@ type
     procedure Reset();
   end;
 
+  { TdfVec4f }
+
   TdfVec4f = record
     x, y, z, w: Single;
+    class operator Equal(const v1, v2: TdfVec4f): Boolean;
     class operator Multiply(const A: Single; v: TdfVec4f): TdfVec4f;
     class operator Multiply(const v1, v2: TdfVec4f): TdfVec4f;
     function Dot(const v: TdfVec3f): Single;
@@ -813,6 +816,13 @@ end;
 
 //======================dfVec4f
 
+class operator TdfVec4f.Equal(const v1, v2: TdfVec4f): Boolean;
+begin
+  Result := (Abs(v1.x - v2.x) <= cEPS) and
+            (Abs(v1.y - v2.y) <= cEPS) and
+            (Abs(v1.z - v2.z) <= cEPS) and
+            (Abs(v1.w - v2.w) <= cEPS);
+end;
 
 class operator TdfVec4f.Multiply(const A: Single; v: TdfVec4f): TdfVec4f;
 begin
