@@ -2758,9 +2758,14 @@ class procedure FileSystem.WriteResource(const aFileName: AnsiString;
 var
   FileStream: TglrStream;
 begin
-  FileStream := TglrStream.Init(aFileName, True);
-  FileStream.CopyFrom(aStream);
-  FileStream.Free();
+  if PathExists(ExtractFilePath(aFileName)) then
+  begin
+    FileStream := TglrStream.Init(aFileName, True);
+    FileStream.CopyFrom(aStream);
+    FileStream.Free();
+  end
+  else
+    Log.Write(lError, 'FileSystem: Unable to write resource "' + aFileName + '", path is not exists');
 end;
 
 class procedure FileSystem.WriteResource(const aFileName: AnsiString;
@@ -2768,10 +2773,15 @@ class procedure FileSystem.WriteResource(const aFileName: AnsiString;
 var
   t: Text;
 begin
-  AssignFile(t, aFileName);
-  Rewrite(t);
-  Write(t, aContent);
-  CloseFile(t);
+  if PathExists(ExtractFilePath(aFileName)) then
+  begin
+    AssignFile(t, aFileName);
+    Rewrite(t);
+    Write(t, aContent);
+    CloseFile(t);
+  end
+  else
+    Log.Write(lError, 'FileSystem: Unable to write resource "' + aFileName + '", path is not exists');
 end;
 
 { Core }
