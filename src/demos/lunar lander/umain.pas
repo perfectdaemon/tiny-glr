@@ -295,43 +295,8 @@ begin
 end;
 
 procedure TGame.InitParticles;
-var
-  i: TglrIntKeyFrame;
-  s: TglrSingleKeyFrame;
-  v: TglrVec2KeyFrame;
-  v2: TglrVec22KeyFrame;
-  c: TglrVec4KeyFrame;
 begin
-  fEmitter := TglrParticleEmitter2D.Create();
-  fEmitter.EmitterShapeType := peCircle;
-
-  i.t := 0;
-  i.value := 50;
-  fEmitter.ParticlesCount.Add(i);
-
-  v.t := 0;
-  v.value := dfVec2f(2, 5);
-  fEmitter.LifetimeMinMax.Add(v);
-
-  v2.t := 0;
-  v2.v1 := dfVec2f(15, 15);
-  v2.v2 := dfVec2f(25, 25);
-  fEmitter.Size.Add(v2);
-
-  c.t := 0;
-  c.value := dfVec4f(1, 0.5, 0.5, 1.0);
-  fEmitter.Color.Add(c);
-  c.t := 1.0;
-  c.value := dfVec4f(1, 0.5, 0.5, 0.0);
-  fEmitter.Color.Add(c);
-
-  v.t := 0;
-  v.value := dfVec2f(0, 5);
-  fEmitter.Velocity.Add(v);
-
-  s.t := 0;
-  s.value := 20;
-  fEmitter.VelocityDispersionAngle.Add(s);
+  fEmitter := TglrParticleEmitter2D.Create(SpriteBatch, 512);
 end;
 
 procedure TGame.DeinitParticles;
