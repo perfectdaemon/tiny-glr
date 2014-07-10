@@ -34,8 +34,10 @@ type
   PglrWindow = ^TglrWindow;
 
   function FileExists(const FileName: AnsiString): Boolean;
+  function PathExists(const FilePath: AnsiString): Boolean;
   procedure FindFiles(const aPath, aExt: AnsiString; var aList: TglrStringList);
   function ExtractFileExt(const aFileName: AnsiString): AnsiString;
+  function ExtractFilePath(const aFileName: AnsiString): AnsiString;
 
 implementation
 
@@ -46,6 +48,17 @@ begin
   Attr := GetFileAttributesA(PAnsiChar(FileName));
   if (Attr <> $ffffffff) then
     Result := (Attr and FILE_ATTRIBUTE_DIRECTORY) = 0
+  else
+    Result := False;
+end;
+
+function PathExists(const FilePath: AnsiString): Boolean;
+var
+  Attr: Dword;
+begin
+  Attr := GetFileAttributes(PAnsiChar(FilePath));
+  if Attr <> $ffffffff then
+    Result := (Attr and FILE_ATTRIBUTE_DIRECTORY) > 0
   else
     Result := False;
 end;
@@ -143,6 +156,20 @@ begin
 
   if (aFileName[i] = '.') and (i > 0) then
     Result := Copy(aFileName, i, MaxInt);
+end;
+
+function ExtractFilePath(const aFileName: AnsiString): AnsiString;
+var
+  i: Integer;
+begin
+  i := Length(aFileName) - 1;
+  while ((i > 0) and (not (aFileName[i] in ['/', '\']))) do
+    i -= 1;
+
+  if (i > 0) then
+    Result := Copy(aFileName, 0, i)
+  else
+    Result := '';
 end;
 
 procedure FindFiles(const aPath, aExt: AnsiString; var aList: TglrStringList);
