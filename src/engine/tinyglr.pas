@@ -851,6 +851,69 @@ type
 
   { TglrParticleEmitter2D }
 
+  { TglrDictionary }
+
+  TglrDictionary<Key, Value> = class
+  private
+    fKeys    : array of Key;
+    fValues  : array of Value;
+    fCount   : LongInt;
+    fCapacity: LongInt;
+    procedure BoundsCheck(Index: LongInt);
+    function GetItem(aKey: Key): Value; inline;
+    procedure SetItem(aKey: Key; aValue: Value); inline;
+  public
+    constructor Create(aCapacity: LongInt = 1); virtual;
+    destructor Destroy(); override;
+
+    function IndexOfKey(aKey: Key): LongInt;
+    function IndexOfValue(aKey: Value): LongInt;
+    function Add(aKey: Key; aValue: Value): LongInt;
+    //procedure DeleteByIndex(aIndex: LongInt);
+    //procedure Delete(aKey: Key);
+    //procedure DeleteSafe(aKey: Key);
+    //procedure DeleteSafeByIndex(aIndex: LongInt);
+
+    property Count: LongInt read fCount;
+    property Items[aKey: Key]: Value read GetItem write SetItem; default;
+  end;
+
+  TglrSingleDic = TglrDictionary<Single, Single>;
+  TglrIntDic = TglrDictionary<Single, Integer>;
+  TglrVec2fDic = TglrDictionary<Single, TdfVec2f>;
+  TglrVec4fDic = TglrDictionary<Single, TdfVec4f>;
+
+  TglrParticleEmitter2D = class
+  protected
+    type
+      TglrParticle2D = class (TglrSprite)
+        T: Single;
+        Velocity: TdfVec2f;
+      end;
+
+      TglrParticles2D = TglrObjectList<TglrParticle2D>;
+
+    var
+      fBatch: TglrSpriteBatch;
+      fParticles: TglrParticles2D;
+  public
+    //Dynamics
+    OriginBoxMinMax: TglrVec4fDic;
+    VelocityMinMax: TglrVec4fDic;
+    VelocityAngle: TglrSingleDic;
+    Color: TglrVec4fDic;
+    ParticlesPerSecond: TglrIntDic;
+    LifetimeMinMax: TglrVec2fDic;
+
+    constructor Create(aBatch: TglrSpriteBatch; aMaxParticlesCount: Integer = 256); virtual; overload;
+    constructor Create(aBatch: TglrSpriteBatch; const aStream: TglrStream;
+      aFreeStreamOnFinish: Boolean = True); virtual; overload;
+    destructor Destroy(); override;
+
+    procedure Update(const dt: Double);
+  end;
+
+  {
   TglrParticleEmitterShapeType2D = (peBox, peCircle);
   TglrSingleKeyFrame = record
     t: Single; // 0..1
@@ -940,7 +1003,10 @@ type
     procedure Update(const dt: Double);
 
     property ActiveParticles: Integer read fActiveParticles;
-  end;
+  end;      }
+
+
+
 
   {$ENDREGION}
 
@@ -1059,6 +1125,73 @@ begin
     SetLength(FItems, Length(FItems) - FCapacity);
 end;
 
+{ TglrDictionary<Key, Value> }
+
+procedure TglrDictionary<Key, Value>.BoundsCheck(Index: LongInt);
+begin
+
+end;
+
+function TglrDictionary<Key, Value>.GetItem(aKey: Key): Value;
+begin
+
+end;
+
+procedure TglrDictionary<Key, Value>.SetItem(aKey: Key; aValue: Value);
+begin
+
+end;
+
+constructor TglrDictionary<Key, Value>.Create(aCapacity: LongInt);
+begin
+
+end;
+
+destructor TglrDictionary<Key, Value>.Destroy;
+begin
+  inherited Destroy;
+end;
+
+function TglrDictionary<Key, Value>.IndexOfKey(aKey: Key): LongInt;
+begin
+
+end;
+
+function TglrDictionary<Key, Value>.IndexOfValue(aKey: Value): LongInt;
+begin
+
+end;
+
+function TglrDictionary<Key, Value>.Add(aKey: Key; aValue: Value): LongInt;
+begin
+
+end;
+
+{ TglrParticleEmitter2D }
+
+constructor TglrParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
+  aMaxParticlesCount: Integer);
+begin
+
+end;
+
+constructor TglrParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
+  const aStream: TglrStream; aFreeStreamOnFinish: Boolean);
+begin
+
+end;
+
+destructor TglrParticleEmitter2D.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TglrParticleEmitter2D.Update(const dt: Double);
+begin
+
+end;
+
+(*
 { TglrParticleEmitter2D }
 
 function TglrParticleEmitter2D.GetParticle: Integer;
@@ -1295,6 +1428,8 @@ begin
     end;
   end;
 end;
+
+*)
 
 constructor TglrTextureAtlas.Create(aImageStream, aInfoStream: TglrStream;
   aImageExt, aInfoExt: AnsiString; aFreeStreamsOnFinish: Boolean);
