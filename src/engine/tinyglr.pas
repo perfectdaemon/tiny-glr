@@ -67,7 +67,7 @@ type
     procedure SetItem(Index: LongInt; Value: T); inline;
     procedure SortFragment(CompareFunc: TglrListCompareFunc; L, R: LongInt);
   public
-    constructor Create(aCapacity: LongInt = 1); virtual;
+    constructor Create(aCapacity: LongInt = 4); virtual;
     destructor Destroy(); override;
 
     function IndexOf(Item: T): LongInt;
@@ -849,8 +849,6 @@ type
 
   {$REGION 'Particles'}
 
-  { TglrParticleEmitter2D }
-
   { TglrDictionary }
 
   TglrDictionary<Key, Value> = class
@@ -863,11 +861,11 @@ type
     function GetItem(aKey: Key): Value; inline;
     procedure SetItem(aKey: Key; aValue: Value); inline;
   public
-    constructor Create(aCapacity: LongInt = 1); virtual;
+    constructor Create(aCapacity: LongInt = 4); virtual;
     destructor Destroy(); override;
 
     function IndexOfKey(aKey: Key): LongInt;
-    function IndexOfValue(aKey: Value): LongInt;
+    function IndexOfValue(aValue: Value): LongInt;
     function Add(aKey: Key; aValue: Value): LongInt;
     //procedure DeleteByIndex(aIndex: LongInt);
     //procedure Delete(aKey: Key);
@@ -878,10 +876,13 @@ type
     property Items[aKey: Key]: Value read GetItem write SetItem; default;
   end;
 
-  TglrSingleDic = TglrDictionary<Single, Single>;
-  TglrIntDic = TglrDictionary<Single, Integer>;
-  TglrVec2fDic = TglrDictionary<Single, TdfVec2f>;
-  TglrVec4fDic = TglrDictionary<Single, TdfVec4f>;
+  //Range of byte is 0..100 (means percent of emitter animation duration)
+  TglrSingleDic = TglrDictionary<Byte, Single>;
+  TglrIntDic = TglrDictionary<Byte, Integer>;
+  TglrVec2fDic = TglrDictionary<Byte, TdfVec2f>;
+  TglrVec4fDic = TglrDictionary<Byte, TdfVec4f>;
+
+  { TglrParticleEmitter2D }
 
   TglrParticleEmitter2D = class
   protected
@@ -909,6 +910,8 @@ type
     constructor Create(aBatch: TglrSpriteBatch; const aStream: TglrStream;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
     destructor Destroy(); override;
+
+    function SaveToStream(): TglrStream;
 
     procedure Update(const dt: Double);
   end;
@@ -1129,42 +1132,76 @@ end;
 
 procedure TglrDictionary<Key, Value>.BoundsCheck(Index: LongInt);
 begin
-
+  if (Index < 0) or (Index >= FCount) then
+    Log.Write(lCritical, 'Dictionary index out of bounds (' + Convert.ToString(Index) + ')');
 end;
 
 function TglrDictionary<Key, Value>.GetItem(aKey: Key): Value;
+var
+  i: Integer;
 begin
-
+  for i := 0 to fCount - 1 do
+    if fKeys[i] = aKey then
+      Exit(fValues[i]);
 end;
 
 procedure TglrDictionary<Key, Value>.SetItem(aKey: Key; aValue: Value);
+var
+  i: Integer;
 begin
-
+  for i := 0 to fCount - 1 do
+    if fKeys[i] = aKey then
+      fValues[i] := aValue;
 end;
 
 constructor TglrDictionary<Key, Value>.Create(aCapacity: LongInt);
 begin
-
+  inherited Create();
+  fCount := 0;
+  SetLength(fKeys, fCount);
+  SetLength(fValues, fCount);
+  fCapacity := aCapacity;
 end;
 
 destructor TglrDictionary<Key, Value>.Destroy;
 begin
+  fCount := 0;
+  SetLength(fKeys, fCount);
+  SetLength(fValues, fCount);
   inherited Destroy;
 end;
 
 function TglrDictionary<Key, Value>.IndexOfKey(aKey: Key): LongInt;
+var
+  i: Integer;
 begin
-
+  for i := 0 to fCount - 1 do
+    if fKeys[i] = aKey then
+      Exit(i);
+  Exit(-1);
 end;
 
-function TglrDictionary<Key, Value>.IndexOfValue(aKey: Value): LongInt;
+function TglrDictionary<Key, Value>.IndexOfValue(aValue: Value): LongInt;
+var
+  i: Integer;
 begin
-
+  for i := 0 to fCount - 1 do
+    if fValues[i] = aValue then
+      Exit(i);
+  Exit(-1);
 end;
 
 function TglrDictionary<Key, Value>.Add(aKey: Key; aValue: Value): LongInt;
 begin
-
+  if fCount mod fCapacity = 0 then
+  begin
+    SetLength(fKeys, Length(fKeys) + fCapacity);
+    SetLength(fValues, Length(fValues) + fCapacity);
+  end;
+  fKeys[fCount] := aKey;
+  fValues[fCount] := aValue;
+  Result := fCount;
+  Inc(fCount);
 end;
 
 { TglrParticleEmitter2D }
@@ -1172,18 +1209,23 @@ end;
 constructor TglrParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
   aMaxParticlesCount: Integer);
 begin
-
+  inherited Create();
 end;
 
 constructor TglrParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
   const aStream: TglrStream; aFreeStreamOnFinish: Boolean);
 begin
-
+  Create(aBatch, 256);
 end;
 
 destructor TglrParticleEmitter2D.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TglrParticleEmitter2D.SaveToStream: TglrStream;
+begin
+
 end;
 
 procedure TglrParticleEmitter2D.Update(const dt: Double);
