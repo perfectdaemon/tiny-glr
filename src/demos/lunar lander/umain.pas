@@ -296,7 +296,7 @@ end;
 
 procedure TGame.InitParticles;
 begin
-  fEmitter := TglrParticleEmitter2D.Create(SpriteBatch, 512);
+  fEmitter := TglrParticleEmitter2D.Create(SpriteBatch, Material, Atlas.GetRegion('particle.png'));
 end;
 
 procedure TGame.DeinitParticles;

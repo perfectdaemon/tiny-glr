@@ -860,6 +860,10 @@ type
     procedure BoundsCheck(Index: LongInt);
     function GetItem(aKey: Key): Value; inline;
     procedure SetItem(aKey: Key; aValue: Value); inline;
+    function GetKey(aIndex: Integer): Key; inline;
+    procedure SetKey(aIndex: Integer; aKey: Key); inline;
+    function GetValue(aIndex: Integer): Value; inline;
+    procedure SetValue(aIndex: Integer; aValue: Value); inline;
   public
     constructor Create(aCapacity: LongInt = 4); virtual;
     destructor Destroy(); override;
@@ -874,6 +878,10 @@ type
 
     property Count: LongInt read fCount;
     property Items[aKey: Key]: Value read GetItem write SetItem; default;
+    property Keys[aIndex: Integer]: Key read GetKey write SetKey;
+    property Values[aIndex: Integer]: Value read GetValue write SetValue;
+
+    procedure SortByKey(aAscending: Boolean = True);
   end;
 
   //Range of byte is 0..100 (means percent of emitter animation duration)
@@ -889,6 +897,7 @@ type
     type
       TglrParticle2D = class (TglrSprite)
         T: Single;
+        LifeTime: Single;
         Velocity: TdfVec2f;
       end;
 
@@ -896,6 +905,8 @@ type
 
     var
       fBatch: TglrSpriteBatch;
+      fMaterial: TglrMaterial;
+      fTextureRegion: PglrTextureRegion;
       fParticles: TglrParticles2D;
   public
     //Dynamics
@@ -905,9 +916,17 @@ type
     Color: TglrVec4fDic;
     ParticlesPerSecond: TglrIntDic;
     LifetimeMinMax: TglrVec2fDic;
+    ParticleSizeMinMax: TglrVec4fDic;
 
-    constructor Create(aBatch: TglrSpriteBatch; aMaxParticlesCount: Integer = 256); virtual; overload;
-    constructor Create(aBatch: TglrSpriteBatch; const aStream: TglrStream;
+    //Params
+    Duration, Time: Single;
+
+    constructor Create(aBatch: TglrSpriteBatch;
+      aMaterial: TglrMaterial; aTextureRegion: PglrTextureRegion = nil); virtual; overload;
+    constructor Create(aBatch: TglrSpriteBatch;
+      aMaterial: TglrMaterial;
+      const aStream: TglrStream;
+      aTextureRegion: PglrTextureRegion = nil;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
     destructor Destroy(); override;
 
@@ -1132,7 +1151,7 @@ end;
 
 procedure TglrDictionary<Key, Value>.BoundsCheck(Index: LongInt);
 begin
-  if (Index < 0) or (Index >= FCount) then
+  if (Index < 0) or (Index >= fCount) then
     Log.Write(lCritical, 'Dictionary index out of bounds (' + Convert.ToString(Index) + ')');
 end;
 
@@ -1152,6 +1171,30 @@ begin
   for i := 0 to fCount - 1 do
     if fKeys[i] = aKey then
       fValues[i] := aValue;
+end;
+
+function TglrDictionary<Key, Value>.GetKey(aIndex: Integer): Key;
+begin
+  BoundsCheck(aIndex);
+  Exit(fKeys[aIndex]);
+end;
+
+procedure TglrDictionary<Key, Value>.SetKey(aIndex: Integer; aKey: Key);
+begin
+  BoundsCheck(aIndex);
+  fKeys[aIndex] := aKey;
+end;
+
+function TglrDictionary<Key, Value>.GetValue(aIndex: Integer): Value;
+begin
+  BoundsCheck(aIndex);
+  Exit(fValues[aIndex]);
+end;
+
+procedure TglrDictionary<Key, Value>.SetValue(aIndex: Integer; aValue: Value);
+begin
+  BoundsCheck(aIndex);
+  fValues[aIndex] := aValue;
 end;
 
 constructor TglrDictionary<Key, Value>.Create(aCapacity: LongInt);
@@ -1204,33 +1247,108 @@ begin
   Inc(fCount);
 end;
 
+procedure TglrDictionary<Key, Value>.SortByKey(aAscending: Boolean);
+var
+  i, j, max: LongInt;
+  k: Key;
+  v: Value;
+begin
+  for i := 0 to fCount - 2 do
+  begin
+    max := i;
+    for j := i to fCount - 1 do
+      if (aAscending and (fKeys[j] < fKeys[max])) or
+        (not aAscending and (fKeys[j] > fKeys[max])) then
+        max := j;
+
+    if max <> i then
+    begin
+      k := fKeys[i];
+      v := fValues[i];
+      fKeys[i] := fKeys[max];
+      fValues[i] := fValues[max];
+      fKeys[max] := k;
+      fValues[max] := v;
+    end;
+  end;
+end;
+
 { TglrParticleEmitter2D }
 
+
 constructor TglrParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
-  aMaxParticlesCount: Integer);
+  aMaterial: TglrMaterial; aTextureRegion: PglrTextureRegion);
+var
+  s: TglrParticle2D;
+  i: Integer;
 begin
   inherited Create();
+  fBatch := aBatch;
+  fMaterial := aMaterial;
+  fTextureRegion := aTextureRegion;
+  fParticles := TglrParticles2D.Create(128);
+  for i := 0 to 127 do
+  begin
+    s := TglrParticle2D.Create();
+    if fTextureRegion <> nil then
+      s.SetTextureRegion(fTextureRegion);
+    s.Velocity.Reset();
+    s.T := 0.0;
+    s.Visible := False;
+    s.LifeTime := 0;
+  end;
+
+  Duration := 1.0;
+  Time := 0;
+
+  OriginBoxMinMax    := TglrVec4fDic.Create (100);
+  VelocityMinMax     := TglrVec4fDic.Create (100);
+  VelocityAngle      := TglrSingleDic.Create(100);
+  Color              := TglrVec4fDic.Create (100);
+  ParticlesPerSecond := TglrIntDic.Create   (100);
+  LifetimeMinMax     := TglrVec2fDic.Create (100);
+  ParticleSizeMinMax := TglrVec4fDic.Create (100);
 end;
 
 constructor TglrParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
-  const aStream: TglrStream; aFreeStreamOnFinish: Boolean);
+  aMaterial: TglrMaterial; const aStream: TglrStream;
+  aTextureRegion: PglrTextureRegion; aFreeStreamOnFinish: Boolean);
 begin
-  Create(aBatch, 256);
+  Create(aBatch, aMaterial, aTextureRegion);
 end;
 
 destructor TglrParticleEmitter2D.Destroy;
 begin
+  fParticles.Free();
+  OriginBoxMinMax.Free();
+  VelocityMinMax.Free();
+  VelocityAngle.Free();
+  Color.Free();
+  ParticlesPerSecond.Free();
+  LifetimeMinMax.Free();
+  ParticleSizeMinMax.Free();
   inherited Destroy;
 end;
 
 function TglrParticleEmitter2D.SaveToStream: TglrStream;
 begin
-
+  Log.Write(lCritical, 'ParticleEmitter2D: SaveToStream is not implemented');
 end;
 
 procedure TglrParticleEmitter2D.Update(const dt: Double);
+var
+  i: Integer;
 begin
-
+  for i := 0 to fParticles.Count - 1 do
+    if fParticles[i].Visible then
+      with fParticles[i] do
+      begin
+        Position += dfVec3f(Velocity * dt, 0);
+        T := T + dt;
+        //todo: Update other stuff
+        if T >= LifeTime then
+          Visible := False;
+      end;
 end;
 
 (*
