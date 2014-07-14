@@ -853,6 +853,7 @@ type
 
   TglrDictionary<Key, Value> = class
   private
+    fSorted  : Boolean;
     fKeys    : array of Key;
     fValues  : array of Value;
     fCount   : LongInt;
@@ -882,6 +883,7 @@ type
     property Values[aIndex: Integer]: Value read GetValue write SetValue;
 
     procedure SortByKey(aAscending: Boolean = True);
+    function GetLerpValue(aKey: Key): Value;
   end;
 
   //Range of byte is 0..100 (means percent of emitter animation duration)
@@ -908,11 +910,14 @@ type
       fMaterial: TglrMaterial;
       fTextureRegion: PglrTextureRegion;
       fParticles: TglrParticles2D;
+
+    function GetFreeParticleIndex(): Integer;
   public
     //Dynamics
     OriginBoxMinMax: TglrVec4fDic;
     VelocityMinMax: TglrVec4fDic;
-    VelocityAngle: TglrSingleDic;
+    VelocityDispersionAngle: TglrSingleDic;
+    VelocityAngularMinMax: TglrVec2fDic;
     Color: TglrVec4fDic;
     ParticlesPerSecond: TglrIntDic;
     LifetimeMinMax: TglrVec2fDic;
@@ -1183,12 +1188,35 @@ procedure TglrDictionary<Key, Value>.SetKey(aIndex: Integer; aKey: Key);
 begin
   BoundsCheck(aIndex);
   fKeys[aIndex] := aKey;
+  fSorted := False;
 end;
 
 function TglrDictionary<Key, Value>.GetValue(aIndex: Integer): Value;
 begin
   BoundsCheck(aIndex);
   Exit(fValues[aIndex]);
+end;
+
+function TglrDictionary<Key, Value>.GetLerpValue(aKey: Key): Value;
+var
+  i: Integer;
+  k: Key;
+begin
+  if not fSorted then
+    Log.Write(lCritical, 'Dictionary: can not return lerp value, dictionary is not sorted!');
+
+  i := IndexOfKey(aKey);
+  if i <> -1 then
+    Exit(fValues[i]);
+
+  for i := 0 to fCount - 1 do
+    if fKeys[i] > aKey then
+      break;
+
+  if (i = 0) or (i = fCount - 1) then
+    Exit(fValues[i])
+  else
+
 end;
 
 procedure TglrDictionary<Key, Value>.SetValue(aIndex: Integer; aValue: Value);
@@ -1204,6 +1232,7 @@ begin
   SetLength(fKeys, fCount);
   SetLength(fValues, fCount);
   fCapacity := aCapacity;
+  fSorted := False;
 end;
 
 destructor TglrDictionary<Key, Value>.Destroy;
@@ -1245,6 +1274,7 @@ begin
   fValues[fCount] := aValue;
   Result := fCount;
   Inc(fCount);
+  fSorted := False;
 end;
 
 procedure TglrDictionary<Key, Value>.SortByKey(aAscending: Boolean);
@@ -1271,10 +1301,29 @@ begin
       fValues[max] := v;
     end;
   end;
+  fSorted := True;
 end;
 
 { TglrParticleEmitter2D }
 
+function TglrParticleEmitter2D.GetFreeParticleIndex: Integer;
+var
+  i: Integer;
+  p: TglrParticle2D;
+begin
+  for i := 0 to fParticles.Count - 1 do
+    if not fParticles[i].Visible then
+      Exit(i);
+
+  p := TglrParticle2D.Create();
+  if fTextureRegion <> nil then
+    p.SetTextureRegion(fTextureRegion);
+  p.Velocity.Reset();
+  p.T := 0.0;
+  p.Visible := False;
+  p.LifeTime := 0;
+  Exit(fParticles.Add(p));
+end;
 
 constructor TglrParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
   aMaterial: TglrMaterial; aTextureRegion: PglrTextureRegion);
@@ -1296,18 +1345,20 @@ begin
     s.T := 0.0;
     s.Visible := False;
     s.LifeTime := 0;
+    fParticles.Add(s);
   end;
 
   Duration := 1.0;
   Time := 0;
 
-  OriginBoxMinMax    := TglrVec4fDic.Create (100);
-  VelocityMinMax     := TglrVec4fDic.Create (100);
-  VelocityAngle      := TglrSingleDic.Create(100);
-  Color              := TglrVec4fDic.Create (100);
-  ParticlesPerSecond := TglrIntDic.Create   (100);
-  LifetimeMinMax     := TglrVec2fDic.Create (100);
-  ParticleSizeMinMax := TglrVec4fDic.Create (100);
+  OriginBoxMinMax         := TglrVec4fDic.Create (100);
+  VelocityMinMax          := TglrVec4fDic.Create (100);
+  VelocityDispersionAngle := TglrSingleDic.Create(100);
+  VelocityAngularMinMax   := TglrVec2fDic.Create(100);
+  Color                   := TglrVec4fDic.Create (100);
+  ParticlesPerSecond      := TglrIntDic.Create   (100);
+  LifetimeMinMax          := TglrVec2fDic.Create (100);
+  ParticleSizeMinMax      := TglrVec4fDic.Create (100);
 end;
 
 constructor TglrParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
@@ -1319,10 +1370,11 @@ end;
 
 destructor TglrParticleEmitter2D.Destroy;
 begin
-  fParticles.Free();
+  fParticles.Free(True);
   OriginBoxMinMax.Free();
   VelocityMinMax.Free();
-  VelocityAngle.Free();
+  VelocityDispersionAngle.Free();
+  VelocityAngularMinMax.Free();
   Color.Free();
   ParticlesPerSecond.Free();
   LifetimeMinMax.Free();
@@ -1339,6 +1391,8 @@ procedure TglrParticleEmitter2D.Update(const dt: Double);
 var
   i: Integer;
 begin
+  Time += dt;
+
   for i := 0 to fParticles.Count - 1 do
     if fParticles[i].Visible then
       with fParticles[i] do
@@ -1349,6 +1403,9 @@ begin
         if T >= LifeTime then
           Visible := False;
       end;
+
+  //todo: add new particles
+
 end;
 
 (*

@@ -2,11 +2,6 @@ unit ogl;
 
 interface
 
-uses
-  {$IFDEF WINDOWS}
-  Windows;
-  {$ENDIF}
-
 type
 
   TRGBA = record
@@ -233,6 +228,9 @@ var
 implementation
 
 uses
+  {$IFDEF WINDOWS}
+  Windows,
+  {$ENDIF}
   tinyglr;
 
 procedure TglrGL.Init;
