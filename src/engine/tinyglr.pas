@@ -1098,8 +1098,9 @@ procedure TglrObjectList<T>.Free(aFreeObjects: Boolean);
 var
   i: Integer;
 begin
-  for i := 0 to Count - 1 do
-    TObject(FItems[i]).Free();
+  if aFreeObjects then
+    for i := 0 to Count - 1 do
+      TObject(FItems[i]).Free();
   inherited Free();
 end;
 
@@ -1200,7 +1201,7 @@ end;
 function TglrDictionary<Key, Value>.GetLerpValue(aKey: Key): Value;
 var
   i: Integer;
-  k: Key;
+  t: single;
 begin
   if not fSorted then
     Log.Write(lCritical, 'Dictionary: can not return lerp value, dictionary is not sorted!');
@@ -1216,7 +1217,10 @@ begin
   if (i = 0) or (i = fCount - 1) then
     Exit(fValues[i])
   else
-
+  begin
+    t := (aKey - fKeys[i - 1]) / (fKeys[i] - fKeys[i - 1]);
+    Result := Value(fValues[i - 1] + (fValues[i] - fValues[i - 1]) * t);
+  end;
 end;
 
 procedure TglrDictionary<Key, Value>.SetValue(aIndex: Integer; aValue: Value);
