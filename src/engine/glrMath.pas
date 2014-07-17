@@ -99,7 +99,10 @@ type
     x, y, z, w: Single;
     class operator Equal(const v1, v2: TdfVec4f): Boolean;
     class operator Multiply(const A: Single; v: TdfVec4f): TdfVec4f;
+    class operator Multiply(const v: TdfVec4f; a: Single): TdfVec4f;
     class operator Multiply(const v1, v2: TdfVec4f): TdfVec4f;
+    class operator Add(const v1, v2: TdfVec4f): TdfVec4f;
+    class operator Subtract(const v1, v2: TdfVec4f): TdfVec4f;
     function Dot(const v: TdfVec3f): Single;
     function Normal: TdfVec4f;
     procedure Normalize;
@@ -832,12 +835,39 @@ begin
   Result.w := v.w;
 end;
 
+class operator TdfVec4f.Multiply(const v: TdfVec4f; a: Single): TdfVec4f;
+begin
+  result := a * v;
+end;
+
 class operator TdfVec4f.Multiply(const v1, v2: TdfVec4f): TdfVec4f;
 begin
   Result.x := v1.x * v2.x;
   Result.y := v1.y * v2.y;
   Result.z := v1.z * v2.z;
   Result.w := v1.w * v2.w;
+end;
+
+class operator TdfVec4f.Add(const v1, v2: TdfVec4f): TdfVec4f;
+begin
+  with Result do
+  begin
+    x := v1.x + v2.x;
+    y := v1.y + v2.y;
+    z := v1.z + v2.z;
+    w := v1.w + v2.w;
+  end;
+end;
+
+class operator TdfVec4f.Subtract(const v1, v2: TdfVec4f): TdfVec4f;
+begin
+  with Result do
+  begin
+    x := v1.x - v2.x;
+    y := v1.y - v2.y;
+    z := v1.z - v2.z;
+    w := v1.w - v2.w;
+  end;
 end;
 
 function TdfVec4f.Dot(const v: TdfVec3f): Single;
