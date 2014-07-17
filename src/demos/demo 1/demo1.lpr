@@ -10,7 +10,7 @@ type
   TGame = class(TglrGame)
   protected
     dx, dy: Integer;
-    Scene, SceneHud: TglrScene;
+    Camera, CameraHud: TglrCamera;
     Material: TglrMaterial;
 
     meshData: array of TglrVertexP3T2N3;
@@ -144,8 +144,6 @@ begin
   atlas := TglrTextureAtlas.Create(FileSystem.ReadResource('data/atlas.tga'), FileSystem.ReadResource('data/atlas.atlas'), 'tga', 'cheetah');
 
   Batch := TglrSpriteBatch.Create();
-  Batch.Material := Material;
-  SceneHud.Root.Childs.Add(Batch);
   SetLength(Sprites, count);
   for i := 0 to count - 1 do
   begin
@@ -153,9 +151,7 @@ begin
     Sprites[i].Position := dfVec3f(Random(800), Random(600), Random(15));
     Sprites[i].SetVerticesColor(dfVec4f(Random(), Random(), Random, 1));
     Sprites[i].SetTextureRegion(atlas.GetRegion('goodline.png'));
-    Batch.Childs.Add(Sprites[i]);
   end;
-  //Batch.SortFarthestFirst();
 end;
 
 procedure TGame.CreateFont;
@@ -166,14 +162,23 @@ begin
   Text.LetterSpacing := 1;
   Text.Position := dfVec3f(10, 150, 90);
   FontBatch := TglrFontBatch.Create(Font);
-  FontBatch.Childs.Add(Text);
-  SceneHud.Root.Childs.Add(FontBatch);
 end;
 
 procedure TGame.OnFinish;
+var
+  i: Integer;
 begin
+  for i := 0 to Length(Sprites) - 1 do
+    Sprites[i].Free();
+  Font.Free();
+  Text.Free();
+  FontBatch.Free();
+  Batch.Free();
+  atlas.Free();
+  Material.Free();
+  Camera.Free();
+  CameraHud.Free();
   WriteLn('End');
-  Scene.Free();
 end;
 
 procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -187,8 +192,8 @@ begin
 
   if (aType = itTouchMove) and (aKey = kLeftButton) then
   begin
-    Scene.Camera.Rotate((x - dx) * deg2rad, dfVec3f(0, 1, 0));
-    Scene.Camera.Rotate((y - dy) * deg2rad, Scene.Camera.Right);
+    Camera.Rotate((x - dx) * deg2rad, dfVec3f(0, 1, 0));
+    Camera.Rotate((y - dy) * deg2rad, Camera.Right);
     dx := X;
     dy := Y;
   end;
@@ -200,9 +205,9 @@ begin
   end;
 
   if (aType = itWheel) then
-    Scene.Camera.Translate(0, 0, -Sign(aOtherParam));
+    Camera.Translate(0, 0, -Sign(aOtherParam));
   if (aType = itKeyUp) and (aKey = kU) then
-    log.Write(lInformation, 'Camera.Mat: '#13#10 + Convert.ToString(Scene.Camera.Matrix, 2));
+    log.Write(lInformation, 'Camera.Mat: '#13#10 + Convert.ToString(Camera.Matrix, 2));
 end;
 
 procedure TGame.OnPause;
@@ -212,13 +217,17 @@ end;
 
 procedure TGame.OnRender;
 begin
-  Scene.RenderScene();
-
   Material.Bind();
+  Camera.Update();
   RenderMesh();
-  Material.Unbind();
 
-  SceneHud.RenderScene();
+  CameraHud.Update();
+  Batch.Start();
+  Batch.Draw(Sprites);
+  Batch.Finish();
+  FontBatch.Start();
+  FontBatch.Draw(Text);
+  FontBatch.Finish();
 end;
 
 procedure TGame.OnResume;
@@ -237,13 +246,13 @@ begin
 
   Render.SetCullMode(cmBack);
 
-  Scene := TglrScene.Create(True);
-  Scene.Camera.SetCamera(dfVec3f(5, 0, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
-  Scene.Camera.ProjectionMode := pmPerspective;
+  Camera := TglrCamera.Create();
+  Camera.SetCamera(dfVec3f(5, 0, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  Camera.ProjectionMode := pmPerspective;
 
-  SceneHud := TglrScene.Create(True);
-  SceneHud.Camera.ProjectionMode := pmOrtho;
-  SceneHud.Camera.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  CameraHud := TglrCamera.Create();
+  CameraHud.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  CameraHud.ProjectionMode := pmOrtho;
 
   Material := TglrMaterial.Create();
   Material.Shader.Free();
