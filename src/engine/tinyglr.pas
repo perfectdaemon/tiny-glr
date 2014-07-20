@@ -184,7 +184,7 @@ type
   TglrFrameBufferId = type LongWord;
   TglrIndex = type Word;
 
-  //TglrTextureFormat = (tfFuck);
+  TglrTextureFormat = (tfRGB8, tfRGBA8, tfBGR8, tfBGRA8);
   TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2, vfPos3Tex2Nor3, vfPos3Tex2Col4);
   TglrIndexFormat = (ifByte, ifShort, ifInt);
 
@@ -231,8 +231,9 @@ type
     procedure SetWrapR(aWrap: TglrTexWrap);
 
     //constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
+    constructor Create(aData: Pointer; aWidth, aHeight: Integer; aFormat: TglrTextureFormat); virtual; overload;
     constructor Create(aStream: TglrStream; aExt: AnsiString;
-      aFreeStreamOnFinish: Boolean = True); virtual;
+      aFreeStreamOnFinish: Boolean = True); virtual; overload;
     //constructor CreateEmpty2D(aWidth, aHeight, aFormat: TGLConst);
     //todo 1d, 3d
     destructor Destroy(); override;
@@ -1048,7 +1049,7 @@ type
     class procedure Deinit();
   public
     class var SpriteShader: TglrShaderProgram;
-//    class var BlankTexture: TglrTexture;
+    class var BlankTexture: TglrTexture;
   end;
 
   {$ENDREGION}
@@ -2203,13 +2204,18 @@ end;
 { Default }
 
 class procedure Default.Init;
+var
+  blankData: Pointer;
 begin
   SpriteShader := TglrShaderProgram.Create();
   SpriteShader.Attach(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
   SpriteShader.Attach(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
   SpriteShader.Link();
 
-//  BlankTexture := TglrTexture.Create();
+  GetMem(blankData, 1 * 1 * 3(*RGB*));
+  FillChar(blankData^, 3, $FF);
+  BlankTexture := TglrTexture.Create(blankData, 1, 1, tfRGB8);
+  FreeMem(blankData);
 
   fInited := True;
 end;
@@ -2220,7 +2226,7 @@ begin
     Exit();
 
   SpriteShader.Free();
-//  BlankTexture.Free();
+  BlankTexture.Free();
 end;
 
 { TglrMaterial }
@@ -3887,14 +3893,81 @@ begin
   gl.BindTexture(Target, 0);
 end;
 
+constructor TglrTexture.Create(aData: Pointer; aWidth, aHeight: Integer;
+  aFormat: TglrTextureFormat);
+var
+  iFormat, cFormat, dType: TGLConst;
+  anisotropy: Integer;
+begin
+  case aFormat of
+    tfBGR8:
+    begin
+      iFormat := GL_RGB8;
+      cFormat := GL_BGR;
+      dType := GL_UNSIGNED_BYTE;
+    end;
+    tfBGRA8:
+    begin
+      iFormat := GL_RGBA8;
+      cFormat := GL_BGRA;
+      dType := GL_UNSIGNED_BYTE;
+    end;
+    tfRGB8:
+    begin
+      iFormat := GL_RGB8;
+      cFormat := GL_RGB;
+      dType := GL_UNSIGNED_BYTE;
+    end;
+    tfRGBA8:
+    begin
+      iFormat := GL_RGBA8;
+      cFormat := GL_RGBA;
+      dType := GL_UNSIGNED_BYTE;
+    end;
+  end;
+
+  Width := aWidth;
+  Height := aHeight;
+
+  gl.GenTextures(1, @Id);
+  Target := GL_TEXTURE_2D;
+  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load started');
+
+  gl.BindTexture(Target, Self.Id);
+
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Ord(GL_LINEAR));
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Ord(GL_LINEAR));
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, Ord(GL_REPEAT));
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, Ord(GL_REPEAT));
+  gl.GetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, @anisotropy);
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
+
+  gl.TexImage2D(GL_TEXTURE_2D, 0, iFormat, Width, Height, 0, cFormat, dType, aData);
+
+  gl.BindTexture(GL_TEXTURE_2D, 0);
+
+  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load completed');
+end;
+
 constructor TglrTexture.Create(aStream: TglrStream; aExt: AnsiString;
   aFreeStreamOnFinish: Boolean);
 var
   data: Pointer;
   iFormat, cFormat, dType: TGLConst;
-  pSize, anisotropy: Integer;
+  pSize: Integer;
 
+  aFormat: TglrTextureFormat;
 begin
+  data := LoadTexture(aStream, aExt, iFormat, cFormat, dType, pSize, Self.Width, Self.Height);
+  case cFormat of
+    GL_BGR:  aFormat := tfBGR8;
+    GL_BGRA: aFormat := tfBGRA8;
+    GL_RGB:  aFormat := tfRGB8;
+    GL_RGBA: aFormat := tfRGBA8;
+  end;
+
+  Create(data, Width, Height, aFormat);
+(*
   gl.GenTextures(1, @Id);
   Target := GL_TEXTURE_2D;
 
@@ -3916,6 +3989,7 @@ begin
 
   Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load completed');
 
+*)
   Freemem(data, Width * Height * pSize);
   if (aFreeStreamOnFinish) then
     aStream.Free();
