@@ -872,10 +872,10 @@ type
     function IndexOfKey(aKey: Key): LongInt;
     function IndexOfValue(aValue: Value): LongInt;
     function Add(aKey: Key; aValue: Value): LongInt;
-    //procedure DeleteByIndex(aIndex: LongInt);
-    //procedure Delete(aKey: Key);
-    //procedure DeleteSafe(aKey: Key);
-    //procedure DeleteSafeByIndex(aIndex: LongInt);
+    procedure DeleteByIndex(aIndex: LongInt);
+    procedure Delete(aKey: Key);
+    procedure DeleteSafe(aKey: Key);
+    procedure DeleteSafeByIndex(aIndex: LongInt);
 
     property Count: LongInt read fCount;
     property Items[aKey: Key]: Value read GetItem write SetItem; default;
@@ -1306,6 +1306,63 @@ begin
     end;
   end;
   fSorted := True;
+end;
+
+procedure TglrDictionary<Key, Value>.DeleteByIndex(aIndex: LongInt);
+begin
+  BoundsCheck(aIndex);
+  if aIndex <> fCount - 1 then
+  begin
+    Move(fKeys[aIndex + 1], fKeys[aIndex], (fCount - aIndex - 1) * SizeOf(Key));
+    Move(fValues[aIndex + 1], fValues[aIndex], (fCount - aIndex - 1) * SizeOf(Value));
+  end;
+  Dec(fCount);
+  if Length(fKeys) - fCount + 1 > fCapacity then
+  begin
+    SetLength(fKeys, Length(fKeys) - fCapacity);
+    SetLength(fValues, Length(fValues) - fCapacity);
+  end;
+end;
+
+procedure TglrDictionary<Key, Value>.Delete(aKey: Key);
+var
+  i: Integer;
+begin
+  i := IndexOfKey(aKey);
+  if i <> -1 then
+    DeleteByIndex(i)
+  else
+    Log.Write(lError, 'Dictionary: No item found at list, delete is impossible');
+end;
+
+procedure TglrDictionary<Key, Value>.DeleteSafe(aKey: Key);
+var
+  i: Integer;
+begin
+  i := IndexOfKey(aKey);
+  if i <> -1 then
+    DeleteSafeByIndex(i)
+  else
+    Log.Write(lError, 'Dictionary: No item found at list, delete is impossible');
+end;
+
+procedure TglrDictionary<Key, Value>.DeleteSafeByIndex(aIndex: LongInt);
+var
+  i: Integer;
+begin
+  BoundsCheck(aIndex);
+  for i := aIndex to fCount - 2 do
+  begin
+    fKeys[i] := fKeys[i + 1];
+    fValues[i] := fValues[i + 1];
+  end;
+
+  Dec(fCount);
+  if Length(fKeys) - fCount + 1 > fCapacity then
+  begin
+    SetLength(fKeys, Length(fKeys) - fCapacity);
+    SetLength(fValues, Length(fValues) - fCapacity);
+  end;
 end;
 
 { TglrParticleEmitter2D }
