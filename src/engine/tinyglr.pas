@@ -567,7 +567,6 @@ type
   { TglrNode }
 
   TglrNode = class;
-  TglrNodeList = TglrObjectList<TglrNode>;
 
   TglrNode = class
   protected
@@ -582,13 +581,11 @@ type
     procedure SetUp(aUp: TdfVec3f);
     procedure UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TdfVec3f); virtual;
     procedure UpdateVectorsFromMatrix(); virtual;
-    procedure RenderChilds(); virtual;
     procedure DoRender(); virtual;
   public
     Visible: Boolean;
     Matrix: TdfMat4f;
     Position: TdfVec3f;
-    Childs: TglrNodeList;
 
     constructor Create; virtual;
     destructor Destroy; override;
@@ -2852,14 +2849,6 @@ begin
   end;
 end;
 
-procedure TglrNode.RenderChilds;
-var
-  i: Integer;
-begin
-  for i := 0 to Childs.Count - 1 do
-    Childs[i].RenderSelf;
-end;
-
 procedure TglrNode.DoRender;
 begin
   //nothing
@@ -2868,7 +2857,6 @@ end;
 constructor TglrNode.Create;
 begin
   inherited Create();
-  Childs := TglrNodeList.Create();
   Matrix.Identity;
   Visible := True;
   Parent := nil;
@@ -2877,9 +2865,6 @@ end;
 
 destructor TglrNode.Destroy;
 begin
-  if (Parent <> nil) then
-    Parent.Childs.Delete(Self, False);
-  Childs.Free(True);
   inherited Destroy;
 end;
 
@@ -2893,7 +2878,6 @@ begin
   if (not Visible) then
     Exit();
   DoRender();
-  RenderChilds();
 end;
 
 { FileSystem }
