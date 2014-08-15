@@ -3613,6 +3613,7 @@ begin
   gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, Id);
   gl.BufferSubData(GL_ELEMENT_ARRAY_BUFFER, aStart, aCount * IF_STRIDE[Format], aData);
   gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  Render.fIB := 0;
 end;
 
 { TglrVertexBuffer }
@@ -3680,6 +3681,7 @@ begin
   gl.BindBuffer(GL_ARRAY_BUFFER, Id);
   gl.BufferSubData(GL_ARRAY_BUFFER, aStart, aCount * VF_STRIDE[Format], aData);
   gl.BindBuffer(GL_ARRAY_BUFFER, 0);
+  Render.fVB := 0;
 end;
 
 function TglrVertexBuffer.Map(aAccess: TglrVertexBufferMapAccess): Pointer;
