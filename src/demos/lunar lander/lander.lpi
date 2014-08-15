@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="10">
+    <Units Count="11">
       <Unit0>
         <Filename Value="lander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -82,6 +82,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="UPhysics2DTypes"/>
       </Unit9>
+      <Unit10>
+        <Filename Value="..\..\engine\uTweener.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uTweener"/>
+      </Unit10>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
