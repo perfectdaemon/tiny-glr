@@ -18,7 +18,7 @@ uses
   ogl, glrMath;
 
 const
-  TINYGLR_VERSION = '0.1 :: pre-alpha';
+  TINYGLR_VERSION = '0.1 :: stable';
   LOG_FILE = 'tinyglr.log';
 
 type
