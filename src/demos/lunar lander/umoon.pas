@@ -54,6 +54,7 @@ type
     procedure DeleteLandingZone(aIndex: Integer);
 
     procedure RenderSelf();
+    procedure RenderLandingZones();
 
     procedure LoadLevel(const aStream: TglrStream; aFreeStreamOnFinish: Boolean = True);
     function SaveLevel(): TglrStream;
@@ -270,17 +271,22 @@ begin
 end;
 
 procedure TMoon.RenderSelf;
-var
-  i: Integer;
 begin
   fMoonMaterial.Bind();
   Render.DrawTriangles(fVB, fIB, 0, fIndCount);
 //  fMoonMaterial.Unbind();
+end;
+
+procedure TMoon.RenderLandingZones;
+var
+  i: Integer;
+begin
   fMaterial.Bind();
   fBatch.Start();
   fFontBatch.Start();
   if fEditMode then
     fBatch.Draw(VerticesPoints);
+
   for i := 0 to Length(LandingZones) - 1 do
   begin
     fBatch.Draw(LandingZones[i].Sprite);
@@ -288,7 +294,7 @@ begin
   end;
   fBatch.Finish();
   fFontBatch.Finish();
-//  fMaterial.Unbind();
+  //fMaterial.Unbind();
 end;
 
 procedure TMoon.LoadLevel(const aStream: TglrStream;

@@ -633,6 +633,8 @@ begin
     SpriteBatch.Draw(FuelLevel.sLevel);
   SpriteBatch.Finish();
 
+  Moon.RenderLandingZones();
+
   FontBatch.Start();
     FontBatch.Draw(DebugText);
   FontBatch.Finish();
