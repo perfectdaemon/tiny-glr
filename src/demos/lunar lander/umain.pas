@@ -49,9 +49,10 @@ type
     fEditType: TEditType;
 
     // debug purposes only
-    fEmitter: TglrParticleEmitter2D;
+    fEmitter: TglrCustomParticleEmitter2D;
     procedure InitParticles();
     procedure DeinitParticles();
+    procedure OnParticlesUpdate(const dt: Double);
 
     function GetShipDistanceToNearestMoonVertex(): Single;
     procedure PhysicsAfter(const FixedDeltaTime: Double);
@@ -124,8 +125,6 @@ begin
   sLevel.Height := sLevel.Height * 0.9;
 
   sLevelOrigWidth := sLevel.Width;
-  //Game.SpriteBatch.Childs.Add(sBack);
-  //Game.SpriteBatch.Childs.Add(sLevel);
 
   Level := MAX_FUEL;
 end;
@@ -291,17 +290,41 @@ begin
   fPoint2 := 0;
   fMoveFlag := False;
 
-//  InitParticles();
+  InitParticles();
 end;
 
 procedure TGame.InitParticles;
 begin
-  fEmitter := TglrParticleEmitter2D.Create(SpriteBatch, Material, Atlas.GetRegion('particle.png'));
+  fEmitter := TglrCustomParticleEmitter2D.Create(SpriteBatch, Material, Atlas.GetRegion('particle.png'));
+  fEmitter.OnUpdate := OnParticlesUpdate;
 end;
 
 procedure TGame.DeinitParticles;
 begin
   fEmitter.Free();
+end;
+
+procedure TGame.OnParticlesUpdate(const dt: Double);
+
+  procedure SetParticleAlpha(aParticle: TglrParticle2D; alpha: Single);
+  var
+    i: Integer;
+  begin
+    for i := 0 to 3 do
+      aParticle.Vertices[i].col.w := alpha;
+  end;
+
+var
+  p: TglrParticle2D;
+  i: Integer;
+begin
+  for i := 0 to fEmitter.Particles.Count - 1 do
+  begin
+    p := fEmitter.Particles[i];
+    if (not p.Visible) then
+      continue;
+    SetParticleAlpha(p, (p.LifeTime - p.T) / p.LifeTime);
+  end;
 end;
 
 function TGame.GetShipDistanceToNearestMoonVertex: Single;
@@ -437,7 +460,7 @@ end;
 
 procedure TGame.OnFinish;
 begin
-  //DeinitParticles();
+  DeinitParticles();
 
   Space.Free();
   Moon.Free();
@@ -633,12 +656,21 @@ begin
     SpriteBatch.Draw(FuelLevel.sLevel);
   SpriteBatch.Finish();
 
-  Moon.RenderLandingZones();
-
   FontBatch.Start();
     FontBatch.Draw(DebugText);
   FontBatch.Finish();
-//  fEmitter.RenderSelf();
+
+  // Render particles
+  Material.DepthWrite := False;
+  Material.Bind();
+  fEmitter.RenderSelf();
+  Material.DepthWrite := True;
+  Material.Bind();
+
+  // Last - render landing zones
+  Moon.RenderLandingZones();
+
+  // At very last - render hud
   SceneHud.RenderScene();
   FontBatchHud.Start();
     FontBatchHud.Draw(HudMainText);
@@ -676,6 +708,20 @@ begin
 
         fShipEngineDirection := dfVec2f(Ship.Rotation) * dt;
         b2Ship.ApplyLinearImpulse(TVector2.From(fShipEngineDirection.x, fShipEngineDirection.y), b2Ship.GetWorldCenter);
+        if fEmitter.ActiveParticlesCount < 128 then
+          with fEmitter.GetNewParticle() do
+          begin
+            Position := Flame.AbsoluteMatrix.Pos;
+            Position.z += 1;
+            Position += dfVec3f(10 - Random(20), 10 - Random(20), Random(3));
+            Rotation := Random(180);
+            //SetVerticesColor(dfVec4f(Random(), Random(), Random(), 1.0));
+            SetVerticesColor(dfVec4f(1.0, 0.5 * Random(), 0.3 * Random(), 1.0));
+            Width := 0.3 + Width * Random();
+            Height := Width;
+            LifeTime := 1.5;
+            Velocity := dfVec2f(15 - Random(30) + Ship.Rotation) * (120 + Random(40)) * (-1);
+          end;
       end;
 
       Box2d.SyncObjects(b2Ship, Ship);
@@ -720,7 +766,7 @@ begin
       if (fShipLinearSpeed < LAND_SPEED) and (fPoint1 > 0) and (fPoint2 > 0) and not Flame.Visible then
         OnGameEnd(rWin);
 
-      //fEmitter.Update(dt);
+      fEmitter.Update(dt);
     end
     else if fGameStatus = sPause then
     begin
