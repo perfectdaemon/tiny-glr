@@ -884,6 +884,47 @@ type
     function GetLerpValue(aKey: Key): Value;
   end;
 
+  { TglrParticle2D }
+
+  TglrParticle2D = class (TglrSprite)
+    T: Single;
+    LifeTime: Single;
+    Velocity: TdfVec2f;
+    procedure Reset();
+  end;
+  TglrParticles2D = TglrObjectList<TglrParticle2D>;
+
+  TglrUpdateCallback = procedure(const dt: Double) of object;
+
+  { TglrCustomParticleEmitter2D }
+
+  TglrCustomParticleEmitter2D = class
+  protected
+    fBatch: TglrSpriteBatch;
+    fMaterial: TglrMaterial;
+    fTextureRegion: PglrTextureRegion;
+    fActiveParticles: Integer;
+  public
+    Visible, Enabled: Boolean;
+    Duration, Time: Single;
+
+    Particles: TglrParticles2D;
+
+    OnUpdate: TglrUpdateCallback;
+
+    constructor Create(aBatch: TglrSpriteBatch;
+      aMaterial: TglrMaterial;
+      aTextureRegion: PglrTextureRegion = nil); virtual;
+    destructor Destroy(); override;
+
+    function GetNewParticle(): TglrParticle2D;
+
+    procedure Update(const dt: Double);
+    procedure RenderSelf();
+
+    property ActiveParticlesCount: Integer read fActiveParticles;
+  end;
+
   //Range of byte is 0..100 (means percent of emitter animation duration)
   TglrSingleDic = TglrDictionary<Byte, Single>;
   TglrIntDic = TglrDictionary<Byte, Integer>;
@@ -894,20 +935,10 @@ type
 
   TglrParticleEmitter2D = class
   protected
-    type
-      TglrParticle2D = class (TglrSprite)
-        T: Single;
-        LifeTime: Single;
-        Velocity: TdfVec2f;
-      end;
-
-      TglrParticles2D = TglrObjectList<TglrParticle2D>;
-
-    var
-      fBatch: TglrSpriteBatch;
-      fMaterial: TglrMaterial;
-      fTextureRegion: PglrTextureRegion;
-      fParticles: TglrParticles2D;
+    fBatch: TglrSpriteBatch;
+    fMaterial: TglrMaterial;
+    fTextureRegion: PglrTextureRegion;
+    fParticles: TglrParticles2D;
 
     function GetFreeParticleIndex(): Integer;
   public
@@ -1266,6 +1297,121 @@ begin
     SetLength(fKeys, Length(fKeys) - fCapacity);
     SetLength(fValues, Length(fValues) - fCapacity);
   end;
+end;
+
+{ TglrParticle2D }
+
+procedure TglrParticle2D.Reset;
+begin
+  T := 0;
+  Velocity.Reset();
+  LifeTime := 0.0;
+  fRot := 0;
+  Visible := True;
+end;
+
+{ TglrCustomParticleEmitter2D }
+
+constructor TglrCustomParticleEmitter2D.Create(aBatch: TglrSpriteBatch;
+  aMaterial: TglrMaterial; aTextureRegion: PglrTextureRegion);
+var
+  s: TglrParticle2D;
+  i: Integer;
+begin
+  inherited Create();
+  fBatch := aBatch;
+  fMaterial := aMaterial;
+  fTextureRegion := aTextureRegion;
+  Particles := TglrParticles2D.Create(128);
+
+  for i := 0 to Particles.Count - 1 do
+  begin
+    s := TglrParticle2D.Create();
+    if fTextureRegion <> nil then
+      s.SetTextureRegion(fTextureRegion)
+    else
+    begin
+      s.Width := fMaterial.Textures[0].Texture.Width;
+      s.Height := fMaterial.Textures[0].Texture.Height;
+    end;
+    s.Reset();
+    s.Visible := False;
+    Particles.Add(s);
+  end;
+
+  Duration := 1.0;
+  Time := 0;
+  Enabled := True;
+  Visible := True;
+end;
+
+destructor TglrCustomParticleEmitter2D.Destroy;
+begin
+  Particles.Free(True);
+  inherited Destroy;
+end;
+
+function TglrCustomParticleEmitter2D.GetNewParticle: TglrParticle2D;
+var
+  i: Integer;
+  p: TglrParticle2D;
+begin
+  fActiveParticles += 1;
+
+  for i := 0 to Particles.Count - 1 do
+    if not Particles[i].Visible then
+    begin
+      Particles[i].Reset();
+      if (fTextureRegion <> nil) then
+        Particles[i].SetTextureRegion(fTextureRegion);
+      Particles[i].SetVerticesColor(dfVec4f(1, 1, 1, 1));
+      Exit(Particles[i]);
+    end;
+
+  p := TglrParticle2D.Create();
+  p.Reset();
+  if fTextureRegion <> nil then
+    p.SetTextureRegion(fTextureRegion);
+  Particles.Add(p);
+  Exit(p);
+end;
+
+procedure TglrCustomParticleEmitter2D.Update(const dt: Double);
+var
+  i: Integer;
+begin
+  if not Visible then
+    Exit();
+
+  Time += dt;
+
+  for i := 0 to Particles.Count - 1 do
+    if Particles[i].Visible then
+      with Particles[i] do
+      begin
+        T := T + dt;
+        if T >= LifeTime then
+        begin
+          Visible := False;
+          fActiveParticles -= 1;
+        end
+        else
+          Position += dfVec3f(Velocity * dt, 0);
+      end;
+
+  if Assigned(OnUpdate) then
+    OnUpdate(dt);
+end;
+
+procedure TglrCustomParticleEmitter2D.RenderSelf;
+var
+  i: Integer;
+begin
+  fMaterial.Bind();
+  fBatch.Start();
+  for i := 0 to Particles.Count - 1 do
+    fBatch.Draw(Particles[i]);
+  fBatch.Finish();
 end;
 
 { TglrParticleEmitter2D }
