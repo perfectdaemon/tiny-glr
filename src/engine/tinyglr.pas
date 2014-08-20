@@ -96,6 +96,43 @@ type
   TglrStringList = TglrList<AnsiString>;
   TglrWordList = TglrList<Word>;
 
+  { TglrDictionary }
+
+  TglrDictionary<Key, Value> = class
+  private
+    fSorted  : Boolean;
+    fKeys    : array of Key;
+    fValues  : array of Value;
+    fCount   : LongInt;
+    fCapacity: LongInt;
+    procedure BoundsCheck(Index: LongInt);
+    function GetItem(aKey: Key): Value; inline;
+    procedure SetItem(aKey: Key; aValue: Value); inline;
+    function GetKey(aIndex: Integer): Key; inline;
+    procedure SetKey(aIndex: Integer; aKey: Key); inline;
+    function GetValue(aIndex: Integer): Value; inline;
+    procedure SetValue(aIndex: Integer; aValue: Value); inline;
+  public
+    constructor Create(aCapacity: LongInt = 4); virtual;
+    destructor Destroy(); override;
+
+    function IndexOfKey(aKey: Key): LongInt;
+    function IndexOfValue(aValue: Value): LongInt;
+    function Add(aKey: Key; aValue: Value): LongInt;
+    procedure DeleteByIndex(aIndex: LongInt);
+    procedure Delete(aKey: Key);
+    procedure DeleteSafe(aKey: Key);
+    procedure DeleteSafeByIndex(aIndex: LongInt);
+
+    property Count: LongInt read fCount;
+    property Items[aKey: Key]: Value read GetItem write SetItem; default;
+    property Keys[aIndex: Integer]: Key read GetKey write SetKey;
+    property Values[aIndex: Integer]: Value read GetValue write SetValue;
+
+    procedure SortByKey(aAscending: Boolean = True);
+    function GetLerpValue(aKey: Key): Value;
+  end;
+
 
   { FileSystem }
 
@@ -847,43 +884,6 @@ type
 
   {$REGION 'Particles'}
 
-  { TglrDictionary }
-
-  TglrDictionary<Key, Value> = class
-  private
-    fSorted  : Boolean;
-    fKeys    : array of Key;
-    fValues  : array of Value;
-    fCount   : LongInt;
-    fCapacity: LongInt;
-    procedure BoundsCheck(Index: LongInt);
-    function GetItem(aKey: Key): Value; inline;
-    procedure SetItem(aKey: Key; aValue: Value); inline;
-    function GetKey(aIndex: Integer): Key; inline;
-    procedure SetKey(aIndex: Integer; aKey: Key); inline;
-    function GetValue(aIndex: Integer): Value; inline;
-    procedure SetValue(aIndex: Integer; aValue: Value); inline;
-  public
-    constructor Create(aCapacity: LongInt = 4); virtual;
-    destructor Destroy(); override;
-
-    function IndexOfKey(aKey: Key): LongInt;
-    function IndexOfValue(aValue: Value): LongInt;
-    function Add(aKey: Key; aValue: Value): LongInt;
-    procedure DeleteByIndex(aIndex: LongInt);
-    procedure Delete(aKey: Key);
-    procedure DeleteSafe(aKey: Key);
-    procedure DeleteSafeByIndex(aIndex: LongInt);
-
-    property Count: LongInt read fCount;
-    property Items[aKey: Key]: Value read GetItem write SetItem; default;
-    property Keys[aIndex: Integer]: Key read GetKey write SetKey;
-    property Values[aIndex: Integer]: Value read GetValue write SetValue;
-
-    procedure SortByKey(aAscending: Boolean = True);
-    function GetLerpValue(aKey: Key): Value;
-  end;
-
   { TglrParticle2D }
 
   TglrParticle2D = class (TglrSprite)
@@ -967,6 +967,50 @@ type
     function SaveToStream(): TglrStream;
 
     procedure Update(const dt: Double);
+  end;
+
+  {$ENDREGION}
+
+  {$REGION 'GUI'}
+
+  TglrGuiElement = class;
+
+  TglrGuiCallback = procedure(Sender: TglrGuiElement;
+    aType: TglrInputType;
+    aKey: TglrKey;
+    X, Y, aOtherParam: Integer) of object;
+
+  { TglrGuiElement }
+
+  TglrGuiElement = class (TglrSprite)
+  protected
+    fEnabled, fFocused: Boolean;
+    procedure SetEnabled(const aValue: Boolean);
+    procedure SetFocused(const aValue: Boolean);
+    procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
+      aOtherParam: Integer);
+  public
+    OnClick, OnTouchDown, OnTouchUp, OnMouseOver, OnMouseOut: TglrGuiCallback;
+    ZIndex: Integer;
+
+    property Enabled: Boolean read fEnabled write SetEnabled;
+    property Focused: Boolean read fFocused write SetFocused;
+
+    constructor Create(); virtual;
+  end;
+
+  { TglrGuiManager }
+
+  TglrGuiManager = class
+  protected
+  public
+    Elements: TglrObjectList<TglrGuiElement>;
+
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+
+    procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
+      aOtherParam: Integer);
   end;
 
   {$ENDREGION}
@@ -1297,6 +1341,47 @@ begin
     SetLength(fKeys, Length(fKeys) - fCapacity);
     SetLength(fValues, Length(fValues) - fCapacity);
   end;
+end;
+
+{ TglrGuiManager }
+
+constructor TglrGuiManager.Create;
+begin
+  Log.Write(lCritical, 'Not implemented');
+end;
+
+destructor TglrGuiManager.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TglrGuiManager.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
+  Y, aOtherParam: Integer);
+begin
+  Log.Write(lCritical, 'Not implemented');
+end;
+
+{ TglrGuiElement }
+
+procedure TglrGuiElement.SetEnabled(const aValue: Boolean);
+begin
+  Log.Write(lCritical, 'Not implemented');
+end;
+
+procedure TglrGuiElement.SetFocused(const aValue: Boolean);
+begin
+  Log.Write(lCritical, 'Not implemented');
+end;
+
+procedure TglrGuiElement.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
+  Y, aOtherParam: Integer);
+begin
+  Log.Write(lCritical, 'Not implemented');
+end;
+
+constructor TglrGuiElement.Create;
+begin
+  Log.Write(lCritical, 'Not implemented');
 end;
 
 { TglrParticle2D }
