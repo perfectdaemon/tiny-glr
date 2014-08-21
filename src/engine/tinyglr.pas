@@ -768,7 +768,7 @@ type
     property Height: Single read fHeight write SetHeight;
     property PivotPoint: TdfVec2f read fPP write SetPP;
 
-    procedure SetDefaultVertices(); //Sets vertices due to width, height, pivot point and rotation
+    procedure SetDefaultVertices(); virtual;//Sets vertices due to width, height, pivot point and rotation
     procedure SetDefaultTexCoords(); //Sets default texture coords
     procedure SetVerticesColor(aColor: TdfVec4f);
     procedure SetSize(aWidth, aHeight: Single); overload;
@@ -975,7 +975,9 @@ type
 
   TglrGuiElement = class;
 
-  TglrGuiCallback = procedure(Sender: TglrGuiElement;
+  TglrGuiBooleanCallback = procedure (Sender: TglrGuiElement; aValue: Boolean) of object;
+
+  TglrGuiInputCallback = procedure(Sender: TglrGuiElement;
     aType: TglrInputType;
     aKey: TglrKey;
     X, Y, aOtherParam: Integer) of object;
@@ -984,33 +986,49 @@ type
 
   TglrGuiElement = class (TglrSprite)
   protected
+    fIsMouseOver: Boolean;
     fEnabled, fFocused: Boolean;
     procedure SetEnabled(const aValue: Boolean);
     procedure SetFocused(const aValue: Boolean);
     procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
       aOtherParam: Integer);
+    function IsHit(X, Y: Integer): Boolean;
   public
-    OnClick, OnTouchDown, OnTouchUp, OnMouseOver, OnMouseOut: TglrGuiCallback;
+    // Input events
+    OnClick, OnTouchDown, OnTouchUp, OnMouseOver, OnMouseOut: TglrGuiInputCallback;
+
+    // Other events
+    OnEnable, OnFocus: TglrGuiBooleanCallback;
+
     ZIndex: Integer;
+
+    HitBox: TdfBB;
 
     property Enabled: Boolean read fEnabled write SetEnabled;
     property Focused: Boolean read fFocused write SetFocused;
 
+    procedure UpdateHitBox();
+    procedure SetDefaultVertices(); override;
+
     constructor Create(); virtual;
   end;
+
+  TglrGuiElementsList = TglrObjectList<TglrGuiElement>;
 
   { TglrGuiManager }
 
   TglrGuiManager = class
   protected
   public
-    Elements: TglrObjectList<TglrGuiElement>;
+    Elements: TglrGuiElementsList;
 
     constructor Create(); virtual;
     destructor Destroy(); override;
 
     procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer);
+      aOtherParam: Integer); overload;
+    procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
+      aOtherParam: Integer; aGuiCamera: TglrCamera); overload;
   end;
 
   {$ENDREGION}
@@ -1347,16 +1365,27 @@ end;
 
 constructor TglrGuiManager.Create;
 begin
-  Log.Write(lCritical, 'Not implemented');
+  inherited;
+  Elements := TglrGuiElementsList.Create();
 end;
 
 destructor TglrGuiManager.Destroy;
 begin
+  Elements.Free(True);
   inherited Destroy;
 end;
 
 procedure TglrGuiManager.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
   Y, aOtherParam: Integer);
+var
+  i: Integer;
+begin
+  for i := 0 to Elements.Count - 1 do
+    Elements[i].ProcessInput(aType, aKey, X, Y, aOtherParam);
+end;
+
+procedure TglrGuiManager.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
+  Y, aOtherParam: Integer; aGuiCamera: TglrCamera);
 begin
   Log.Write(lCritical, 'Not implemented');
 end;
@@ -1365,23 +1394,77 @@ end;
 
 procedure TglrGuiElement.SetEnabled(const aValue: Boolean);
 begin
-  Log.Write(lCritical, 'Not implemented');
+  if fEnabled = aValue then
+    Exit();
+  fEnabled := aValue;
+  if Assigned(OnEnable) then
+    OnEnable(Self, aValue);
 end;
 
 procedure TglrGuiElement.SetFocused(const aValue: Boolean);
 begin
-  Log.Write(lCritical, 'Not implemented');
+  if fFocused = aValue then
+    Exit();
+  fFocused := aValue;
+  if Assigned(OnFocus) then
+    OnFocus(Self, aValue);
 end;
 
 procedure TglrGuiElement.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
   Y, aOtherParam: Integer);
 begin
+  if not Enabled then
+    Exit();
+
+  case aType of
+    itTouchDown:
+    begin
+      if Assigned(OnTouchDown) then
+        OnTouchDown(Self, aType, aKey, x, y, aOtherParam);
+      Focused := True;
+    end;
+    itTouchUp:
+    begin
+      if Assigned(OnTouchUp) then
+        OnTouchUp(Self, aType, aKey, x, y, aOtherParam);
+    end;
+
+  end;
+
   Log.Write(lCritical, 'Not implemented');
+end;
+
+function TglrGuiElement.IsHit(X, Y: Integer): Boolean;
+begin
+  x += Floor(Position.x);
+  y += Floor(Position.y);
+  with HitBox do
+    Result := (x >= Left) and (x <= Right) and (y >= Top) and (y <= Bottom);
+end;
+
+procedure TglrGuiElement.UpdateHitBox;
+begin
+  HitBox.Bottom := Max(Vertices[0].vec.y, Vertices[1].vec.y);
+  HitBox.Top := Min(Vertices[2].vec.y, Vertices[3].vec.y);
+  HitBox.Right := Max(Vertices[0].vec.x, Vertices[3].vec.x);
+  HitBox.Left := Min(Vertices[1].vec.x, Vertices[2].vec.x);
+end;
+
+procedure TglrGuiElement.SetDefaultVertices;
+begin
+  inherited SetDefaultVertices;
+  UpdateHitBox();
 end;
 
 constructor TglrGuiElement.Create;
 begin
-  Log.Write(lCritical, 'Not implemented');
+  inherited;
+  UpdateHitBox();
+  fFocused := False;
+  fEnabled := True;
+  fIsMouseOver := False;
+
+  ZIndex := 0;
 end;
 
 { TglrParticle2D }
