@@ -27,6 +27,8 @@ Tiny crossplatform (Win, Mac, Linux, Android, iOS) game development framework bu
 * Pack files
 * 2D (Sprites, Bitmap Fonts)
 * Texture atlases ([Cheetah](https://github.com/scriptum/Cheetah-Texture-Packer) texture atlases supported)
+* Programmable 2d particles
+* Box2D support
 
 ###Current toolset###
 * Resource packer
@@ -35,7 +37,7 @@ Tiny crossplatform (Win, Mac, Linux, Android, iOS) game development framework bu
 ###In progress###
 
 * 3D base functionality (mesh, skeletal, morph, 3ds, fbx, obj, smd)
-* Particles
+* GUI
 * Sound and physics engines support
 * Linux, Mac OS, Android, iOS
 
