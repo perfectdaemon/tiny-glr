@@ -71,13 +71,46 @@ uses
     PackStream.Free();
   end;
 
+  procedure PackFileLZO(const aInputFileName, aOutputFileName: AnsiString);
+  var
+    inputStream, outputStream: TglrStream;
+    mIn, mOut: Pointer;
+    compressedSize: LongInt;
+  begin
+    Log.Write(lInformation, 'Start packing file "' + aInputFileName + '" into LZO file "' + aOutputFileName + '"');
+    if (not FileExists(aInputFileName)) then
+    begin
+      Log.Write(lCritical, 'File "' + aInputFileName + '" was not found');
+      Exit();
+    end;
+
+    inputStream := TglrStream.Init(aInputFileName);
+    outputStream := TglrStream.Init(aOutputFileName, True);
+
+    mIn := GetMemory(inputStream.Size);
+    mOut := GetMemory(inputStream.Size);
+
+    inputStream.Read(mIn^, inputStream.Size);
+
+    CompressData(mIn, inputStream.Size, mOut, compressedSize);
+
+    outputStream.Write(mOut^, compressedSize);
+
+    inputStream.Free();
+    outputStream.Free();
+    FreeMemory(mIn);
+    FreeMemory(mOut);
+    Log.Write(lInformation, '... success!');
+  end;
+
 begin
   Log.Init('pack.log');
 
 //  PackData('data/p1.glrpack', 'data');
-  if ParamStr(1) = '-pack' then
-    PackData(ParamStr(2), ParamStr(3));
-
+  if (ParamStr(1) = '-pack') then
+    PackData(ParamStr(2), ParamStr(3))
+  else if (ParamStr(1) = '-file') then
+    PackFileLZO(ParamStr(2), ParamStr(3));
   Log.Deinit();
 end.
 
