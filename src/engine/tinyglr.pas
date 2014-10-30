@@ -3136,8 +3136,34 @@ end;
 
 class function FileSystem.ReadResourceLZO(const aFileName: AnsiString;
   aSearchInPackFiles: Boolean): TglrStream;
+var
+  fileStream: TglrStream;
+  mIn, mOut: Pointer;
+  outSize: LongInt;
 begin
-  Log.Write(lCritical, 'FileSystem.ReadResourceLZO is not implemented');
+  if (FileExists(aFileName)) then
+  begin
+    Log.Write(lInformation, 'FileSystem: start reading LZO resource "' + aFileName + '" directly from file');
+    fileStream := TglrStream.Init(aFileName);
+
+    mIn := GetMemory(fileStream.Size);
+    mOut := GetMemory(fileStream.Size * 10);
+
+    fileStream.Read(mIn^, fileStream.Size);
+
+    DecompressData(mIn, fileStream.Size, mOut, outSize);
+
+    Result := TglrStream.Init(mOut, outSize, True);
+
+    fileStream.Free();
+    FreeMemory(mIn);
+    Log.Write(lInformation, 'FileSystem: read successfully');
+    Exit();
+  end
+  else if (aSearchInPackFiles) then
+    Log.Write(lCritical, 'FileSystem.ReadResourceLZO from pack files is not implemented');
+
+  Log.Write(lError, 'FileSystem: requested resource "' + aFileName + '" was not found');
 end;
 
 class procedure FileSystem.WriteResource(const aFileName: AnsiString;
