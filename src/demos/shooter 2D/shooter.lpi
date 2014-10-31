@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="4">
+    <Units Count="7">
       <Unit0>
         <Filename Value="shooter.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -52,6 +52,20 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uGame"/>
       </Unit3>
+      <Unit4>
+        <Filename Value="uFMOD.pp"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uFMOD"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="libufmod.o"/>
+        <IsPartOfProject Value="True"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="music.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="music"/>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
