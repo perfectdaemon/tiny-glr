@@ -201,6 +201,7 @@ type
   public
     class function ToString(aVal: Integer): AnsiString; overload;
     class function ToString(aVal: Single; Digits: Integer = 5): AnsiString; overload;
+    class function ToString(aVal: Boolean): AnsiString; overload;
     class function ToString(aVal: TdfMat4f; aDigits: Integer = 5): AnsiString; overload;
     class function ToString(aVal: TdfVec2f): AnsiString; overload;
     class function ToString(aVal: TdfVec3f): AnsiString; overload;
@@ -2695,6 +2696,14 @@ end;
 class function Convert.ToString(aVal: Single; Digits: Integer = 5): AnsiString;
 begin
   Str(aVal:0:Digits, Result);
+end;
+
+class function Convert.ToString(aVal: Boolean): AnsiString;
+begin
+  if (aVal) then
+    Result := 'True'
+  else
+    Result := 'False';
 end;
 
 class function Convert.ToString(aVal: TdfMat4f; aDigits: Integer): AnsiString;
