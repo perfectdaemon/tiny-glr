@@ -995,7 +995,7 @@ type
     function IsHit(X, Y: Integer): Boolean;
   public
     // Input events
-    OnClick, OnTouchDown, OnTouchUp, OnMouseOver, OnMouseOut: TglrGuiInputCallback;
+    OnClick, OnTouchDown, OnTouchUp, OnTouchMove, OnMouseOver, OnMouseOut: TglrGuiInputCallback;
 
     // Other events
     OnEnable, OnFocus: TglrGuiBooleanCallback;
@@ -1381,7 +1381,8 @@ var
   i: Integer;
 begin
   for i := 0 to Elements.Count - 1 do
-    Elements[i].ProcessInput(aType, aKey, X, Y, aOtherParam);
+    if Elements[i].Enabled then
+      Elements[i].ProcessInput(aType, aKey, X, Y, aOtherParam);
 end;
 
 procedure TglrGuiManager.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
@@ -1413,9 +1414,6 @@ end;
 procedure TglrGuiElement.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
   Y, aOtherParam: Integer);
 begin
-  if not Enabled then
-    Exit();
-
   case aType of
     itTouchDown:
     begin
@@ -2022,6 +2020,10 @@ begin
     Matrix.Identity();
     Matrix.Rotate(aRot * deg2rad, dfVec3f(0, 0, 1));
     fRot := aRot;
+    if fRot > 360 then
+      fRot -= 360
+    else if fRot < -360 then
+      fRot += 360;
   end;
 end;
 

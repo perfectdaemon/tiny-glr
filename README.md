@@ -9,6 +9,8 @@ end;
 ###Introduction###
 Tiny crossplatform (Win, Mac, Linux, Android, iOS) game development framework built with (and for) Free Pascal.
 
+*Notice: It's Windows only for now (0.1 version)*
+
 ###Current roadmap###
  - [x] Early development
  - [x] Some little game to prove framework' abilities (see src/demos/lunar lander)
