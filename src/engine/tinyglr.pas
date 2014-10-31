@@ -2020,6 +2020,10 @@ begin
     Matrix.Identity();
     Matrix.Rotate(aRot * deg2rad, dfVec3f(0, 0, 1));
     fRot := aRot;
+    if fRot > 360 then
+      fRot -= 360
+    else if fRot < -360 then
+      fRot += 360;
   end;
 end;
 
