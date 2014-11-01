@@ -1,3 +1,16 @@
+{
+  todo:
+    bonuses
+      triple shot
+      alternative usage
+      health
+    scores
+    weapons
+      rockets
+      mines
+    gameover
+}
+
 unit uGame;
 
 interface
@@ -7,7 +20,7 @@ uses
 
 type
 
-  TBulletType = (bSimple);
+  TBulletType = (bSimple, bFragile, bRocket);
 
   TBulletOwner = (bPlayer, bEnemy);
 
@@ -16,8 +29,10 @@ type
   TBullet = class (TglrSprite)
     T, LifeTime: Single;
     Velocity: TdfVec2f;
+    RotationVelocity: Single;
     BType: TBulletType;
     Owner: TBulletOwner;
+    Damage: Single;
     procedure Reset();
   end;
 
@@ -29,10 +44,8 @@ type
   private
     fBullets: TBullets;
     fBatch: TglrSpriteBatch;
-    fMaterial: TglrMaterial;
   public
-    constructor Create(aBatch: TglrSpriteBatch;
-      aMaterial: TglrMaterial);
+    constructor Create(aBatch: TglrSpriteBatch);
     destructor Destroy();
 
     function GetNewBullet(): TBullet;
@@ -41,33 +54,49 @@ type
     procedure RenderSelf();
   end;
 
+  { TUnit }
+
+  TUnit = class (TglrSprite)
+  protected
+    fBulletOwner: TBulletOwner;
+    fWeaponDir: TdfVec2f;
+    fT, fSmokeT: Single; // for shooting
+
+    fBonusTriple: Boolean;
+  public
+    Health, HealthMax: Single;
+    Weapon: TglrSprite;
+    FireThreshold, RotateSpeed, DirectSpeed: Single;
+    MainWeaponVelocity, MainWeaponDispersion, MainWeaponDamage: Single;
+    AltWeaponVelocity, AltWeaponDamage: Single;
+
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+
+    procedure Update(const dt: Double; axisX, axisY: Integer); virtual;
+    procedure Fire();
+    procedure FireAlternative();
+
+    procedure GetKilled(); virtual;
+
+    procedure Reset();
+  end;
+
   { TPlayer }
 
-  TPlayer = class
-  private
-    WeaponDir: TdfVec2f;
-    fT: Single; // for shooting
+  TPlayer = class (TUnit)
   public
-    FireThreshold, RotateSpeed, DirectSpeed: Single;
-    MainWeaponVelocity, MainWeaponDispersion: Single;
-    Hero, Weapon: TglrSprite;
-
-    constructor Create();
-    destructor Destroy();
-
-    procedure Update(const dt: Double; axisX, axisY: Integer);
-
-    procedure Fire();
+    constructor Create(); override;
+    procedure Update(const dt: Double; axisX, axisY: Integer); override;
+    procedure GetKilled(); override;
   end;
 
   { TEnemy }
 
-  TEnemy = class (TglrSprite)
+  TEnemy = class (TUnit)
   public
-    Health: Single;
-
-    procedure Reset();
-    procedure Update(const dt: Double);
+    constructor Create(); override;
+    procedure Update(const dt: Double; axisX, axisY: Integer); override;
   end;
 
   TEnemies = TglrObjectList<TEnemy>;
@@ -75,12 +104,20 @@ type
   { TEnemyManager }
 
   TEnemyManager = class
+  private
+    fT: Single;
+    fBatch: TglrSpriteBatch;
   public
+    EnemySpawnInterval: Single;
+    EnemySpawnCount: Integer;
     Enemies: TEnemies;
-    constructor Create();
+    constructor Create(aBatch: TglrSpriteBatch);
     destructor Destroy();
 
+    function GetNewEnemy(): TEnemy;
+
     procedure Update(const dt: Double);
+    procedure RenderSelf();
   end;
 
   { TGame }
@@ -95,7 +132,7 @@ type
     Font: TglrFont;
 
     MainMaterial: TglrMaterial;
-    ParticleEmitter: TglrCustomParticleEmitter2D;
+    ParticleEmitter, ShellEmitter: TglrCustomParticleEmitter2D;
     BulletManager: TBulletManager;
     EnemyManager: TEnemyManager;
 
@@ -106,7 +143,13 @@ type
     procedure InitEnemies();
     procedure ParticleBoom(aPos: TdfVec2f);
     procedure ParticleBigBoom(aPos: TdfVec2f);
+    procedure ParticleSmoke(aPos: TdfVec2f);
+
+    procedure ParticleShells(aPos, aDir: TdfVec2f);
+
     procedure ParticleUpdate(const dt: Double);
+    procedure ShellUpdate(const dt: Double);
+
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -153,12 +196,103 @@ begin
   Exit(Abs(aRad) < 0.3);
 end;
 
+{ TEnemy }
+
+constructor TEnemy.Create;
+begin
+  inherited Create;
+  fBulletOwner := bEnemy;
+  Width := 45;
+  Height := 25;
+
+  SetVerticesColor(dfVec4f(0.7, 0.3, 0.2, 1.0));
+  Weapon.SetVerticesColor(dfVec4f(0.6, 0.2, 0.2, 1.0));
+
+  HealthMax := 15;
+
+  RotateSpeed := 2;
+  DirectSpeed := 70;
+  FireThreshold := 4.0;
+
+  MainWeaponVelocity := 250;
+  MainWeaponDispersion := 0.2;
+  MainWeaponDamage := 3;
+end;
+
+procedure TEnemy.Update(const dt: Double; axisX, axisY: Integer);
+begin
+  if not Visible then
+    Exit();
+  fWeaponDir := dfVec2f(Game.Player.Position - Position).Normal;
+  Weapon.Rotation := fWeaponDir.GetRotationAngle();
+
+
+  if (Position - Game.Player.Position).LengthQ > (190 * 190) then
+  begin
+    Rotation := LerpAngles(Rotation, fWeaponDir.GetRotationAngle(), RotateSpeed * dt);
+  end
+  else
+    Rotation := LerpAngles(Rotation, dfVec2f(-fWeaponDir.y, fWeaponDir.x).GetRotationAngle(), RotateSpeed * dt);
+
+  // Always move!
+  axisX := 1;
+  axisY := 0;
+  Fire();
+  inherited Update(dt, axisX, axisY);
+end;
+
+{ TPlayer }
+
+constructor TPlayer.Create;
+begin
+  inherited Create;
+  fBulletOwner := bPlayer;
+  Width := 45;
+  Height := 25;
+
+  HealthMax := 100;
+  Health := HealthMax;
+
+  Position := dfVec3f(Render.Width / 2, Render.Height / 2, 1);
+  SetVerticesColor(dfVec4f(0.3, 0.7, 0.3, 1.0));
+  Weapon.SetVerticesColor(dfVec4f(0.2, 0.6, 0.2, 1.0));
+
+  RotateSpeed := 130;
+  DirectSpeed := 150;
+  FireThreshold := 0.1;
+
+  MainWeaponVelocity := 650;
+  MainWeaponDispersion := 0.1;
+  MainWeaponDamage := 5;
+
+  AltWeaponDamage := 30;
+  AltWeaponVelocity := 300;
+
+  fBonusTriple := True;
+end;
+
+procedure TPlayer.Update(const dt: Double; axisX, axisY: Integer);
+begin
+  inherited Update(dt, axisX, axisY);
+  fWeaponDir := (Core.Input.MousePos - dfVec2f(Position)).Normal;
+  Weapon.Rotation := fWeaponDir.GetRotationAngle();
+end;
+
+procedure TPlayer.GetKilled;
+begin
+  inherited GetKilled;
+  //todo: gameover
+end;
+
 { TEnemyManager }
 
-constructor TEnemyManager.Create;
+constructor TEnemyManager.Create(aBatch: TglrSpriteBatch);
 begin
-  inherited;
+  inherited Create;
+  fBatch := aBatch;
   Enemies := TEnemies.Create(40);
+  EnemySpawnInterval := 3.0;
+  EnemySpawnCount := 4;
 end;
 
 destructor TEnemyManager.Destroy;
@@ -167,41 +301,71 @@ begin
   inherited;
 end;
 
+function TEnemyManager.GetNewEnemy: TEnemy;
+var
+  i: Integer;
+  e: TEnemy;
+begin
+  for i := 0 to Enemies.Count - 1 do
+    if not Enemies[i].Visible then
+    begin
+      Enemies[i].Reset();
+      Exit(Enemies[i]);
+    end;
+
+  e := TEnemy.Create();
+  e.Reset();
+  Enemies.Add(e);
+  Exit(e);
+end;
+
 procedure TEnemyManager.Update(const dt: Double);
 var
   i: Integer;
+  e: TEnemy;
 begin
   for i := 0 to Enemies.Count - 1 do
-    Enemies[i].Update(dt);
+    Enemies[i].Update(dt, 0, 0);
+
+  if (fT > 0) then
+    fT -= dt
+  else if (fT <= 0) then
+  begin
+    fT := EnemySpawnInterval;
+    for i := 0 to EnemySpawnCount - 1 do
+    begin
+      e := GetNewEnemy();
+      e.Position := dfVec3f(dfVec2f(Random(360)) * 700 + dfVec2f(Render.Width / 2, Render.Height / 2), 0);
+    end;
+  end;
 end;
 
-{ TEnemy }
-
-
-procedure TEnemy.Reset;
+procedure TEnemyManager.RenderSelf();
+var
+  i: Integer;
 begin
-  Health := 20;
-end;
-
-procedure TEnemy.Update(const dt: Double);
-begin
-
+  fBatch.Start();
+  for i := 0 to Enemies.Count - 1 do
+  begin
+    fBatch.Draw(Enemies[i]);
+    fBatch.Draw(Enemies[i].Weapon);
+  end;
+  fBatch.Finish();
 end;
 
 { TBulletManager }
 
-constructor TBulletManager.Create(aBatch: TglrSpriteBatch; aMaterial: TglrMaterial);
+constructor TBulletManager.Create(aBatch: TglrSpriteBatch);
 var
   i: Integer;
   b: TBullet;
 begin
   inherited Create;
   fBatch := aBatch;
-  fMaterial := aMaterial;
   fBullets := TBullets.Create(128);
   for i := 0 to 128 do
   begin
-    b := TBullet.Create(6, 2, dfVec2f(0.5, 0.5));
+    b := TBullet.Create(12, 2, dfVec2f(0.5, 0.5));
     b.Reset();
     b.Visible := False;
     fBullets.Add(b);
@@ -227,7 +391,7 @@ begin
       Exit(fBullets[i]);
     end;
 
-  b := TBullet.Create(6, 2, dfVec2f(0.5, 0.5));
+  b := TBullet.Create(12, 2, dfVec2f(0.5, 0.5));
   b.Reset();
   fBullets.Add(b);
   Exit(b);
@@ -243,17 +407,24 @@ begin
       with fBullets[i] do
       begin
         T += dt;
+        for j := 0 to 3 do
+          Vertices[j].col.w := (LifeTime - T) / LifeTime;
         if (T > LifeTime) then
           Visible := False
         else
         begin
           Position += dfVec3f(Velocity * dt, 0);
+          Rotation := Rotation + RotationVelocity * dt;
 
           if (Owner = bEnemy) then
           begin
-            if (PointToSpriteIntersect(dfVec2f(Position), Game.Player.Hero)) then
+            if (PointToSpriteIntersect(dfVec2f(Position), Game.Player)) then
             begin
               Game.DebugText.Text := 'Player hit!';
+              Game.ParticleBoom(dfVec2f(Position));
+              Game.Player.Health -= Damage;
+              if (Game.Player.Health  <= 0) then
+                Game.Player.GetKilled();
               Visible := False;
             end;
           end
@@ -267,20 +438,17 @@ begin
                 Game.ParticleBoom(dfVec2f(Position));
                 Visible := False;
 
-                case (BType) of
-                  bSimple: e.Health -= 1;
-                end;
+                e.Health -= Damage;
 
                 if e.Health <= 0 then
                 begin
-                  e.Visible := False;
+                  e.GetKilled();
                   Game.ParticleBigBoom(dfVec2f(e.Position));
                 end;
 
+                break;
               end;
             end;
-
-
         end;
       end;
 end;
@@ -289,7 +457,6 @@ procedure TBulletManager.RenderSelf;
 var
   i: Integer;
 begin
-  fMaterial.Bind();
   fBatch.Start();
   for i := 0 to fBullets.Count - 1 do
     fBatch.Draw(fBullets[i]);
@@ -303,72 +470,124 @@ begin
   T := 0;
   LifeTime := 3;
   Velocity := dfVec2f(0, 0);
+  RotationVelocity := 0;
   Visible := True;
+  SetVerticesColor(dfVec4f(1, 1, 1, 1));
 end;
 
 { TPlayer }
 
-constructor TPlayer.Create;
+procedure TUnit.Reset();
 begin
-  inherited;
-  Hero := TglrSprite.Create(45, 25, dfVec2f(0.5, 0.5));
-  Hero.Position := dfVec3f(Render.Width / 2, Render.Height / 2, 1);
-  Hero.SetVerticesColor(dfVec4f(0.5, 0.7, 0.5, 1.0));
-
-  Weapon := TglrSprite.Create(25, 8, dfVec2f(0.0, 0.5));
-  Weapon.SetVerticesColor(dfVec4f(0.3, 0.6, 0.3, 1.0));
-  Weapon.Position := Hero.Position + dfVec3f(0, 0, 1);
-
-  RotateSpeed := 130;
-  DirectSpeed := 150;
-  FireThreshold := 0.1;
-
-  MainWeaponVelocity := 450;
-  MainWeaponDispersion := 0.1;
-
-  fT := 0.1;
+  Health := HealthMax;
+  fT := 0.0;
+  Visible := True;
+  Weapon.Visible := True;
+  Position := dfVec3f(-1000, -1000, 0);
+  Weapon.Position := Position + dfVec3f(0, 0, 1);
 end;
 
-destructor TPlayer.Destroy;
+constructor TUnit.Create;
+begin
+  inherited;
+  Weapon := TglrSprite.Create(25, 8, dfVec2f(0.0, 0.5));
+  Weapon.Position := Position + dfVec3f(0, 0, 1);
+
+  fBonusTriple := False;
+  fT := 0.0;
+end;
+
+destructor TUnit.Destroy;
 begin
   Weapon.Free();
-  Hero.Free();
   inherited;
 end;
 
-procedure TPlayer.Update(const dt: Double; axisX, axisY: Integer);
+procedure TUnit.Update(const dt: Double; axisX, axisY: Integer);
 begin
-  Hero.Rotation := Hero.Rotation + (RotateSpeed * dt * axisY);
-  Hero.Position += dfVec3f(DirectSpeed * dt * axisX * dfVec2f(Hero.Rotation), 0);
+  if not Visible then
+    Exit();
+  Rotation := Rotation + (RotateSpeed * dt * axisY);
+  Position += dfVec3f(DirectSpeed * dt * axisX * dfVec2f(Rotation), 0);
 
-  WeaponDir := (Core.Input.MousePos - dfVec2f(hero.Position)).Normal;
-  Weapon.Rotation := WeaponDir.GetRotationAngle();
-
-  Weapon.Position := Hero.Position + dfVec3f(0, 0, 1);
+  Weapon.Position := Position + dfVec3f(0, 0, 1);
 
   if (fT > 0) then
     fT -= dt;
+
+  if (fSmokeT > 0) then
+    fSmokeT -= dt
+  else
+  begin
+    fSmokeT := 0.01;
+    Game.ParticleSmoke(dfVec2f(Position) - dfVec2f(Rotation) * (Width - 15));
+  end;
 end;
 
-procedure TPlayer.Fire;
+procedure TUnit.Fire;
 var
   b: TBullet;
   bulletDir: TdfVec2f;
+  i, count: Integer;
 begin
   if (fT <= 0) then
   begin
     fT := FireThreshold;
-    b := Game.BulletManager.GetNewBullet();
-    b.BType := bSimple;
-    b.Owner := bPlayer;
 
-    bulletDir := WeaponDir +
-      dfVec2f(- WeaponDir.y, WeaponDir.x) * MainWeaponDispersion * (0.5 - Random());
+    if fBonusTriple then
+      count := 3
+    else
+      count := 1;
 
-    b.Velocity := bulletDir * MainWeaponVelocity;
-    b.Rotation := b.Velocity.GetRotationAngle();
-    b.Position := Weapon.Position + dfVec3f(WeaponDir * 20, 0);
+    bulletDir := fWeaponDir +
+      dfVec2f(- fWeaponDir.y, fWeaponDir.x) * MainWeaponDispersion * (0.5 - Random());
+
+    for i := 0 to count - 1 do
+    begin
+      b := Game.BulletManager.GetNewBullet();
+      b.Width := 12;
+      b.Height := 2;
+      b.BType := bSimple;
+      b.Owner := fBulletOwner;
+      b.Damage := MainWeaponDamage;
+
+      b.Velocity := bulletDir * MainWeaponVelocity;
+      b.Rotation := b.Velocity.GetRotationAngle();
+      b.Position := Weapon.Position + dfVec3f(fWeaponDir * 20, 0);
+      if fBonusTriple then
+        b.Position += dfVec3f(dfVec2f(-bulletDir.y, bulletDir.x) * (-1 + i) * 5, 0);
+      Game.ParticleShells(dfVec2f(b.Position) + dfVec2f(i * 5, i* 5),
+        (dfVec2f(-fWeaponDir.y, fWeaponDir.x) + dfVec2f(10 - Random(20))).Normal);
+    end;
   end;
+end;
+
+procedure TUnit.FireAlternative;
+var
+  i: Integer;
+begin
+  for i := 0 to 35 do
+    with Game.BulletManager.GetNewBullet() do
+    begin
+      Width := 15;
+      Height := 5;
+      SetVerticesColor(dfVec4f(219 / 255, 104 / 255, 3 / 255, 1.0));
+      BType := bFragile;
+      Owner := fBulletOwner;
+      Damage := AltWeaponDamage;
+      Velocity := dfVec2f(i * 10) * AltWeaponVelocity;
+      Rotation := Velocity.GetRotationAngle();
+      Position := Self.Position;
+      RotationVelocity := 150;
+      LifeTime := 1.0;
+    end;
+  Game.ParticleBoom(dfVec2f(Self.Position));
+end;
+
+procedure TUnit.GetKilled();
+begin
+  Visible := False;
+  Weapon.Visible := False;
 end;
 
 { TGame }
@@ -376,8 +595,11 @@ end;
 procedure TGame.OnStart;
 begin
   // Write here initialization code
-  Render.SetClearColor(43 / 255, 99 / 255, 147 / 255);
-  Font := TglrFont.Create(FileSystem.ReadResourceLZO('shooter/Hattori Hanzo17b_.bmp', False));
+  Randomize();
+
+  //Render.SetClearColor(43 / 255, 99 / 255, 147 / 255);
+  Render.SetClearColor(0.15, 0.15, 0.15);
+  Font := TglrFont.Create(FileSystem.ReadResourceLZO('shooter/font.bmp', False));
 
   MainMaterial := TglrMaterial.Create();
   MainMaterial.Shader.Free();
@@ -390,9 +612,12 @@ begin
   ParticleEmitter := TglrCustomParticleEmitter2D.Create(SpriteBatch, MainMaterial);
   ParticleEmitter.OnUpdate := ParticleUpdate;
 
-  BulletManager := TBulletManager.Create(SpriteBatch, MainMaterial);
+  ShellEmitter := TglrCustomParticleEmitter2D.Create(SpriteBatch, MainMaterial);
+  ShellEmitter.OnUpdate := ShellUpdate;
 
-  DebugText := TglrText.Create(UTF8Decode('Тест'));
+  BulletManager := TBulletManager.Create(SpriteBatch);
+
+  DebugText := TglrText.Create(UTF8Decode('Test'));
   DebugText.Position := dfVec3f(100, 100, 1);
 
   SceneHud := TglrScene.Create();
@@ -406,7 +631,7 @@ begin
 
   Player := TPlayer.Create();
 
-  EnemyManager := TEnemyManager.Create();
+  EnemyManager := TEnemyManager.Create(SpriteBatch);
   InitEnemies();
 
   uFMOD_PlaySong(@xm1, Length(xm1), XM_MEMORY);
@@ -415,14 +640,8 @@ begin
 end;
 
 procedure TGame.InitEnemies;
-var
-  e: TEnemy;
 begin
-  e := TEnemy.Create(50, 50, dfVec2f(0.5, 0.5));
-  e.Reset();
-  e.Position := dfVec3f(100, 400, 2);
-  e.Rotation := 40;
-  EnemyManager.Enemies.Add(e);
+
 end;
 
 procedure TGame.ParticleBoom(aPos: TdfVec2f);
@@ -437,7 +656,8 @@ begin
       Position += dfVec3f(10 - Random(20), 10 - Random(20), Random(3));
       Rotation := Random(180);
       //SetVerticesColor(dfVec4f(Random(), Random(), Random(), 1.0));
-      SetVerticesColor(dfVec4f(1.0, 0.5 * Random(), 0.3 * Random(), 1.0));
+      //SetVerticesColor(dfVec4f(1.0, 0.5 * Random(), 0.3 * Random(), 1.0));
+      SetVerticesColor(dfVec4f(1.0, 0.5, 0.2, 0.3 + Random()));
       Width := 1 + 5 * Random();
       Height := Width;
       LifeTime := 0.5;
@@ -449,7 +669,7 @@ procedure TGame.ParticleBigBoom(aPos: TdfVec2f);
 var
   i: Integer;
 begin
-  for i := 0 to 35 do
+  for i := 0 to 72 do
     with ParticleEmitter.GetNewParticle() do
     begin
       Position := dfVec3f(aPos, 5);
@@ -457,11 +677,31 @@ begin
       Position += dfVec3f(10 - Random(20), 10 - Random(20), Random(3));
       Rotation := Random(180);
       //SetVerticesColor(dfVec4f(Random(), Random(), Random(), 1.0));
-      SetVerticesColor(dfVec4f(1.0, 0.5 * Random(), 0.3 * Random(), 1.0));
-      Width := 15 + 10 * Random();
+      //SetVerticesColor(dfVec4f(1.0, 0.7 * Random(), 0.6 * Random(), 1.0));
+      SetVerticesColor(dfVec4f(1.0, 0.5, 0.2, 0.3 + Random()));
+      Width := 5 + 10 * Random();
       Height := Width;
       LifeTime := 0.7;
       Velocity := dfVec2f(Random(360)) * (90 + Random(40));
+    end;
+end;
+
+procedure TGame.ParticleSmoke(aPos: TdfVec2f);
+var
+  i: Integer;
+begin
+  for i := 0 to 1 do
+    with ParticleEmitter.GetNewParticle() do
+    begin
+      Position := dfVec3f(aPos, 5);
+      Position.z += 1;
+      Position += dfVec3f(5 - Random(10), 5 - Random(10), 0);
+      Rotation := Random(180);
+      SetVerticesColor(dfVec4f(0.3, 0.3, 0.45, 0.7 * Random()));
+      Width := 3 + 4 * Random();
+      Height := Width;
+      LifeTime := 0.5;
+      Velocity := dfVec2f(Random(360)) * (30 + Random(10));
     end;
 end;
 
@@ -474,6 +714,33 @@ begin
       if Visible then
         for j := 0 to 3 do
           Vertices[j].col.w := (LifeTime - T) / LifeTime;
+end;
+
+procedure TGame.ShellUpdate(const dt: Double);
+var
+  i: Integer;
+begin
+  for i := 0 to ShellEmitter.Particles.Count - 1 do
+    with ShellEmitter.Particles[i] do
+    begin
+      if Visible then
+        Velocity := Velocity * (1 - 2 * dt);
+    end;
+end;
+
+procedure TGame.ParticleShells(aPos, aDir: TdfVec2f);
+begin
+  with ShellEmitter.GetNewParticle() do
+  begin
+    Position := dfVec3f(aPos + aDir* 5, 5);
+    Rotation := dfVec2f(- aDir.y, aDir.x).GetRotationAngle() + Random(50);
+    //SetVerticesColor(dfVec4f(Random(), Random(), Random(), 1.0));
+    SetVerticesColor(dfVec4f(0.7,  0.6, 0.1, 1.0));
+    Width := 8;
+    Height := 2;
+    LifeTime := 1.5;
+    Velocity := aDir * (120 + Random(10));
+  end;
 end;
 
 procedure TGame.OnFinish;
@@ -490,6 +757,7 @@ begin
 
   BulletManager.Free();
   ParticleEmitter.Free();
+  ShellEmitter.Free();
 
   SpriteBatch.Free();
   FontBatch.Free();
@@ -502,8 +770,11 @@ procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
   aOtherParam: Integer);
 begin
   // Calls when engine receives some input info
-  if (aType = itKeyUp) and (aKey = kP) then
+  if (aType = itKeyDown) and (aKey = kSpace) then
     Pause := not Pause;
+
+  if (aType = itTouchDown) and (aKey = kRightButton) then
+    Player.FireAlternative();
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
@@ -515,21 +786,22 @@ begin
 
   // Place here game logic code
   if (Core.Input.KeyDown[kA]) then
-    axisY := - 1
+    axisY := -1
   else if (Core.Input.KeyDown[kD]) then
-    axisY :=  1
+    axisY := 1
   else
     axisY := 0;
 
   if (Core.Input.KeyDown[kW]) then
     axisX := 1
   else if (Core.Input.KeyDown[kS]) then
-    axisX := - 1
+    axisX := -1
   else
     axisX := 0;
 
   Player.Update(dt, axisX, axisY);
   ParticleEmitter.Update(dt);
+  ShellEmitter.Update(dt);
   BulletManager.Update(dt);
   EnemyManager.Update(dt);
 
@@ -538,8 +810,6 @@ begin
 end;
 
 procedure TGame.OnRender;
-var
-  i: Integer;
 begin
   // It calls on every draw
   SceneHud.RenderScene();
@@ -549,18 +819,18 @@ begin
 
   MainMaterial.Bind();
   SpriteBatch.Start();
-    SpriteBatch.Draw(Player.Hero);
+    SpriteBatch.Draw(Player);
     SpriteBatch.Draw(Player.Weapon);
-    for i := 0 to EnemyManager.Enemies.Count - 1 do
-      SpriteBatch.Draw(EnemyManager.Enemies[i]);
   SpriteBatch.Finish();
 
+  EnemyManager.RenderSelf();
   BulletManager.RenderSelf();
 
   // Render ParticleEmitter
   MainMaterial.DepthWrite := False;
   MainMaterial.Bind();
   ParticleEmitter.RenderSelf();
+  ShellEmitter.RenderSelf();
   MainMaterial.DepthWrite := True;
   MainMaterial.Bind();
 end;
@@ -577,7 +847,7 @@ end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
 begin
-  //Calls when windows has chagned size
+  // Calls when windows has changed size
 end;
 
 
