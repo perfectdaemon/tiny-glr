@@ -468,7 +468,7 @@ end;
 
 function dfVec2f(rotationAngle: Single): TdfVec2f;
 begin
-  Result := dfVec2f(cos(-rotationAngle * deg2rad), sin(rotationAngle * deg2rad));
+  Result := dfVec2f(cos(-rotationAngle * deg2rad), sin(rotationAngle * deg2rad)).Normal;
 end;
 
 function dfVec3f(x, y, z: Single): TdfVec3f; overload;
