@@ -514,7 +514,8 @@ type
 
     kNumLock = $90, kScrollLock,
 
-    kWheelUp = $97, kWheelDown //engine defined, according to win api reference these codes are not assigned
+    kWheelUp = $97, kWheelDown, //engine defined, according to win api reference these codes are not assigned
+    kPlus = $BB, kMinus = $BD
   {$ENDIF}
   );
 
