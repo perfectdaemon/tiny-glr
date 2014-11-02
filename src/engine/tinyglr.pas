@@ -823,7 +823,7 @@ type
       Table: array [WideChar] of PglrCharData;
       CharData: array of TglrCharData;
 
-    function GetCharQuad(aChar: WideChar): TglrQuadP3T2C4;
+    function GetCharQuad(aChar: WideChar; aScale: Single): TglrQuadP3T2C4;
   public
     MaxCharHeight: Word;
 
@@ -848,6 +848,7 @@ type
     Text: WideString;
     LetterSpacing, LineSpacing: Single;
     Color: TdfVec4f;
+    Scale: Single;
     constructor Create(const aText: WideString = ''); virtual;
     destructor Destroy(); override;
 
@@ -1790,14 +1791,14 @@ begin
     if (aText.Text[j] = #10) then
     begin
       x := 0;
-      y += aText.LineSpacing + fFont.MaxCharHeight;
+      y += (aText.LineSpacing + fFont.MaxCharHeight) * aText.Scale;
       continue;
     end;
 
     if fFont.Table[aText.Text[j]] = nil then
       continue;
 
-    quad := fFont.GetCharQuad(aText.Text[j]);
+    quad := fFont.GetCharQuad(aText.Text[j], aText.Scale);
     //Do not need it anymore - included in AbsoluteMatrix computing
     //child.Matrix.Pos := child.Position;
     for k := 0 to 3 do
@@ -1927,6 +1928,7 @@ begin
   LineSpacing := 2.0;
   LetterSpacing := 1.0;
   Color := dfVec4f(1, 1, 1, 1);
+  Scale := 1.0;
 end;
 
 destructor TglrText.Destroy;
@@ -1941,17 +1943,17 @@ end;
 
 { TglrFont }
 
-function TglrFont.GetCharQuad(aChar: WideChar): TglrQuadP3T2C4;
+function TglrFont.GetCharQuad(aChar: WideChar; aScale: Single): TglrQuadP3T2C4;
 begin
   FillChar(Result[0], SizeOf(TglrVertexP3T2C4) * 4, 0);
   if Table[aChar] = nil then
     Exit();
   with Table[aChar]^ do
   begin
-    Result[0].vec := dfVec3f(w, py + h, 0);
-    Result[1].vec := dfVec3f(w, py, 0);
-    Result[2].vec := dfVec3f(0, py, 0);
-    Result[3].vec := dfVec3f(0, py + h, 0);
+    Result[0].vec := dfVec3f(w, py + h, 0) * aScale;
+    Result[1].vec := dfVec3f(w, py, 0) * aScale;
+    Result[2].vec := dfVec3f(0, py, 0) * aScale;
+    Result[3].vec := dfVec3f(0, py + h, 0) * aScale;
 
     Result[0].tex := dfVec2f(tx + tw, ty + th);
     Result[1].tex := dfVec2f(tx + tw, ty);
