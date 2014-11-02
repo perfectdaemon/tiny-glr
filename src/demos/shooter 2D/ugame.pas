@@ -15,8 +15,8 @@
   + normal pause button
   + OnPause/OnResume
 
-    enemy spawn progress
-    attention text
+  + enemy spawn progress
+  + attention text
 
   + music volume
 }
@@ -51,9 +51,9 @@ const
   //Bonuses
   HEALTH_BONUS = 10;
   TRIPLESHOT_TIME = 20.0;
-  RICOCHET_TIME = 20.0;
+  RICOCHET_TIME = 14.0;
 
-  BONUS_LIFETIME = 10.0;
+  BONUS_LIFETIME = 12.0;
   BONUS_COLLECT_RADIUS = 25;
   BONUS_MAGNET_RADIUS = 100;
 
@@ -68,6 +68,10 @@ const
   ENEMY_MAIN_WEAPON_VELOCITY = 250;
   ENEMY_MAIN_WEAPON_DISPERSION = 0.2;
   ENEMY_MAIN_WEAPON_DAMAGE = 5;
+
+  ENEMY_WAVE_COUNT = 10;
+
+  ATTENTION_POPUP_TIME = 5.0;
 
 type
 
@@ -178,13 +182,16 @@ type
     fBonusTriple, fBonusRicochet: Boolean;
     fBonusT: array[TBonusType] of Single;
   public
-    Health, HealthMax: Integer;
-    Weapon: TglrSprite;
+    HealthMax: Integer;
     FireThreshold, RotateSpeed, DirectSpeed: Single;
     MainWeaponVelocity, MainWeaponDispersion: Single;
     AltWeaponVelocity: Single;
-    AltWeaponCount: Integer;
     MainWeaponDamage, AltWeaponDamage: Integer;
+
+    Health: Integer;
+    Weapon: TglrSprite;
+
+    AltWeaponCount: Integer;
 
     constructor Create(); virtual;
     destructor Destroy(); override;
@@ -195,7 +202,7 @@ type
 
     procedure GetKilled(); virtual;
 
-    procedure Reset();
+    procedure Reset(); virtual;
   end;
 
   { TPlayer }
@@ -215,9 +222,17 @@ type
 
   TEnemy = class (TUnit)
   public
+    class var
+      _HealthMax: Integer;
+      _FireThreshold, _RotateSpeed, _DirectSpeed: Single;
+      _MainWeaponVelocity, _MainWeaponDispersion: Single;
+      _AltWeaponVelocity: Single;
+      _MainWeaponDamage, _AltWeaponDamage: Integer;
     constructor Create(); override;
     procedure Update(const dt: Double; axisX, axisY: Integer); override;
     procedure GetKilled(); override;
+
+    procedure Reset(); override;
   end;
 
   TEnemies = TglrObjectList<TEnemy>;
@@ -232,6 +247,7 @@ type
     EnemySpawnInterval: Single;
     EnemySpawnCount: Integer;
     Enemies: TEnemies;
+    WaveCount: Integer;
     constructor Create(aBatch: TglrSpriteBatch);
     destructor Destroy();
 
@@ -275,6 +291,9 @@ type
     GameOverText: TglrText;
 
     AttentionText: TglrText;
+    fAttT: Single;
+
+    EnemiesKilled, PreviouslyKilled: Integer;
     procedure SetGameOver();
     procedure ParticleBoom(aPos: TdfVec2f);
     procedure ParticleBigBoom(aPos: TdfVec2f);
@@ -286,6 +305,8 @@ type
     procedure ShellUpdate(const dt: Double);
 
     function GenerateTexture(aWidth, aHeight, aBorderSize: Integer): TglrTexture;
+
+    procedure SetAttention(aText: WideString);
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -588,18 +609,18 @@ begin
   Width := 45;
   Height := 25;
 
-  SetVerticesColor(dfVec4f(0.7, 0.3, 0.2, 1.0));
+  SetVerticesColor(dfVec4f(0.7 + 0.3 * Random(), 0.25 + 0.1 * Random(), 0.2, 1.0));
   Weapon.SetVerticesColor(dfVec4f(0.6, 0.2, 0.2, 1.0));
 
-  HealthMax := HEALTH_ENEMY;
+  HealthMax := TEnemy._HealthMax;
 
-  RotateSpeed := ENEMY_ROTATE_SPEED; //2;
-  DirectSpeed := ENEMY_DIRECT_SPEED; //70;
-  FireThreshold := ENEMY_FIRE_INTERVAL; //4.0;
+  RotateSpeed := TEnemy._RotateSpeed;
+  DirectSpeed := TEnemy._DirectSpeed;
+  FireThreshold := TEnemy._FireThreshold;
 
-  MainWeaponVelocity := ENEMY_MAIN_WEAPON_VELOCITY; //250;
-  MainWeaponDispersion := ENEMY_MAIN_WEAPON_DISPERSION; //0.2;
-  MainWeaponDamage := ENEMY_MAIN_WEAPON_DAMAGE //3;
+  MainWeaponVelocity := TEnemy._MainWeaponVelocity;
+  MainWeaponDispersion := TEnemy._MainWeaponDispersion;
+  MainWeaponDamage := TEnemy._MainWeaponDamage;
 end;
 
 procedure TEnemy.Update(const dt: Double; axisX, axisY: Integer);
@@ -630,10 +651,11 @@ var
 begin
   inherited GetKilled;
 
-  Game.Scores += SCORES_FOR_ENEMY;
+  Game.Scores += SCORES_FOR_ENEMY + Game.EnemyManager.WaveCount;
+  Game.EnemiesKilled += 1;
   with Game.PopupManager.GetNewPopup() do
   begin
-    Text := '+' + Convert.ToString(SCORES_FOR_ENEMY) + ' points';
+    Text := '+' + Convert.ToString(SCORES_FOR_ENEMY + Game.EnemyManager.WaveCount) + ' points';
     Color := dfVec4f(0.6, 0.6, 0.1, 1.0);
     Position := Self.Position;
     T := 3;
@@ -654,6 +676,20 @@ begin
 
       Position := Self.Position;
     end;
+end;
+
+procedure TEnemy.Reset;
+begin
+  inherited Reset;
+  HealthMax := TEnemy._HealthMax;
+
+  RotateSpeed := TEnemy._RotateSpeed;
+  DirectSpeed := TEnemy._DirectSpeed;
+  FireThreshold := TEnemy._FireThreshold;
+
+  MainWeaponVelocity := TEnemy._MainWeaponVelocity;
+  MainWeaponDispersion := TEnemy._MainWeaponDispersion;
+  MainWeaponDamage := TEnemy._MainWeaponDamage;
 end;
 
 { TPlayer }
@@ -697,6 +733,8 @@ begin
 
   AltWeaponDamage := PLAYER_ALT_WEAPON_DAMAGE;
   AltWeaponVelocity := PLAYER_ALT_WEAPON_VELOCITY;
+
+  AltWeaponCount := 1;
 end;
 
 destructor TPlayer.Destroy;
@@ -786,6 +824,16 @@ begin
   Enemies := TEnemies.Create(40);
   EnemySpawnInterval := ENEMY_SPAWN_INTERVAL;
   EnemySpawnCount := ENEMY_SPAWN_COUNT;
+
+  TEnemy._HealthMax := HEALTH_ENEMY;
+
+  TEnemy._RotateSpeed := ENEMY_ROTATE_SPEED;
+  TEnemy._DirectSpeed := ENEMY_DIRECT_SPEED;
+  TEnemy._FireThreshold := ENEMY_FIRE_INTERVAL;
+
+  TEnemy._MainWeaponVelocity := ENEMY_MAIN_WEAPON_VELOCITY;
+  TEnemy._MainWeaponDispersion := ENEMY_MAIN_WEAPON_DISPERSION;
+  TEnemy._MainWeaponDamage := ENEMY_MAIN_WEAPON_DAMAGE;
 end;
 
 destructor TEnemyManager.Destroy;
@@ -831,6 +879,24 @@ begin
       e.Position := dfVec3f(dfVec2f(Random(360)) * 700 + dfVec2f(Render.Width / 2, Render.Height / 2), 0);
     end;
   end;
+
+  if ((Game.EnemiesKilled - Game.PreviouslyKilled) > ENEMY_WAVE_COUNT * (WaveCount + 1)) and (WaveCount < 5) then
+  begin
+    WaveCount += 1;
+    Game.PreviouslyKilled := Game.EnemiesKilled;
+    EnemySpawnCount += 2;
+    EnemySpawnInterval := Max(1.0, EnemySpawnInterval - 0.1);
+    if (Game.EnemiesKilled > ENEMY_WAVE_COUNT * 5) then
+    begin
+      TEnemy._HealthMax += 5;
+      TEnemy._DirectSpeed += 5;
+      TEnemy._FireThreshold := Max(1.0, TEnemy._FireThreshold - 0.2);
+      TEnemy._MainWeaponDamage += 2;
+      Game.SetAttention('More enemies are coming!'#13#10'And they become stronger!');
+    end
+    else
+      Game.SetAttention('More enemies are coming!');
+  end;
 end;
 
 procedure TEnemyManager.RenderSelf();
@@ -855,7 +921,7 @@ var
 begin
   inherited Create;
   fBatch := aBatch;
-  fBullets := TBullets.Create(128);
+  fBullets := TBullets.Create(256);
   for i := 0 to 127 do
   begin
     b := TBullet.Create(BULLET_WIDTH, BULLET_HEIGHT, dfVec2f(0.5, 0.5));
@@ -1104,9 +1170,9 @@ begin
   for i := 0 to 35 do
     with Game.BulletManager.GetNewBullet() do
     begin
-      Width := 15;
-      Height := 5;
-      SetVerticesColor(dfVec4f(219 / 255, 104 / 255, 3 / 255, 1.0));
+      Width := 16;
+      Height := 4;
+      SetVerticesColor(dfVec4f(24 / 255, 124 / 255, 240 / 255, 1.0));
       BType := bFragile;
       Owner := fBulletOwner;
       Damage := AltWeaponDamage;
@@ -1132,14 +1198,12 @@ begin
   // Write here initialization code
   Randomize();
 
-  //Render.SetClearColor(43 / 255, 99 / 255, 147 / 255);
   Render.SetClearColor(0.15, 0.15, 0.15);
   Font := TglrFont.Create(FileSystem.ReadResourceLZO('shooter/font.bmp', False));
 
   MainMaterial := TglrMaterial.Create();
   MainMaterial.Shader.Free();
   MainMaterial.Shader := Default.SpriteShader;
-  //MainMaterial.AddTexture(Default.BlankTexture, 'uDiffuse');
   MainMaterial.AddTexture(GenerateTexture(64, 32, 2), 'uDiffuse');
 
   SpriteBatch := TglrSpriteBatch.Create();
@@ -1180,6 +1244,9 @@ begin
   GameOverText.Visible := False;
 
   AttentionText := TglrText.Create();
+  AttentionText.Scale := 1.5;
+  AttentionText.Position := dfVec3f(Render.Width / 2 - 200, 50, 25);
+  AttentionText.Visible := False;
 
   PauseSprite := TglrSprite.Create(Render.Width, Render.Height, dfVec2f(0, 0));
   PauseSprite.SetVerticesColor(dfVec4f(0.1, 0.1, 0.1, 0.5));
@@ -1206,6 +1273,11 @@ begin
 
   Pause := False;
   GameOver := False;
+  EnemiesKilled := 0;
+  PreviouslyKilled := 0;
+  fAttT := 0;
+
+  Scores := 0;
 end;
 
 procedure TGame.SetGameOver;
@@ -1328,6 +1400,13 @@ begin
   Result := TglrTexture.Create(m_origin, aWidth, aHeight, tfRGB8);
 end;
 
+procedure TGame.SetAttention(aText: WideString);
+begin
+  AttentionText.Text := aText;
+  AttentionText.Visible := True;
+  fAttT := ATTENTION_POPUP_TIME;
+end;
+
 procedure TGame.ParticleShells(aPos, aDir: TdfVec2f);
 begin
   with ShellEmitter.GetNewParticle() do
@@ -1445,9 +1524,18 @@ begin
   if (Core.Input.Touch[1].IsDown) then
     Player.Fire();
 
+  if (fAttT > 0) then
+  begin
+    fAttT -= dt;
+    AttentionText.Color.w := fAttT / ATTENTION_POPUP_TIME;
+  end
+  else
+    AttentionText.Visible := False;
+
   DebugText.Text :=
 //    'Health: ' + Convert.ToString(Player.Health) + #13#10 +
-    'Scores: ' + Convert.ToString(Scores);
+    'Scores: ' + Convert.ToString(Scores) + #13#10 +
+    'Wave indicator: ' + Convert.ToString(EnemyManager.WaveCount);
 end;
 
 procedure TGame.OnRender;
