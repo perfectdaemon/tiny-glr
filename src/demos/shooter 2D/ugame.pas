@@ -7,15 +7,18 @@
     + ricochet
   + scores
   + weapons
-    gameover
+  + gameover
 
-    hud for bombs
-    hud for health
+  + hud for bombs
+  + hud for health
 
   + normal pause button
   + OnPause/OnResume
 
     enemy spawn progress
+    attention text
+
+  + music volume
 }
 
 unit uGame;
@@ -198,8 +201,10 @@ type
   { TPlayer }
 
   TPlayer = class (TUnit)
+  private
+    fHealthAnimateT, fGameOverT: Single;
   public
-    BonusInfo: TglrText;
+    BonusInfo, HealthText, AltWeaponText: TglrText;
     constructor Create(); override;
     destructor Destroy(); override;
     procedure Update(const dt: Double; axisX, axisY: Integer); override;
@@ -258,10 +263,19 @@ type
     DebugText, PauseText: TglrText;
     PauseSprite: TglrSprite;
     SceneHud: TglrScene;
+    Camera: TglrCamera;
 
     Scores: Integer;
 
     Player: TPlayer;
+
+    MusicVolume: LongWord;
+
+    GameOver: Boolean;
+    GameOverText: TglrText;
+
+    AttentionText: TglrText;
+    procedure SetGameOver();
     procedure ParticleBoom(aPos: TdfVec2f);
     procedure ParticleBigBoom(aPos: TdfVec2f);
     procedure ParticleSmoke(aPos: TdfVec2f);
@@ -270,7 +284,6 @@ type
 
     procedure ParticleUpdate(const dt: Double);
     procedure ShellUpdate(const dt: Double);
-
 
     function GenerateTexture(aWidth, aHeight, aBorderSize: Integer): TglrTexture;
   public
@@ -534,7 +547,10 @@ begin
       Game.Player.Health := Min(Game.Player.Health + HEALTH_BONUS, Game.Player.HealthMax);
       with Game.PopupManager.GetNewPopup() do
       begin
-        Text := '+' + Convert.ToString(HEALTH_BONUS) + ' health';
+        if (Game.Player.Health = Game.Player.HealthMax) then
+          Text := 'Full health!'
+        else
+          Text := '+' + Convert.ToString(HEALTH_BONUS) + ' health';
         Color := dfVec4f(0.1, 0.6, 0.1, 1.0);
         Position := Self.Position;
         T := 3;
@@ -646,7 +662,19 @@ constructor TPlayer.Create;
 begin
   inherited Create;
   BonusInfo := TglrText.Create();
+  BonusInfo.Color := dfVec4f(0.3, 0.7, 0.3, 0.5);
   BonusInfo.Scale := 0.7;
+
+  HealthText := TglrText.Create('Low health!');
+  HealthText.Scale := 0.7;
+  HealthText.Color := dfVec4f(1.0, 0.0, 0.0, 1.0);
+  HealthText.Visible := False;
+  fHealthAnimateT := 0;
+
+  AltWeaponText := TglrText.Create();
+  AltWeaponText.Scale := 0.7;
+  AltWeaponText.Color := dfVec4f(0.3, 0.7, 0.3, 0.5);
+  AltWeaponText.Visible := True;
 
   fBulletOwner := bPlayer;
   Width := 45;
@@ -673,6 +701,8 @@ end;
 
 destructor TPlayer.Destroy;
 begin
+  AltWeaponText.Free();
+  HealthText.Free();
   BonusInfo.Free();
   inherited Destroy;
 end;
@@ -682,6 +712,15 @@ var
   add: Single;
 begin
   inherited Update(dt, axisX, axisY);
+
+  if not Visible then
+  begin
+    fGameOverT -= dt;
+    if fGameOverT < 0 then
+      Game.SetGameOver();
+    Exit();
+  end;
+
   fWeaponDir := (Core.Input.MousePos - dfVec2f(Position)).Normal;
   Weapon.Rotation := fWeaponDir.GetRotationAngle();
 
@@ -708,12 +747,34 @@ begin
   end;
 
   BonusInfo.Position := Position + dfVec3f(-30, -add, 4);
+  HealthText.Position := Position + dfVec3f(-30, 30, 4);
+  AltWeaponText.Position := Position + dfVec3f(30, 0, 4);
+
+  if Health <= (HealthMax div 2) then
+  begin
+    HealthText.Visible := True;
+    fHealthAnimateT += dt;
+    HealthText.Color.w := Abs(sin(fHealthAnimateT * 3));
+  end
+  else
+  begin
+    HealthText.Visible := False;
+    HealthText.Color.w := 1.0;
+    fHealthAnimateT := 0;
+  end;
+
+  if AltWeaponCount > 0 then
+    AltWeaponText.Text := Convert.ToString(AltWeaponCount) + ' bomb'
+  else
+    AltWeaponText.Text := '';
 end;
 
 procedure TPlayer.GetKilled;
 begin
   inherited GetKilled;
-  //todo: gameover
+  BonusInfo.Visible := False;
+  HealthText.Visible := False;
+  fGameOverT := 2.0;
 end;
 
 { TEnemyManager }
@@ -849,6 +910,9 @@ begin
 
           if (Owner = bEnemy) then
           begin
+            if not Game.Player.Visible then
+              continue;
+
             if (PointToSpriteIntersect(dfVec2f(Position), Game.Player)) then
             begin
               Game.ParticleBoom(dfVec2f(Position));
@@ -863,6 +927,7 @@ begin
               end
               else
               begin
+
                 with Game.PopupManager.GetNewPopup() do
                 begin
                   Text := '-' + Convert.ToString(Damage) + ' health';
@@ -873,11 +938,13 @@ begin
 
                 Game.Player.Health -= Damage;
                 if (Game.Player.Health  <= 0) then
+                begin
                   Game.Player.GetKilled();
+                  Game.ParticleBigBoom(dfVec2f(e.Position));
+                end;
 
                  Visible := False;
               end;
-              break;
             end;
           end
           else if (Owner = bPlayer) then
@@ -1108,29 +1175,48 @@ begin
     'T - Triple shot for your main weapon';
   PauseText.Visible := False;
 
+  GameOverText := TglrText.Create();
+  GameOverText.Position := dfVec3f(Render.Width / 2 - 200, 100, 30);
+  GameOverText.Visible := False;
+
+  AttentionText := TglrText.Create();
+
   PauseSprite := TglrSprite.Create(Render.Width, Render.Height, dfVec2f(0, 0));
   PauseSprite.SetVerticesColor(dfVec4f(0.1, 0.1, 0.1, 0.5));
   PauseSprite.Position.z := 25;
   PauseSprite.Visible := False;
 
-  SceneHud := TglrScene.Create();
-  SceneHud.Camera.ProjectionMode := pmOrtho;
-  SceneHud.Camera.ProjectionModePivot := pTopLeft;
-  SceneHud.Camera.SetCamera(
+  Camera := TglrCamera.Create();
+  Camera.ProjectionMode := pmOrtho;
+  Camera.ProjectionModePivot := pTopLeft;
+  Camera.SetCamera(
     dfVec3f(0, 0, 100),
     dfVec3f(0, 0, 0),
     dfVec3f(0, 1, 0));
-  SceneHud.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
+  Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
 
   Player := TPlayer.Create();
 
   EnemyManager := TEnemyManager.Create(SpriteBatch);
 
+  MusicVolume := 18;
+  uFMOD_SetVolume(MusicVolume);
+
   uFMOD_PlaySong(@xm1, Length(xm1), XM_MEMORY);
 
   Pause := False;
+  GameOver := False;
 end;
 
+procedure TGame.SetGameOver;
+begin
+  Pause := True;
+  GameOver := True;
+  PauseSprite.Visible := True;
+  GameOverText.Text := '        SCORES: ' + Convert.ToString(Scores) + #13#10#13#10 +
+    'Press "Enter" to start it all over again';
+  GameOverText.Visible := True;
+end;
 
 procedure TGame.ParticleBoom(aPos: TdfVec2f);
 var
@@ -1265,8 +1351,10 @@ begin
   EnemyManager.Free();
   Player.Free();
 
-  SceneHud.Free();
+  Camera.Free();
 
+  AttentionText.Free();
+  GameOverText.Free();
   DebugText.Free();
   PauseText.Free();
   PauseSprite.Free();
@@ -1289,15 +1377,39 @@ procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
   aOtherParam: Integer);
 begin
   // Calls when engine receives some input info
-  if (aType = itKeyDown) and (aKey = kEscape) then
+  if (GameOver) then
   begin
-    Pause := not Pause;
-    PauseText.Visible := Pause;
-    PauseSprite.Visible := Pause;
-  end;
+    if (aType = itKeyDown) and (aKey = kEscape) then
+      Core.Quit()
+    else if (aType = itKeyDown) and (aKey = kReturn) then
+    begin
+      OnFinish();
+      OnStart();
+    end;
+  end
+  else
+  begin
+    if (aType = itKeyDown) and (aKey = kEscape) then
+    begin
+      Pause := not Pause;
+      PauseText.Visible := Pause;
+      PauseSprite.Visible := Pause;
+    end;
 
-  if (aType = itTouchDown) and (aKey = kRightButton) then
-    Player.FireAlternative();
+    if (aType = itTouchDown) and (aKey = kRightButton) then
+      Player.FireAlternative();
+
+    if (aType = itKeyDown) and (aKey = kPlus) then
+    begin
+      MusicVolume := Clamp(MusicVolume + 1, 0, uFMOD_MAX_VOL);
+      uFMOD_SetVolume(MusicVolume);
+    end
+    else if (aType = itKeyDown) and (aKey = kMinus) then
+    begin
+      MusicVolume := Clamp(MusicVolume - 1, 0, uFMOD_MAX_VOL);
+      uFMOD_SetVolume(MusicVolume);
+    end;
+  end;
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
@@ -1335,17 +1447,13 @@ begin
 
   DebugText.Text :=
 //    'Health: ' + Convert.ToString(Player.Health) + #13#10 +
-//    'Triple: ' + Convert.ToString(Player.fBonusTriple) + ' ' + Convert.ToString(Player.fBonusT[bTripleShot]) + #13#10 +
-//    'Ricochet: ' + Convert.ToString(Player.fBonusRicochet) + ' ' + Convert.ToString(Player.fBonusT[bRicochet]) + #13#10 +
-//    'Alt count: ' + Convert.ToString(Player.AltWeaponCount) + #13#10#13#10 +
     'Scores: ' + Convert.ToString(Scores);
-
 end;
 
 procedure TGame.OnRender;
 begin
   // It calls on every draw
-  SceneHud.RenderScene();
+  Camera.Update();
   MainMaterial.Bind();
   SpriteBatch.Start();
     SpriteBatch.Draw(Player);
@@ -1368,7 +1476,11 @@ begin
   FontBatch.Start();
     FontBatch.Draw(DebugText);
     FontBatch.Draw(Player.BonusInfo);
+    FontBatch.Draw(Player.HealthText);
+    FontBatch.Draw(Player.AltWeaponText);
+    FontBatch.Draw(AttentionText);
     FontBatch.Draw(PauseText);
+    FontBatch.Draw(GameOverText);
   FontBatch.Finish();
 
   MainMaterial.Bind();
@@ -1381,20 +1493,22 @@ end;
 
 procedure TGame.OnPause;
 begin
+  // Calls when app has lost focus
+  uFMOD_Pause();
   Pause := True;
   PauseText.Visible := True;
   PauseSprite.Visible := True;
-  // Calls when engine receives that app was lost focus
 end;
 
 procedure TGame.OnResume;
 begin
   // Calls when engine receives that app was focused
+  uFMOD_Resume();
 end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
 begin
-  // Calls when windows has changed size
+  // Calls when window has changed size
 end;
 
 
