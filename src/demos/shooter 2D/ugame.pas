@@ -1,14 +1,22 @@
 {
   todo:
-    bonuses
-      triple shot
-      alternative usage
-      health
-    scores
+  + bonuses
+    + triple shot
+    + alternative usage
+    + health
+    + ricochet
+  + scores
     weapons
       rockets
       mines
     gameover
+
+    hud for bombs
+    hud for health
+
+  + normal pause button
+
+    OnPause/OnResume
 }
 
 unit uGame;
@@ -18,7 +26,87 @@ interface
 uses
   tinyglr, glrMath;
 
+const
+  HEALTH_PLAYER = 100;
+  HEALTH_ENEMY = 15;
+
+  PLAYER_ROTATE_SPEED = 130;
+
+  SHELL_WIDTH = 8;
+  SHELL_HEIGHT = 2;
+  SHELL_LIFETIME = 1.5;
+
+  //Bonuses
+  HEALTH_BONUS = 10;
+  TRIPLESHOT_TIME = 20.0;
+  RICOCHET_TIME = 20.0;
+  BONUS_LIFETIME = 10.0;
+  BONUS_COLLECT_RADIUS = 25;
+  BONUS_MAGNET_RADIUS = 100;
+
 type
+
+  { TPopupText }
+
+  TPopupText = class (TglrText)
+    T: Single;
+    procedure Reset();
+    procedure Update(const dt: Double);
+  end;
+
+  TPopupTexts = TglrObjectList<TPopupText>;
+
+  { TPopupManager }
+
+  TPopupManager = class
+  private
+    fBatch: TglrFontBatch;
+    fPopups: TPopupTexts;
+  public
+    constructor Create(aBatch: TglrFontBatch); virtual;
+    destructor Destroy(); override;
+
+    procedure Update(const dt: Double);
+    procedure RenderSelf();
+
+    function GetNewPopup(): TPopupText;
+  end;
+
+
+  TBonusType = (bTripleShot, bAlternativeShot, bHealth, bRicochet);
+
+  { TBonus }
+
+  TBonus = class (TglrText)
+  private
+    fT, fLifeTime: Single;
+    fBonusType: TBonusType;
+    fVelocity: TdfVec3f;
+    procedure SetBonusType(aBonusType: TBonusType);
+  public
+    property BonusType: TBonusType read fBonusType write SetBonusType;
+    procedure Reset();
+    procedure Update(const dt: Double);
+    procedure Use();
+  end;
+
+  TBonuses = TglrObjectList<TBonus>;
+
+  { TBonusManager }
+
+  TBonusManager = class
+  private
+    fBatch: TglrFontBatch;
+    fBonuses: TBonuses;
+  public
+    constructor Create(aBatch: TglrFontBatch); virtual;
+    destructor Destroy(); override;
+
+    procedure Update(const dt: Double);
+    procedure RenderSelf();
+
+    function GetNewBonus(): TBonus;
+  end;
 
   TBulletType = (bSimple, bFragile, bRocket);
 
@@ -32,7 +120,7 @@ type
     RotationVelocity: Single;
     BType: TBulletType;
     Owner: TBulletOwner;
-    Damage: Single;
+    Damage: Integer;
     procedure Reset();
   end;
 
@@ -62,13 +150,16 @@ type
     fWeaponDir: TdfVec2f;
     fT, fSmokeT: Single; // for shooting
 
-    fBonusTriple: Boolean;
+    fBonusTriple, fBonusRicochet: Boolean;
+    fBonusT: array[TBonusType] of Single;
   public
-    Health, HealthMax: Single;
+    Health, HealthMax: Integer;
     Weapon: TglrSprite;
     FireThreshold, RotateSpeed, DirectSpeed: Single;
-    MainWeaponVelocity, MainWeaponDispersion, MainWeaponDamage: Single;
-    AltWeaponVelocity, AltWeaponDamage: Single;
+    MainWeaponVelocity, MainWeaponDispersion: Single;
+    AltWeaponVelocity: Single;
+    AltWeaponCount: Integer;
+    MainWeaponDamage, AltWeaponDamage: Integer;
 
     constructor Create(); virtual;
     destructor Destroy(); override;
@@ -86,7 +177,9 @@ type
 
   TPlayer = class (TUnit)
   public
+    BonusInfo: TglrText;
     constructor Create(); override;
+    destructor Destroy(); override;
     procedure Update(const dt: Double; axisX, axisY: Integer); override;
     procedure GetKilled(); override;
   end;
@@ -97,6 +190,7 @@ type
   public
     constructor Create(); override;
     procedure Update(const dt: Double; axisX, axisY: Integer); override;
+    procedure GetKilled(); override;
   end;
 
   TEnemies = TglrObjectList<TEnemy>;
@@ -136,8 +230,14 @@ type
     BulletManager: TBulletManager;
     EnemyManager: TEnemyManager;
 
-    DebugText: TglrText;
+    BonusManager: TBonusManager;
+    PopupManager: TPopupManager;
+
+    DebugText, PauseText: TglrText;
+    PauseSprite: TglrSprite;
     SceneHud: TglrScene;
+
+    Scores: Integer;
 
     Player: TPlayer;
     procedure InitEnemies();
@@ -150,6 +250,8 @@ type
     procedure ParticleUpdate(const dt: Double);
     procedure ShellUpdate(const dt: Double);
 
+
+    function GenerateTexture(aWidth, aHeight, aBorderSize: Integer): TglrTexture;
   public
     procedure OnFinish; override;
     procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -196,6 +298,250 @@ begin
   Exit(Abs(aRad) < 0.3);
 end;
 
+{ TPopupManager }
+
+constructor TPopupManager.Create(aBatch: TglrFontBatch);
+var
+  i: Integer;
+  p: TPopupText;
+begin
+  inherited Create();
+  fBatch := aBatch;
+  fPopups := TPopupTexts.Create(30);
+  for i := 0 to 29 do
+  begin
+    p := TPopupText.Create();
+    p.Reset();
+    p.Visible := False;
+    fPopups.Add(p);
+  end;
+end;
+
+destructor TPopupManager.Destroy;
+begin
+  fPopups.Free(True);
+  inherited Destroy;
+end;
+
+procedure TPopupManager.Update(const dt: Double);
+var
+  i: Integer;
+begin
+  for i := 0 to fPopups.Count - 1 do
+    fPopups[i].Update(dt);
+end;
+
+procedure TPopupManager.RenderSelf;
+var
+  i: Integer;
+begin
+  fBatch.Start();
+    for i := 0 to fPopups.Count - 1 do
+      fBatch.Draw(fPopups[i]);
+  fBatch.Finish();
+end;
+
+function TPopupManager.GetNewPopup: TPopupText;
+var
+  i: Integer;
+  p: TPopupText;
+begin
+  for i := 0 to fPopups.Count - 1 do
+    if not fPopups[i].Visible then
+    begin
+      fPopups[i].Reset();
+      Exit(fPopups[i]);
+    end;
+
+  p := TPopupText.Create();
+  p.Reset();
+  fPopups.Add(p);
+  Exit(p);
+end;
+
+{ TPopupText }
+
+procedure TPopupText.Reset;
+begin
+  Text := '';
+  Color := dfVec4f(1,1,1,1);
+  T := 2.0;
+  Visible := True;
+  Scale := 0.7;
+end;
+
+procedure TPopupText.Update(const dt: Double);
+begin
+  if not Visible then
+    Exit();
+  T -= dt;
+
+  Position.y -= 20 * dt;
+  Color.w := (T / 2.0);
+
+  if T < 0 then
+    Visible := False;
+end;
+
+{ TBonusManager }
+
+constructor TBonusManager.Create(aBatch: TglrFontBatch);
+var
+  b: TBonus;
+  i: Integer;
+begin
+  inherited Create;
+  fBatch := aBatch;
+  fBonuses := TBonuses.Create(12);
+  for i := 0 to 11 do
+  begin
+    b := TBonus.Create();
+    b.Reset();
+    b.Visible := False;
+    fBonuses.Add(b);
+  end;
+end;
+
+destructor TBonusManager.Destroy;
+begin
+  fBonuses.Free(True);
+  inherited Destroy;
+end;
+
+procedure TBonusManager.Update(const dt: Double);
+var
+  i: Integer;
+begin
+  for i := 0 to fBonuses.Count - 1 do
+    fBonuses[i].Update(dt);
+end;
+
+procedure TBonusManager.RenderSelf;
+var
+  i: Integer;
+begin
+  fBatch.Start();
+    for i := 0 to fBonuses.Count - 1 do
+      fBatch.Draw(fBonuses[i]);
+  fBatch.Finish();
+end;
+
+function TBonusManager.GetNewBonus: TBonus;
+var
+  i: Integer;
+  b: TBonus;
+begin
+  for i := 0 to fBonuses.Count - 1 do
+    if not fBonuses[i].Visible then
+    begin
+      fBonuses[i].Reset();
+      Exit(fBonuses[i]);
+    end;
+
+  b := TBonus.Create();
+  b.Reset();
+  fBonuses.Add(b);
+  Exit(b);
+end;
+
+{ TBonus }
+
+procedure TBonus.SetBonusType(aBonusType: TBonusType);
+begin
+  fBonusType := aBonusType;
+  case fBonusType of
+    bHealth:          Text := 'H';
+    bTripleShot:      Text := 'T';
+    bAlternativeShot: Text := 'B';
+    bRicochet:        Text := 'R';
+  end;
+end;
+
+procedure TBonus.Reset();
+begin
+  fT := 0;
+  fLifeTime := BONUS_LIFETIME;
+  fVelocity.Reset();
+  Color := dfVec4f(1, 1, 1, 1);
+  Visible := True;
+  Scale := 1.3;
+end;
+
+procedure TBonus.Update(const dt: Double);
+var
+  magnitude: Single;
+begin
+  if not Visible then
+    Exit();
+
+  magnitude := Abs(sin(fT * 2));
+
+  case BonusType of
+    bTripleShot:      Color := dfVec4f(0.3 + magnitude, 0.3 + magnitude, 1.0, 1.0);
+    bHealth:          Color := dfVec4f(1.0, 0.3 + magnitude, 0.3 + magnitude, 1.0);
+    bRicochet:        Color := dfVec4f(0.3 + magnitude, 1.0, 0.3 + magnitude, 1.0);
+    bAlternativeShot: Color := dfVec4f(0.6 + magnitude, 0.3 + magnitude, 0.0, 1.0);
+  end;
+
+  magnitude := (Position - Game.Player.Position).LengthQ;
+
+  if magnitude < (BONUS_MAGNET_RADIUS * BONUS_MAGNET_RADIUS) then
+    fVelocity := (Game.Player.Position - Position).Normal * 180 * dt;
+
+  Position += fVelocity;
+
+  if magnitude < (BONUS_COLLECT_RADIUS * BONUS_COLLECT_RADIUS) then
+    Use();
+
+  fT += dt;
+  if (fT >= fLifeTime) then
+    Visible := False;
+end;
+
+procedure TBonus.Use;
+begin
+  case BonusType of
+
+    bTripleShot:
+    begin
+      Game.Player.fBonusTriple := True;
+      Game.Player.fBonusT[bTripleShot] := TRIPLESHOT_TIME;
+    end;
+
+    bHealth:
+    begin
+      Game.Player.Health := Min(Game.Player.Health + HEALTH_BONUS, Game.Player.HealthMax);
+      with Game.PopupManager.GetNewPopup() do
+      begin
+        Text := '+' + Convert.ToString(HEALTH_BONUS) + ' health';
+        Color := dfVec4f(0.1, 0.6, 0.1, 1.0);
+        Position := Self.Position;
+        T := 3;
+      end;
+    end;
+
+    bAlternativeShot:
+    begin
+      Game.Player.AltWeaponCount += 1;
+      with Game.PopupManager.GetNewPopup() do
+      begin
+        Text := '+ 1 super bomb';
+        Color := dfVec4f(0.1, 0.6, 0.1, 1.0);
+        Position := Self.Position;
+        T := 3;
+      end;
+    end;
+
+    bRicochet:
+    begin
+      Game.Player.fBonusRicochet := True;
+      Game.Player.fBonusT[bRicochet] := RICOCHET_TIME;
+    end;
+  end;
+
+  Visible := False;
+end;
+
 { TEnemy }
 
 constructor TEnemy.Create;
@@ -208,7 +554,7 @@ begin
   SetVerticesColor(dfVec4f(0.7, 0.3, 0.2, 1.0));
   Weapon.SetVerticesColor(dfVec4f(0.6, 0.2, 0.2, 1.0));
 
-  HealthMax := 15;
+  HealthMax := HEALTH_Enemy;
 
   RotateSpeed := 2;
   DirectSpeed := 70;
@@ -241,11 +587,46 @@ begin
   inherited Update(dt, axisX, axisY);
 end;
 
+procedure TEnemy.GetKilled;
+var
+  roll: Single;
+begin
+  inherited GetKilled;
+
+  Game.Scores += 10;
+  with Game.PopupManager.GetNewPopup() do
+  begin
+    Text := '+10 points';
+    Color := dfVec4f(0.6, 0.6, 0.1, 1.0);
+    Position := Self.Position;
+    T := 3;
+  end;
+
+  if Random() < 0.2 then
+    with Game.BonusManager.GetNewBonus() do
+    begin
+      roll := Random();
+      if roll < 0.3 then
+        BonusType := bHealth
+      else if roll < 0.6 then
+        BonusType := bTripleShot
+      else if roll < 0.8 then
+        BonusType := bAlternativeShot
+      else
+        BonusType := bRicochet;
+
+      Position := Self.Position;
+    end;
+end;
+
 { TPlayer }
 
 constructor TPlayer.Create;
 begin
   inherited Create;
+  BonusInfo := TglrText.Create();
+  BonusInfo.Scale := 0.7;
+
   fBulletOwner := bPlayer;
   Width := 45;
   Height := 25;
@@ -257,7 +638,7 @@ begin
   SetVerticesColor(dfVec4f(0.3, 0.7, 0.3, 1.0));
   Weapon.SetVerticesColor(dfVec4f(0.2, 0.6, 0.2, 1.0));
 
-  RotateSpeed := 130;
+  RotateSpeed := PLAYER_ROTATE_SPEED;//130;
   DirectSpeed := 150;
   FireThreshold := 0.1;
 
@@ -267,15 +648,45 @@ begin
 
   AltWeaponDamage := 30;
   AltWeaponVelocity := 300;
+end;
 
-  fBonusTriple := True;
+destructor TPlayer.Destroy;
+begin
+  BonusInfo.Free();
+  inherited Destroy;
 end;
 
 procedure TPlayer.Update(const dt: Double; axisX, axisY: Integer);
+var
+  add: Single;
 begin
   inherited Update(dt, axisX, axisY);
   fWeaponDir := (Core.Input.MousePos - dfVec2f(Position)).Normal;
   Weapon.Rotation := fWeaponDir.GetRotationAngle();
+
+  if Position.x < - (Width / 2) then
+    Position.x := Render.Width + (Width / 2)
+  else if Position.x > Render.Width + (Width / 2) then
+    Position.x := - (Width / 2);
+  if Position.y < - (Height / 2) then
+    Position.y := Render.Height + (Height / 2)
+  else if Position.y > Render.Height + (Height / 2) then
+    Position.y := - (Height / 2);
+
+  BonusInfo.Text := '';
+  add := 0;
+  if (fBonusTriple) then
+  begin
+    BonusInfo.Text := 'Triple shot - ' + Convert.ToString(fBonusT[bTripleShot], 1) + #13#10;
+    add += 30;
+  end;
+  if (fBonusRicochet) then
+  begin
+    BonusInfo.Text += 'Ricochet - ' + Convert.ToString(fBonusT[bRicochet], 1);
+    add += 30;
+  end;
+
+  BonusInfo.Position := Position + dfVec3f(-30, -add, 4);
 end;
 
 procedure TPlayer.GetKilled;
@@ -420,12 +831,34 @@ begin
           begin
             if (PointToSpriteIntersect(dfVec2f(Position), Game.Player)) then
             begin
-              Game.DebugText.Text := 'Player hit!';
               Game.ParticleBoom(dfVec2f(Position));
-              Game.Player.Health -= Damage;
-              if (Game.Player.Health  <= 0) then
-                Game.Player.GetKilled();
-              Visible := False;
+
+              if Game.Player.fBonusRicochet then
+              begin
+                T := 0;
+                Velocity := Velocity.Reflect(dfVec2f(Game.Player.Rotation));
+                Rotation := Velocity.GetRotationAngle();
+                Owner := bPlayer;
+                SetVerticesColor(dfVec4f(1, 0.5, 0.5, 1));
+                //todo ricochet
+              end
+              else
+              begin
+                with Game.PopupManager.GetNewPopup() do
+                begin
+                  Text := '-' + Convert.ToString(Damage) + ' health';
+                  Color := dfVec4f(0.9, 0.1, 0.1, 1.0);
+                  Position := fBullets[i].Position;
+                  T := 3;
+                end;
+
+                Game.Player.Health -= Damage;
+                if (Game.Player.Health  <= 0) then
+                  Game.Player.GetKilled();
+
+                 Visible := False;
+              end;
+
             end;
           end
           else if (Owner = bPlayer) then
@@ -504,6 +937,8 @@ begin
 end;
 
 procedure TUnit.Update(const dt: Double; axisX, axisY: Integer);
+var
+  i: TBonusType;
 begin
   if not Visible then
     Exit();
@@ -511,6 +946,15 @@ begin
   Position += dfVec3f(DirectSpeed * dt * axisX * dfVec2f(Rotation), 0);
 
   Weapon.Position := Position + dfVec3f(0, 0, 1);
+
+  for i := Low(TBonusType) to High(TBonusType) do
+    if fBonusT[i] > 0 then
+      fBonusT[i] -= dt;
+
+  if (fBonusT[bTripleShot] < 0) then
+    fBonusTriple := False;
+  if (fBonusT[bRicochet] < 0) then
+    fBonusRicochet := False;
 
   if (fT > 0) then
     fT -= dt;
@@ -566,6 +1010,11 @@ procedure TUnit.FireAlternative;
 var
   i: Integer;
 begin
+  if AltWeaponCount <= 0 then
+    Exit();
+
+  AltWeaponCount -= 1;
+
   for i := 0 to 35 do
     with Game.BulletManager.GetNewBullet() do
     begin
@@ -604,7 +1053,8 @@ begin
   MainMaterial := TglrMaterial.Create();
   MainMaterial.Shader.Free();
   MainMaterial.Shader := Default.SpriteShader;
-  MainMaterial.AddTexture(Default.BlankTexture, 'uDiffuse');
+  //MainMaterial.AddTexture(Default.BlankTexture, 'uDiffuse');
+  MainMaterial.AddTexture(GenerateTexture(64, 32, 2), 'uDiffuse');
 
   SpriteBatch := TglrSpriteBatch.Create();
   FontBatch := TglrFontBatch.Create(Font);
@@ -617,8 +1067,32 @@ begin
 
   BulletManager := TBulletManager.Create(SpriteBatch);
 
-  DebugText := TglrText.Create(UTF8Decode('Test'));
-  DebugText.Position := dfVec3f(100, 100, 1);
+  BonusManager := TBonusManager.Create(FontBatch);
+
+  PopupManager := TPopupManager.Create(FontBatch);
+
+  DebugText := TglrText.Create();
+  DebugText.Position := dfVec3f(10, 10, 1);
+
+  PauseText := TglrText.Create();
+  PauseText.Position := dfVec3f(Render.Width / 2, 100, 30)
+    - dfVec3f(300, 0, 0);
+  PauseText.Text := '              P A U S E' + #13#10 +
+    'Press "Escape" to continue exterminate enemies' + #13#10#13#10 +
+    'Control' + #13#10 +
+    'LMB - fire main weapon' + #13#10 +
+    'RMB - fire special weapon (if you have ammo)' + #13#10#13#10 +
+    'Bonuses' + #13#10 +
+    'B - Adds 1 ammo for special weapon' + #13#10 +
+    'R - Projectiles ricochets from you back to your enemies!' + #13#10 +
+    'H - Gives you ' + Convert.ToString(HEALTH_BONUS) + ' health points' + #13#10+
+    'T - Triple shot for your main weapon';
+  PauseText.Visible := False;
+
+  PauseSprite := TglrSprite.Create(Render.Width, Render.Height, dfVec2f(0, 0));
+  PauseSprite.SetVerticesColor(dfVec4f(0.1, 0.1, 0.1, 0.5));
+  PauseSprite.Position.z := 25;
+  PauseSprite.Visible := False;
 
   SceneHud := TglrScene.Create();
   SceneHud.Camera.ProjectionMode := pmOrtho;
@@ -728,6 +1202,32 @@ begin
     end;
 end;
 
+function TGame.GenerateTexture(aWidth, aHeight, aBorderSize: Integer): TglrTexture;
+var
+  m, m_origin: PByte;
+  i, j: Integer;
+  value: Byte;
+begin
+  m := GetMemory(aWidth * aHeight * 3);
+  m_origin := m;
+  for j := 0 to aHeight - 1 do
+    for i := 0 to aWidth - 1 do
+    begin
+      if (i < aBorderSize) or (j < aBorderSize)
+        or (i > aWidth - aBorderSize - 1) or (j > aHeight - aBorderSize - 1) then
+        value := 196
+      else
+        if ((i + j) mod 16) >= 8 then
+          value := 255
+        else
+          value := 196;
+      m^ := value; m+=1;
+      m^ := value; m+=1;
+      m^ := value; m+=1;
+    end;
+  Result := TglrTexture.Create(m_origin, aWidth, aHeight, tfRGB8);
+end;
+
 procedure TGame.ParticleShells(aPos, aDir: TdfVec2f);
 begin
   with ShellEmitter.GetNewParticle() do
@@ -736,9 +1236,9 @@ begin
     Rotation := dfVec2f(- aDir.y, aDir.x).GetRotationAngle() + Random(50);
     //SetVerticesColor(dfVec4f(Random(), Random(), Random(), 1.0));
     SetVerticesColor(dfVec4f(0.7,  0.6, 0.1, 1.0));
-    Width := 8;
-    Height := 2;
-    LifeTime := 1.5;
+    Width := SHELL_WIDTH;
+    Height := SHELL_HEIGHT;
+    LifeTime := SHELL_LIFETIME;
     Velocity := aDir * (120 + Random(10));
   end;
 end;
@@ -754,6 +1254,11 @@ begin
   SceneHud.Free();
 
   DebugText.Free();
+  PauseText.Free();
+  PauseSprite.Free();
+
+  PopupManager.Free();
+  BonusManager.Free();
 
   BulletManager.Free();
   ParticleEmitter.Free();
@@ -770,8 +1275,12 @@ procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
   aOtherParam: Integer);
 begin
   // Calls when engine receives some input info
-  if (aType = itKeyDown) and (aKey = kSpace) then
+  if (aType = itKeyDown) and (aKey = kEscape) then
+  begin
     Pause := not Pause;
+    PauseText.Visible := Pause;
+    PauseSprite.Visible := Pause;
+  end;
 
   if (aType = itTouchDown) and (aKey = kRightButton) then
     Player.FireAlternative();
@@ -804,19 +1313,25 @@ begin
   ShellEmitter.Update(dt);
   BulletManager.Update(dt);
   EnemyManager.Update(dt);
+  BonusManager.Update(dt);
+  PopupManager.Update(dt);
 
   if (Core.Input.Touch[1].IsDown) then
     Player.Fire();
+
+  DebugText.Text :=
+//    'Health: ' + Convert.ToString(Player.Health) + #13#10 +
+//    'Triple: ' + Convert.ToString(Player.fBonusTriple) + ' ' + Convert.ToString(Player.fBonusT[bTripleShot]) + #13#10 +
+//    'Ricochet: ' + Convert.ToString(Player.fBonusRicochet) + ' ' + Convert.ToString(Player.fBonusT[bRicochet]) + #13#10 +
+//    'Alt count: ' + Convert.ToString(Player.AltWeaponCount) + #13#10#13#10 +
+    'Scores: ' + Convert.ToString(Scores);
+
 end;
 
 procedure TGame.OnRender;
 begin
   // It calls on every draw
   SceneHud.RenderScene();
-  FontBatch.Start();
-    FontBatch.Draw(DebugText);
-  FontBatch.Finish();
-
   MainMaterial.Bind();
   SpriteBatch.Start();
     SpriteBatch.Draw(Player);
@@ -826,6 +1341,8 @@ begin
   EnemyManager.RenderSelf();
   BulletManager.RenderSelf();
 
+  BonusManager.RenderSelf();
+
   // Render ParticleEmitter
   MainMaterial.DepthWrite := False;
   MainMaterial.Bind();
@@ -833,10 +1350,26 @@ begin
   ShellEmitter.RenderSelf();
   MainMaterial.DepthWrite := True;
   MainMaterial.Bind();
+
+  FontBatch.Start();
+    FontBatch.Draw(DebugText);
+    FontBatch.Draw(Player.BonusInfo);
+    FontBatch.Draw(PauseText);
+  FontBatch.Finish();
+
+  MainMaterial.Bind();
+  SpriteBatch.Start();
+    SpriteBatch.Draw(PauseSprite);
+  SpriteBatch.Finish();
+
+  PopupManager.RenderSelf();
 end;
 
 procedure TGame.OnPause;
 begin
+  Pause := True;
+  PauseText.Visible := True;
+  PauseSprite.Visible := True;
   // Calls when engine receives that app was lost focus
 end;
 
