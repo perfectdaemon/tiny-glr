@@ -6,17 +6,16 @@
     + health
     + ricochet
   + scores
-    weapons
-      rockets
-      mines
+  + weapons
     gameover
 
     hud for bombs
     hud for health
 
   + normal pause button
+  + OnPause/OnResume
 
-    OnPause/OnResume
+    enemy spawn progress
 }
 
 unit uGame;
@@ -27,22 +26,45 @@ uses
   tinyglr, glrMath;
 
 const
-  HEALTH_PLAYER = 100;
+  HEALTH_PLAYER = 75;
   HEALTH_ENEMY = 15;
 
   PLAYER_ROTATE_SPEED = 130;
+  PLAYER_DIRECT_SPEED = 150;
+  PLAYER_FIRE_INTERVAL = 0.1;
+  PLAYER_MAIN_WEAPON_VELOCITY = 650;
+  PLAYER_MAIN_WEAPON_DISPERSION = 0.15;
+  PLAYER_MAIN_WEAPON_DAMAGE = 5;
+  PLAYER_ALT_WEAPON_DAMAGE = 30;
+  PLAYER_ALT_WEAPON_VELOCITY = 300;
 
-  SHELL_WIDTH = 8;
+  SHELL_WIDTH = 7;
   SHELL_HEIGHT = 2;
   SHELL_LIFETIME = 1.5;
+
+  BULLET_WIDTH = 12;
+  BULLET_HEIGHT = 2;
 
   //Bonuses
   HEALTH_BONUS = 10;
   TRIPLESHOT_TIME = 20.0;
   RICOCHET_TIME = 20.0;
+
   BONUS_LIFETIME = 10.0;
   BONUS_COLLECT_RADIUS = 25;
   BONUS_MAGNET_RADIUS = 100;
+
+  SCORES_FOR_ENEMY = 10;
+
+  ENEMY_SPAWN_INTERVAL = 3.0;
+  ENEMY_SPAWN_COUNT = 4;
+  ENEMY_ROTATE_SPEED = 2;
+  ENEMY_DIRECT_SPEED = 70;
+  ENEMY_FIRE_INTERVAL = 4.0;
+
+  ENEMY_MAIN_WEAPON_VELOCITY = 250;
+  ENEMY_MAIN_WEAPON_DISPERSION = 0.2;
+  ENEMY_MAIN_WEAPON_DAMAGE = 5;
 
 type
 
@@ -240,7 +262,6 @@ type
     Scores: Integer;
 
     Player: TPlayer;
-    procedure InitEnemies();
     procedure ParticleBoom(aPos: TdfVec2f);
     procedure ParticleBigBoom(aPos: TdfVec2f);
     procedure ParticleSmoke(aPos: TdfVec2f);
@@ -554,15 +575,15 @@ begin
   SetVerticesColor(dfVec4f(0.7, 0.3, 0.2, 1.0));
   Weapon.SetVerticesColor(dfVec4f(0.6, 0.2, 0.2, 1.0));
 
-  HealthMax := HEALTH_Enemy;
+  HealthMax := HEALTH_ENEMY;
 
-  RotateSpeed := 2;
-  DirectSpeed := 70;
-  FireThreshold := 4.0;
+  RotateSpeed := ENEMY_ROTATE_SPEED; //2;
+  DirectSpeed := ENEMY_DIRECT_SPEED; //70;
+  FireThreshold := ENEMY_FIRE_INTERVAL; //4.0;
 
-  MainWeaponVelocity := 250;
-  MainWeaponDispersion := 0.2;
-  MainWeaponDamage := 3;
+  MainWeaponVelocity := ENEMY_MAIN_WEAPON_VELOCITY; //250;
+  MainWeaponDispersion := ENEMY_MAIN_WEAPON_DISPERSION; //0.2;
+  MainWeaponDamage := ENEMY_MAIN_WEAPON_DAMAGE //3;
 end;
 
 procedure TEnemy.Update(const dt: Double; axisX, axisY: Integer);
@@ -593,10 +614,10 @@ var
 begin
   inherited GetKilled;
 
-  Game.Scores += 10;
+  Game.Scores += SCORES_FOR_ENEMY;
   with Game.PopupManager.GetNewPopup() do
   begin
-    Text := '+10 points';
+    Text := '+' + Convert.ToString(SCORES_FOR_ENEMY) + ' points';
     Color := dfVec4f(0.6, 0.6, 0.1, 1.0);
     Position := Self.Position;
     T := 3;
@@ -631,23 +652,23 @@ begin
   Width := 45;
   Height := 25;
 
-  HealthMax := 100;
+  HealthMax := HEALTH_PLAYER;
   Health := HealthMax;
 
   Position := dfVec3f(Render.Width / 2, Render.Height / 2, 1);
   SetVerticesColor(dfVec4f(0.3, 0.7, 0.3, 1.0));
   Weapon.SetVerticesColor(dfVec4f(0.2, 0.6, 0.2, 1.0));
 
-  RotateSpeed := PLAYER_ROTATE_SPEED;//130;
-  DirectSpeed := 150;
-  FireThreshold := 0.1;
+  RotateSpeed := PLAYER_ROTATE_SPEED;
+  DirectSpeed := PLAYER_DIRECT_SPEED;
+  FireThreshold := PLAYER_FIRE_INTERVAL;
 
-  MainWeaponVelocity := 650;
-  MainWeaponDispersion := 0.1;
-  MainWeaponDamage := 5;
+  MainWeaponVelocity := PLAYER_MAIN_WEAPON_VELOCITY;;
+  MainWeaponDispersion := PLAYER_MAIN_WEAPON_DISPERSION;
+  MainWeaponDamage := PLAYER_MAIN_WEAPON_DAMAGE;
 
-  AltWeaponDamage := 30;
-  AltWeaponVelocity := 300;
+  AltWeaponDamage := PLAYER_ALT_WEAPON_DAMAGE;
+  AltWeaponVelocity := PLAYER_ALT_WEAPON_VELOCITY;
 end;
 
 destructor TPlayer.Destroy;
@@ -678,12 +699,12 @@ begin
   if (fBonusTriple) then
   begin
     BonusInfo.Text := 'Triple shot - ' + Convert.ToString(fBonusT[bTripleShot], 1) + #13#10;
-    add += 30;
+    add += 35;
   end;
   if (fBonusRicochet) then
   begin
     BonusInfo.Text += 'Ricochet - ' + Convert.ToString(fBonusT[bRicochet], 1);
-    add += 30;
+    add += 35;
   end;
 
   BonusInfo.Position := Position + dfVec3f(-30, -add, 4);
@@ -702,8 +723,8 @@ begin
   inherited Create;
   fBatch := aBatch;
   Enemies := TEnemies.Create(40);
-  EnemySpawnInterval := 3.0;
-  EnemySpawnCount := 4;
+  EnemySpawnInterval := ENEMY_SPAWN_INTERVAL;
+  EnemySpawnCount := ENEMY_SPAWN_COUNT;
 end;
 
 destructor TEnemyManager.Destroy;
@@ -774,9 +795,9 @@ begin
   inherited Create;
   fBatch := aBatch;
   fBullets := TBullets.Create(128);
-  for i := 0 to 128 do
+  for i := 0 to 127 do
   begin
-    b := TBullet.Create(12, 2, dfVec2f(0.5, 0.5));
+    b := TBullet.Create(BULLET_WIDTH, BULLET_HEIGHT, dfVec2f(0.5, 0.5));
     b.Reset();
     b.Visible := False;
     fBullets.Add(b);
@@ -798,11 +819,10 @@ begin
     if not fBullets[i].Visible then
     begin
       fBullets[i].Reset();
-      fBullets[i].SetVerticesColor(dfVec4f(1, 1, 1, 1));
       Exit(fBullets[i]);
     end;
 
-  b := TBullet.Create(12, 2, dfVec2f(0.5, 0.5));
+  b := TBullet.Create(BULLET_WIDTH, BULLET_HEIGHT, dfVec2f(0.5, 0.5));
   b.Reset();
   fBullets.Add(b);
   Exit(b);
@@ -840,7 +860,6 @@ begin
                 Rotation := Velocity.GetRotationAngle();
                 Owner := bPlayer;
                 SetVerticesColor(dfVec4f(1, 0.5, 0.5, 1));
-                //todo ricochet
               end
               else
               begin
@@ -858,7 +877,7 @@ begin
 
                  Visible := False;
               end;
-
+              break;
             end;
           end
           else if (Owner = bPlayer) then
@@ -989,8 +1008,8 @@ begin
     for i := 0 to count - 1 do
     begin
       b := Game.BulletManager.GetNewBullet();
-      b.Width := 12;
-      b.Height := 2;
+      b.Width := BULLET_WIDTH;
+      b.Height := BULLET_HEIGHT;
       b.BType := bSimple;
       b.Owner := fBulletOwner;
       b.Damage := MainWeaponDamage;
@@ -1106,17 +1125,12 @@ begin
   Player := TPlayer.Create();
 
   EnemyManager := TEnemyManager.Create(SpriteBatch);
-  InitEnemies();
 
   uFMOD_PlaySong(@xm1, Length(xm1), XM_MEMORY);
 
   Pause := False;
 end;
 
-procedure TGame.InitEnemies;
-begin
-
-end;
 
 procedure TGame.ParticleBoom(aPos: TdfVec2f);
 var
