@@ -58,17 +58,17 @@ end;
 
 procedure TGame.OnPause;
 begin
-  // Calls when engine receives that app was lost focus
+  // Calls when app' window has lost focus
 end;
 
 procedure TGame.OnResume;
 begin
-  // Calls when engine receives that app was focused
+  // Calls when app' window was focused
 end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
 begin
-  //Calls when windows has chagned size
+  // Calls when window has changed size
 end;
 
 
