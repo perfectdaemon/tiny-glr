@@ -1475,6 +1475,9 @@ begin
       PauseSprite.Visible := Pause;
     end;
 
+    if (aType = itKeyDown) and (aKey = kSpace) then
+      Pause := not Pause;
+
     if (aType = itTouchDown) and (aKey = kRightButton) then
       Player.FireAlternative();
 
