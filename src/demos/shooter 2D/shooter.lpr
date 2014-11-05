@@ -14,7 +14,7 @@ begin
     Height := 600;
     X := 100;
     Y := 100;
-    Caption := 'Shooter [tiny-glr ' + TINYGLR_VERSION + ']';
+    Caption := 'Shooter 115k [tiny-glr ' + TINYGLR_VERSION + ']';
     vSync := True;
     PackFilesPath := '';
     UseDefaultAssets := True;

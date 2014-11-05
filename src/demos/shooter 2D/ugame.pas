@@ -1299,7 +1299,9 @@ begin
   Pause := True;
   GameOver := True;
   PauseSprite.Visible := True;
-  GameOverText.Text := '        SCORES: ' + Convert.ToString(Scores) + #13#10#13#10 +
+  GameOverText.Text :=
+    '        SCORES: ' + Convert.ToString(Scores) + #13#10 +
+    '        KILLED: ' + Convert.ToString(EnemiesKilled) + ' enemies' + #13#10#13#10 +
     'Press "Enter" to start it all over again';
   GameOverText.Visible := True;
 end;
