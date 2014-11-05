@@ -1242,13 +1242,14 @@ begin
   PauseText.Text := '              P A U S E' + #13#10 +
     'Press "Escape" to continue exterminate enemies' + #13#10#13#10 +
     'Control' + #13#10 +
-    'Space - on/off autofire' + #13#10 +
+    'WASD - movement' + #13#10 +
     'LMB - fire main weapon' + #13#10 +
-    'RMB - fire special weapon (if you have ammo)' + #13#10#13#10 +
+    'RMB - fire bomb (if you have ammo)' + #13#10 +
+    'Space - on/off autofire' + #13#10#13#10 +
     'Bonuses' + #13#10 +
-    'B - Adds 1 ammo for special weapon' + #13#10 +
+    'B - + 1 bomb' + #13#10 +
     'R - Projectiles ricochets from you back to your enemies!' + #13#10 +
-    'H - Gives you ' + Convert.ToString(HEALTH_BONUS) + ' health points' + #13#10+
+    'H - ' + Convert.ToString(HEALTH_BONUS) + ' health points' + #13#10+
     'T - Triple shot for your main weapon';
   PauseText.Visible := False;
 
