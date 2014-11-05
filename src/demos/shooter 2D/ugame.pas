@@ -211,6 +211,7 @@ type
   private
     fHealthAnimateT, fGameOverT: Single;
   public
+    FrontBumper: TglrSprite;
     BonusInfo, HealthText, AltWeaponText: TglrText;
     constructor Create(); override;
     destructor Destroy(); override;
@@ -294,6 +295,8 @@ type
     fAttT: Single;
 
     EnemiesKilled, PreviouslyKilled: Integer;
+
+    AutoFire: Boolean;
     procedure SetGameOver();
     procedure ParticleBoom(aPos: TdfVec2f);
     procedure ParticleBigBoom(aPos: TdfVec2f);
@@ -609,7 +612,7 @@ begin
   Width := 45;
   Height := 25;
 
-  SetVerticesColor(dfVec4f(0.7 + 0.3 * Random(), 0.25 + 0.1 * Random(), 0.2, 1.0));
+  SetVerticesColor(dfVec4f(0.7 + 0.4 * Random(), 0.25 + 0.2 * Random(), 0.3, 1.0));
   Weapon.SetVerticesColor(dfVec4f(0.6, 0.2, 0.2, 1.0));
 
   HealthMax := TEnemy._HealthMax;
@@ -713,7 +716,7 @@ begin
   AltWeaponText.Visible := True;
 
   fBulletOwner := bPlayer;
-  Width := 45;
+  Width := 46;
   Height := 25;
 
   HealthMax := HEALTH_PLAYER;
@@ -735,6 +738,13 @@ begin
   AltWeaponVelocity := PLAYER_ALT_WEAPON_VELOCITY;
 
   AltWeaponCount := 1;
+
+  FrontBumper := TglrSprite.Create(10, 25, dfVec2f(0, 0.5));
+  FrontBumper.SetVerticesColor(dfVec4f(0.2, 0.6, 0.2, 1.0));
+  FrontBumper.Position := dfVec3f(23, 0, 1);
+  FrontBumper.Parent := Self;
+  FrontBumper.Vertices[0].vec.y -= 5;
+  FrontBumper.Vertices[1].vec.y += 5;
 end;
 
 destructor TPlayer.Destroy;
@@ -742,6 +752,7 @@ begin
   AltWeaponText.Free();
   HealthText.Free();
   BonusInfo.Free();
+  FrontBumper.Free();
   inherited Destroy;
 end;
 
@@ -812,6 +823,7 @@ begin
   inherited GetKilled;
   BonusInfo.Visible := False;
   HealthText.Visible := False;
+  FrontBumper.Visible := False;
   fGameOverT := 2.0;
 end;
 
@@ -1230,6 +1242,7 @@ begin
   PauseText.Text := '              P A U S E' + #13#10 +
     'Press "Escape" to continue exterminate enemies' + #13#10#13#10 +
     'Control' + #13#10 +
+    'Space - on/off autofire' + #13#10 +
     'LMB - fire main weapon' + #13#10 +
     'RMB - fire special weapon (if you have ammo)' + #13#10#13#10 +
     'Bonuses' + #13#10 +
@@ -1476,7 +1489,7 @@ begin
     end;
 
     if (aType = itKeyDown) and (aKey = kSpace) then
-      Pause := not Pause;
+      AutoFire := not AutoFire;
 
     if (aType = itTouchDown) and (aKey = kRightButton) then
       Player.FireAlternative();
@@ -1524,7 +1537,7 @@ begin
   BonusManager.Update(dt);
   PopupManager.Update(dt);
 
-  if (Core.Input.Touch[1].IsDown) then
+  if (AutoFire) or (Core.Input.Touch[1].IsDown) then
     Player.Fire();
 
   if (fAttT > 0) then
@@ -1538,7 +1551,7 @@ begin
   DebugText.Text :=
 //    'Health: ' + Convert.ToString(Player.Health) + #13#10 +
     'Scores: ' + Convert.ToString(Scores) + #13#10 +
-    'Wave indicator: ' + Convert.ToString(EnemyManager.WaveCount);
+    'Wave: ' + Convert.ToString(EnemyManager.WaveCount);
 end;
 
 procedure TGame.OnRender;
@@ -1549,6 +1562,7 @@ begin
   SpriteBatch.Start();
     SpriteBatch.Draw(Player);
     SpriteBatch.Draw(Player.Weapon);
+    SpriteBatch.Draw(Player.FrontBumper);
   SpriteBatch.Finish();
 
   EnemyManager.RenderSelf();
