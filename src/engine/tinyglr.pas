@@ -82,6 +82,9 @@ type
     property Items[Index: LongInt]: T read GetItem write SetItem; default;
   end;
 
+  TglrStringList = TglrList<AnsiString>;
+  TglrWordList = TglrList<Word>;
+
   { TglrObjectList }
 
   TglrObjectList<T> = class (TglrList<T>)
@@ -93,8 +96,14 @@ type
     procedure DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean = False); reintroduce;
   end;
 
-  TglrStringList = TglrList<AnsiString>;
-  TglrWordList = TglrList<Word>;
+  { TglrPool }
+
+  TglrPool<T> = class (TglrObjectList<T>)
+  public
+    constructor Create(const aPoolSize: Integer); virtual;
+    function Get(): T;
+    procedure Release(const aItem: T);
+  end;
 
   { TglrDictionary }
 
@@ -1150,6 +1159,45 @@ begin
   Dec(FCount);
   if Length(FItems) - FCount + 1 > FCapacity then
     SetLength(FItems, Length(FItems) - FCapacity);
+end;
+
+{ TglrPool<T> }
+
+constructor TglrPool<T>.Create(const aPoolSize: Integer);
+var
+  i: Integer;
+  new: T;
+begin
+  inherited Create(aPoolSize);
+  for i := 0 to aPoolSize - 1 do
+  begin
+    new := T.Create;
+    new.Enabled := False;
+    Add(new);
+  end;
+end;
+
+function TglrPool<T>.Get: T;
+var
+  i: Integer;
+  new: T;
+begin
+  for i := 0 to Count - 1 do
+    if (not Items[i].Enabled) then
+    begin
+      Items[i].Enabled := True;
+      Exit(Items[i]);
+    end;
+
+  new := T.Create;
+  Add(new);
+  new.Enabled := True;
+  Exit(new);
+end;
+
+procedure TglrPool<T>.Release(const aItem: T);
+begin
+  aItem.Enabled := False;
 end;
 
 { TglrDictionary<Key, Value> }
