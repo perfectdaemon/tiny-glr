@@ -888,8 +888,8 @@ begin
 
                 if e.Health <= 0 then
                 begin
-                  Game.EnemyManager.Release(e);
                   e.GetKilled();
+                  Game.EnemyManager.Release(e);
                   Game.ParticleBigBoom(dfVec2f(e.Position));
                 end;
 
@@ -1066,7 +1066,7 @@ begin
   MainMaterial := TglrMaterial.Create();
   MainMaterial.Shader.Free();
   MainMaterial.Shader := Default.SpriteShader;
-  MainMaterial.AddTexture(GenerateTexture(64, 32, 2), 'uDiffuse');
+  MainMaterial.AddTexture({Default.BlankTexture}GenerateTexture(64, 32, 2), 'uDiffuse');
 
   SpriteBatch := TglrSpriteBatch.Create();
   FontBatch := TglrFontBatch.Create(Font);
