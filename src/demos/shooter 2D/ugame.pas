@@ -48,6 +48,9 @@ const
   BULLET_WIDTH = 12;
   BULLET_HEIGHT = 2;
 
+  BULLET_ALT_WIDTH = 16;
+  BULLET_ALT_HEIGHT = 4;
+
   //Bonuses
   HEALTH_BONUS = 10;
   TRIPLESHOT_TIME = 20.0;
@@ -78,27 +81,23 @@ type
   { TPopupText }
 
   TPopupText = class (TglrText)
+  private
+    procedure SetEnabled(const aEnabled: Boolean);
+  public
     T: Single;
-    procedure Reset();
-    procedure Update(const dt: Double);
+    property Enabled: Boolean read Visible write SetEnabled;
   end;
-
-  TPopupTexts = TglrObjectList<TPopupText>;
 
   { TPopupManager }
 
-  TPopupManager = class
+  TPopupManager = class (TglrPool<TPopupText>)
   private
     fBatch: TglrFontBatch;
-    fPopups: TPopupTexts;
   public
     constructor Create(aBatch: TglrFontBatch); virtual;
-    destructor Destroy(); override;
 
     procedure Update(const dt: Double);
     procedure RenderSelf();
-
-    function GetNewPopup(): TPopupText;
   end;
 
 
@@ -111,30 +110,25 @@ type
     fT, fLifeTime: Single;
     fBonusType: TBonusType;
     fVelocity: TdfVec3f;
+    procedure SetEnabled(const aEnabled: Boolean);
     procedure SetBonusType(aBonusType: TBonusType);
   public
     property BonusType: TBonusType read fBonusType write SetBonusType;
-    procedure Reset();
-    procedure Update(const dt: Double);
     procedure Use();
-  end;
 
-  TBonuses = TglrObjectList<TBonus>;
+    property Enabled: Boolean read Visible write SetEnabled;
+  end;
 
   { TBonusManager }
 
-  TBonusManager = class
+  TBonusManager = class (TglrPool<TBonus>)
   private
     fBatch: TglrFontBatch;
-    fBonuses: TBonuses;
   public
     constructor Create(aBatch: TglrFontBatch); virtual;
-    destructor Destroy(); override;
 
     procedure Update(const dt: Double);
     procedure RenderSelf();
-
-    function GetNewBonus(): TBonus;
   end;
 
   TBulletType = (bSimple, bFragile, bRocket);
@@ -144,28 +138,25 @@ type
   { TBullet }
 
   TBullet = class (TglrSprite)
+  private
+    procedure SetEnabled(const aEnabled: Boolean);
+  public
     T, LifeTime: Single;
     Velocity: TdfVec2f;
     RotationVelocity: Single;
     BType: TBulletType;
     Owner: TBulletOwner;
     Damage: Integer;
-    procedure Reset();
+    property Enabled: Boolean read Visible write SetEnabled;
   end;
-
-  TBullets = TglrObjectList<TBullet>;
 
   { TBulletManager }
 
-  TBulletManager = class
+  TBulletManager = class (TglrPool<TBullet>)
   private
-    fBullets: TBullets;
     fBatch: TglrSpriteBatch;
   public
-    constructor Create(aBatch: TglrSpriteBatch);
-    destructor Destroy();
-
-    function GetNewBullet(): TBullet;
+    constructor Create(aBatch: TglrSpriteBatch); virtual;
 
     procedure Update(const dt: Double);
     procedure RenderSelf();
@@ -181,6 +172,7 @@ type
 
     fBonusTriple, fBonusRicochet: Boolean;
     fBonusT: array[TBonusType] of Single;
+    procedure SetEnabled(const aEnabled: Boolean); virtual;
   public
     HealthMax: Integer;
     FireThreshold, RotateSpeed, DirectSpeed: Single;
@@ -202,14 +194,15 @@ type
 
     procedure GetKilled(); virtual;
 
-    procedure Reset(); virtual;
+    property Enabled: Boolean read Visible write SetEnabled;
   end;
 
   { TPlayer }
 
   TPlayer = class (TUnit)
-  private
+  protected
     fHealthAnimateT, fGameOverT: Single;
+    procedure SetEnabled(const aEnabled: Boolean); override;
   public
     FrontBumper: TglrSprite;
     BonusInfo, HealthText, AltWeaponText: TglrText;
@@ -222,6 +215,8 @@ type
   { TEnemy }
 
   TEnemy = class (TUnit)
+  protected
+    procedure SetEnabled(const aEnabled: Boolean); override;
   public
     class var
       _HealthMax: Integer;
@@ -232,27 +227,19 @@ type
     constructor Create(); override;
     procedure Update(const dt: Double; axisX, axisY: Integer); override;
     procedure GetKilled(); override;
-
-    procedure Reset(); override;
   end;
-
-  TEnemies = TglrObjectList<TEnemy>;
 
   { TEnemyManager }
 
-  TEnemyManager = class
+  TEnemyManager = class (TglrPool<TEnemy>)
   private
     fT: Single;
     fBatch: TglrSpriteBatch;
   public
     EnemySpawnInterval: Single;
     EnemySpawnCount: Integer;
-    Enemies: TEnemies;
     WaveCount: Integer;
-    constructor Create(aBatch: TglrSpriteBatch);
-    destructor Destroy();
-
-    function GetNewEnemy(): TEnemy;
+    constructor Create(aBatch: TglrSpriteBatch); virtual;
 
     procedure Update(const dt: Double);
     procedure RenderSelf();
@@ -279,7 +266,6 @@ type
 
     DebugText, PauseText: TglrText;
     PauseSprite: TglrSprite;
-    SceneHud: TglrScene;
     Camera: TglrCamera;
 
     Scores: Integer;
@@ -359,34 +345,30 @@ end;
 { TPopupManager }
 
 constructor TPopupManager.Create(aBatch: TglrFontBatch);
-var
-  i: Integer;
-  p: TPopupText;
 begin
-  inherited Create();
+  inherited Create(30);
   fBatch := aBatch;
-  fPopups := TPopupTexts.Create(30);
-  for i := 0 to 29 do
-  begin
-    p := TPopupText.Create();
-    p.Reset();
-    p.Visible := False;
-    fPopups.Add(p);
-  end;
-end;
-
-destructor TPopupManager.Destroy;
-begin
-  fPopups.Free(True);
-  inherited Destroy;
 end;
 
 procedure TPopupManager.Update(const dt: Double);
 var
   i: Integer;
 begin
-  for i := 0 to fPopups.Count - 1 do
-    fPopups[i].Update(dt);
+  for i := 0 to Count - 1 do
+    if not Items[i].Enabled then
+      continue
+    else
+      with Items[i] do
+      begin
+        T -= dt;
+
+        Position.y -= 20 * dt;
+        Color.w := (T / 2.0);
+
+        if T < 0 then
+          Release(Items[i]);
+      end;
+
 end;
 
 procedure TPopupManager.RenderSelf;
@@ -394,84 +376,65 @@ var
   i: Integer;
 begin
   fBatch.Start();
-    for i := 0 to fPopups.Count - 1 do
-      fBatch.Draw(fPopups[i]);
+    for i := 0 to Count - 1 do
+      fBatch.Draw(Items[i]);
   fBatch.Finish();
-end;
-
-function TPopupManager.GetNewPopup: TPopupText;
-var
-  i: Integer;
-  p: TPopupText;
-begin
-  for i := 0 to fPopups.Count - 1 do
-    if not fPopups[i].Visible then
-    begin
-      fPopups[i].Reset();
-      Exit(fPopups[i]);
-    end;
-
-  p := TPopupText.Create();
-  p.Reset();
-  fPopups.Add(p);
-  Exit(p);
 end;
 
 { TPopupText }
 
-procedure TPopupText.Reset;
+procedure TPopupText.SetEnabled(const aEnabled: Boolean);
 begin
+  Visible := aEnabled;
   Text := '';
   Color := dfVec4f(1,1,1,1);
   T := 2.0;
-  Visible := True;
   Scale := 0.7;
-end;
-
-procedure TPopupText.Update(const dt: Double);
-begin
-  if not Visible then
-    Exit();
-  T -= dt;
-
-  Position.y -= 20 * dt;
-  Color.w := (T / 2.0);
-
-  if T < 0 then
-    Visible := False;
 end;
 
 { TBonusManager }
 
 constructor TBonusManager.Create(aBatch: TglrFontBatch);
-var
-  b: TBonus;
-  i: Integer;
 begin
-  inherited Create;
+  inherited Create(12);
   fBatch := aBatch;
-  fBonuses := TBonuses.Create(12);
-  for i := 0 to 11 do
-  begin
-    b := TBonus.Create();
-    b.Reset();
-    b.Visible := False;
-    fBonuses.Add(b);
-  end;
-end;
-
-destructor TBonusManager.Destroy;
-begin
-  fBonuses.Free(True);
-  inherited Destroy;
 end;
 
 procedure TBonusManager.Update(const dt: Double);
 var
   i: Integer;
+  magnitude: Single;
 begin
-  for i := 0 to fBonuses.Count - 1 do
-    fBonuses[i].Update(dt);
+  for i := 0 to Count - 1 do
+    if not Items[i].Enabled then
+      continue
+    else
+      with Items[i] do
+      begin
+        magnitude := Abs(sin(fT * 2));
+
+        case BonusType of
+          bTripleShot:      Color := dfVec4f(0.3 + magnitude, 0.3 + magnitude, 1.0, 1.0);
+          bHealth:          Color := dfVec4f(1.0, 0.3 + magnitude, 0.3 + magnitude, 1.0);
+          bRicochet:        Color := dfVec4f(0.3 + magnitude, 1.0, 0.3 + magnitude, 1.0);
+          bAlternativeShot: Color := dfVec4f(0.6 + magnitude, 0.3 + magnitude, 0.0, 1.0);
+        end;
+
+        magnitude := (Position - Game.Player.Position).LengthQ;
+
+        if magnitude < (BONUS_MAGNET_RADIUS * BONUS_MAGNET_RADIUS) then
+          fVelocity := (Game.Player.Position - Position).Normal * 180 * dt;
+
+        Position += fVelocity;
+
+        if magnitude < (BONUS_COLLECT_RADIUS * BONUS_COLLECT_RADIUS) then
+          Use();
+
+        fT += dt;
+        if (fT >= fLifeTime) then
+          Release(Items[i]);
+      end;
+
 end;
 
 procedure TBonusManager.RenderSelf;
@@ -479,30 +442,23 @@ var
   i: Integer;
 begin
   fBatch.Start();
-    for i := 0 to fBonuses.Count - 1 do
-      fBatch.Draw(fBonuses[i]);
+    for i := 0 to Count - 1 do
+      fBatch.Draw(Items[i]);
   fBatch.Finish();
 end;
 
-function TBonusManager.GetNewBonus: TBonus;
-var
-  i: Integer;
-  b: TBonus;
-begin
-  for i := 0 to fBonuses.Count - 1 do
-    if not fBonuses[i].Visible then
-    begin
-      fBonuses[i].Reset();
-      Exit(fBonuses[i]);
-    end;
-
-  b := TBonus.Create();
-  b.Reset();
-  fBonuses.Add(b);
-  Exit(b);
-end;
-
 { TBonus }
+
+procedure TBonus.SetEnabled(const aEnabled: Boolean);
+begin
+  fT := 0;
+  fLifeTime := BONUS_LIFETIME;
+  fVelocity.Reset();
+  Color := dfVec4f(1, 1, 1, 1);
+  Visible := True;
+  Scale := 1.3;
+  Visible := aEnabled;
+end;
 
 procedure TBonus.SetBonusType(aBonusType: TBonusType);
 begin
@@ -513,47 +469,6 @@ begin
     bAlternativeShot: Text := 'B';
     bRicochet:        Text := 'R';
   end;
-end;
-
-procedure TBonus.Reset();
-begin
-  fT := 0;
-  fLifeTime := BONUS_LIFETIME;
-  fVelocity.Reset();
-  Color := dfVec4f(1, 1, 1, 1);
-  Visible := True;
-  Scale := 1.3;
-end;
-
-procedure TBonus.Update(const dt: Double);
-var
-  magnitude: Single;
-begin
-  if not Visible then
-    Exit();
-
-  magnitude := Abs(sin(fT * 2));
-
-  case BonusType of
-    bTripleShot:      Color := dfVec4f(0.3 + magnitude, 0.3 + magnitude, 1.0, 1.0);
-    bHealth:          Color := dfVec4f(1.0, 0.3 + magnitude, 0.3 + magnitude, 1.0);
-    bRicochet:        Color := dfVec4f(0.3 + magnitude, 1.0, 0.3 + magnitude, 1.0);
-    bAlternativeShot: Color := dfVec4f(0.6 + magnitude, 0.3 + magnitude, 0.0, 1.0);
-  end;
-
-  magnitude := (Position - Game.Player.Position).LengthQ;
-
-  if magnitude < (BONUS_MAGNET_RADIUS * BONUS_MAGNET_RADIUS) then
-    fVelocity := (Game.Player.Position - Position).Normal * 180 * dt;
-
-  Position += fVelocity;
-
-  if magnitude < (BONUS_COLLECT_RADIUS * BONUS_COLLECT_RADIUS) then
-    Use();
-
-  fT += dt;
-  if (fT >= fLifeTime) then
-    Visible := False;
 end;
 
 procedure TBonus.Use;
@@ -569,7 +484,7 @@ begin
     bHealth:
     begin
       Game.Player.Health := Min(Game.Player.Health + HEALTH_BONUS, Game.Player.HealthMax);
-      with Game.PopupManager.GetNewPopup() do
+      with Game.PopupManager.Get() do
       begin
         if (Game.Player.Health = Game.Player.HealthMax) then
           Text := 'Full health!'
@@ -584,7 +499,7 @@ begin
     bAlternativeShot:
     begin
       Game.Player.AltWeaponCount += 1;
-      with Game.PopupManager.GetNewPopup() do
+      with Game.PopupManager.Get() do
       begin
         Text := '+ 1 super bomb';
         Color := dfVec4f(0.1, 0.6, 0.1, 1.0);
@@ -605,16 +520,9 @@ end;
 
 { TEnemy }
 
-constructor TEnemy.Create;
+procedure TEnemy.SetEnabled(const aEnabled: Boolean);
 begin
-  inherited Create;
-  fBulletOwner := bEnemy;
-  Width := 45;
-  Height := 25;
-
-  SetVerticesColor(dfVec4f(0.7 + 0.4 * Random(), 0.25 + 0.2 * Random(), 0.3, 1.0));
-  Weapon.SetVerticesColor(dfVec4f(0.6, 0.2, 0.2, 1.0));
-
+  inherited SetEnabled(aEnabled);
   HealthMax := TEnemy._HealthMax;
 
   RotateSpeed := TEnemy._RotateSpeed;
@@ -626,9 +534,19 @@ begin
   MainWeaponDamage := TEnemy._MainWeaponDamage;
 end;
 
+constructor TEnemy.Create;
+begin
+  inherited Create;
+  fBulletOwner := bEnemy;
+  SetSize(45, 25);
+
+  SetVerticesColor(dfVec4f(0.7 + 0.4 * Random(), 0.25 + 0.2 * Random(), 0.3, 1.0));
+  Weapon.SetVerticesColor(dfVec4f(0.6, 0.2, 0.2, 1.0));
+end;
+
 procedure TEnemy.Update(const dt: Double; axisX, axisY: Integer);
 begin
-  if not Visible then
+  if not Enabled then
     Exit();
   fWeaponDir := dfVec2f(Game.Player.Position - Position).Normal;
   Weapon.Rotation := fWeaponDir.GetRotationAngle();
@@ -644,8 +562,8 @@ begin
   // Always move!
   axisX := 1;
   axisY := 0;
-  Fire();
   inherited Update(dt, axisX, axisY);
+  Fire();
 end;
 
 procedure TEnemy.GetKilled;
@@ -656,7 +574,7 @@ begin
 
   Game.Scores += SCORES_FOR_ENEMY + Game.EnemyManager.WaveCount;
   Game.EnemiesKilled += 1;
-  with Game.PopupManager.GetNewPopup() do
+  with Game.PopupManager.Get() do
   begin
     Text := '+' + Convert.ToString(SCORES_FOR_ENEMY + Game.EnemyManager.WaveCount) + ' points';
     Color := dfVec4f(0.6, 0.6, 0.1, 1.0);
@@ -665,7 +583,7 @@ begin
   end;
 
   if Random() < 0.2 then
-    with Game.BonusManager.GetNewBonus() do
+    with Game.BonusManager.Get() do
     begin
       roll := Random();
       if roll < 0.3 then
@@ -681,21 +599,15 @@ begin
     end;
 end;
 
-procedure TEnemy.Reset;
-begin
-  inherited Reset;
-  HealthMax := TEnemy._HealthMax;
-
-  RotateSpeed := TEnemy._RotateSpeed;
-  DirectSpeed := TEnemy._DirectSpeed;
-  FireThreshold := TEnemy._FireThreshold;
-
-  MainWeaponVelocity := TEnemy._MainWeaponVelocity;
-  MainWeaponDispersion := TEnemy._MainWeaponDispersion;
-  MainWeaponDamage := TEnemy._MainWeaponDamage;
-end;
-
 { TPlayer }
+
+procedure TPlayer.SetEnabled(const aEnabled: Boolean);
+begin
+  inherited SetEnabled(aEnabled);
+  BonusInfo.Visible := aEnabled;
+  HealthText.Visible := aEnabled;
+  FrontBumper.Visible := aEnabled;
+end;
 
 constructor TPlayer.Create;
 begin
@@ -716,13 +628,12 @@ begin
   AltWeaponText.Visible := True;
 
   fBulletOwner := bPlayer;
-  Width := 46;
-  Height := 25;
+  SetSize(46, 25);
 
   HealthMax := HEALTH_PLAYER;
   Health := HealthMax;
 
-  Position := dfVec3f(Render.Width / 2, Render.Height / 2, 1);
+  Position := dfVec3f(Render.Width / 2, Render.Height / 2, 2);
   SetVerticesColor(dfVec4f(0.3, 0.7, 0.3, 1.0));
   Weapon.SetVerticesColor(dfVec4f(0.2, 0.6, 0.2, 1.0));
 
@@ -762,7 +673,7 @@ var
 begin
   inherited Update(dt, axisX, axisY);
 
-  if not Visible then
+  if not Enabled then
   begin
     fGameOverT -= dt;
     if fGameOverT < 0 then
@@ -821,19 +732,14 @@ end;
 procedure TPlayer.GetKilled;
 begin
   inherited GetKilled;
-  BonusInfo.Visible := False;
-  HealthText.Visible := False;
-  FrontBumper.Visible := False;
   fGameOverT := 2.0;
+  Enabled := False;
 end;
 
 { TEnemyManager }
 
 constructor TEnemyManager.Create(aBatch: TglrSpriteBatch);
 begin
-  inherited Create;
-  fBatch := aBatch;
-  Enemies := TEnemies.Create(40);
   EnemySpawnInterval := ENEMY_SPAWN_INTERVAL;
   EnemySpawnCount := ENEMY_SPAWN_COUNT;
 
@@ -846,39 +752,17 @@ begin
   TEnemy._MainWeaponVelocity := ENEMY_MAIN_WEAPON_VELOCITY;
   TEnemy._MainWeaponDispersion := ENEMY_MAIN_WEAPON_DISPERSION;
   TEnemy._MainWeaponDamage := ENEMY_MAIN_WEAPON_DAMAGE;
-end;
 
-destructor TEnemyManager.Destroy;
-begin
-  Enemies.Free(True);
-  inherited;
-end;
-
-function TEnemyManager.GetNewEnemy: TEnemy;
-var
-  i: Integer;
-  e: TEnemy;
-begin
-  for i := 0 to Enemies.Count - 1 do
-    if not Enemies[i].Visible then
-    begin
-      Enemies[i].Reset();
-      Exit(Enemies[i]);
-    end;
-
-  e := TEnemy.Create();
-  e.Reset();
-  Enemies.Add(e);
-  Exit(e);
+  inherited Create(40);
+  fBatch := aBatch;
 end;
 
 procedure TEnemyManager.Update(const dt: Double);
 var
   i: Integer;
-  e: TEnemy;
 begin
-  for i := 0 to Enemies.Count - 1 do
-    Enemies[i].Update(dt, 0, 0);
+  for i := 0 to Count - 1 do
+    Items[i].Update(dt, 0, 0);
 
   if (fT > 0) then
     fT -= dt
@@ -886,10 +770,8 @@ begin
   begin
     fT := EnemySpawnInterval;
     for i := 0 to EnemySpawnCount - 1 do
-    begin
-      e := GetNewEnemy();
-      e.Position := dfVec3f(dfVec2f(Random(360)) * 700 + dfVec2f(Render.Width / 2, Render.Height / 2), 0);
-    end;
+      with Get() do
+        Position := dfVec3f(dfVec2f(Random(360)) * 700 + dfVec2f(Render.Width / 2, Render.Height / 2), 3);
   end;
 
   if ((Game.EnemiesKilled - Game.PreviouslyKilled) > ENEMY_WAVE_COUNT * (WaveCount + 1)) and (WaveCount < 5) then
@@ -916,10 +798,10 @@ var
   i: Integer;
 begin
   fBatch.Start();
-  for i := 0 to Enemies.Count - 1 do
+  for i := 0 to Count - 1 do
   begin
-    fBatch.Draw(Enemies[i]);
-    fBatch.Draw(Enemies[i].Weapon);
+    fBatch.Draw(Items[i]);
+    fBatch.Draw(Items[i].Weapon);
   end;
   fBatch.Finish();
 end;
@@ -927,44 +809,9 @@ end;
 { TBulletManager }
 
 constructor TBulletManager.Create(aBatch: TglrSpriteBatch);
-var
-  i: Integer;
-  b: TBullet;
 begin
-  inherited Create;
+  inherited Create(256);
   fBatch := aBatch;
-  fBullets := TBullets.Create(256);
-  for i := 0 to 127 do
-  begin
-    b := TBullet.Create(BULLET_WIDTH, BULLET_HEIGHT, dfVec2f(0.5, 0.5));
-    b.Reset();
-    b.Visible := False;
-    fBullets.Add(b);
-  end;
-end;
-
-destructor TBulletManager.Destroy;
-begin
-  fBullets.Free(True);
-  inherited;
-end;
-
-function TBulletManager.GetNewBullet: TBullet;
-var
-  i: Integer;
-  b: TBullet;
-begin
-  for i := 0 to fBullets.Count - 1 do
-    if not fBullets[i].Visible then
-    begin
-      fBullets[i].Reset();
-      Exit(fBullets[i]);
-    end;
-
-  b := TBullet.Create(BULLET_WIDTH, BULLET_HEIGHT, dfVec2f(0.5, 0.5));
-  b.Reset();
-  fBullets.Add(b);
-  Exit(b);
 end;
 
 procedure TBulletManager.Update(const dt: Double);
@@ -972,15 +819,17 @@ var
   i, j: Integer;
   e: TEnemy;
 begin
-  for i := 0 to fBullets.Count - 1 do
-    if (fBullets[i].Visible) then
-      with fBullets[i] do
+  for i := 0 to Count - 1 do
+    if (not Items[i].Enabled) then
+      continue
+    else
+      with Items[i] do
       begin
         T += dt;
         for j := 0 to 3 do
           Vertices[j].col.w := (LifeTime - T) / LifeTime;
         if (T > LifeTime) then
-          Visible := False
+          Release(Items[i])
         else
         begin
           Position += dfVec3f(Velocity * dt, 0);
@@ -1006,39 +855,40 @@ begin
               else
               begin
 
-                with Game.PopupManager.GetNewPopup() do
+                with Game.PopupManager.Get() do
                 begin
                   Text := '-' + Convert.ToString(Damage) + ' health';
                   Color := dfVec4f(0.9, 0.1, 0.1, 1.0);
-                  Position := fBullets[i].Position;
+                  Position := Items[i].Position;
                   T := 3;
                 end;
 
                 Game.Player.Health -= Damage;
                 if (Game.Player.Health  <= 0) then
                 begin
+                  Game.ParticleBigBoom(dfVec2f(Game.Player.Position));
                   Game.Player.GetKilled();
-                  Game.ParticleBigBoom(dfVec2f(e.Position));
                 end;
 
-                 Visible := False;
+                 Release(Items[i])
               end;
             end;
           end
           else if (Owner = bPlayer) then
 
-            for j := 0 to Game.EnemyManager.Enemies.Count - 1 do
+            for j := 0 to Game.EnemyManager.Count - 1 do
             begin
-              e := Game.EnemyManager.Enemies[j];
+              e := Game.EnemyManager[j];
               if (e.Visible) and (PointToSpriteIntersect(dfVec2f(Position), e)) then
               begin
                 Game.ParticleBoom(dfVec2f(Position));
-                Visible := False;
+                Release(Items[i]);
 
                 e.Health -= Damage;
 
                 if e.Health <= 0 then
                 begin
+                  Game.EnemyManager.Release(e);
                   e.GetKilled();
                   Game.ParticleBigBoom(dfVec2f(e.Position));
                 end;
@@ -1055,14 +905,14 @@ var
   i: Integer;
 begin
   fBatch.Start();
-  for i := 0 to fBullets.Count - 1 do
-    fBatch.Draw(fBullets[i]);
+  for i := 0 to Count - 1 do
+    fBatch.Draw(Items[i]);
   fBatch.Finish();
 end;
 
 { TBullet }
 
-procedure TBullet.Reset;
+procedure TBullet.SetEnabled(const aEnabled: Boolean);
 begin
   T := 0;
   LifeTime := 3;
@@ -1070,16 +920,18 @@ begin
   RotationVelocity := 0;
   Visible := True;
   SetVerticesColor(dfVec4f(1, 1, 1, 1));
+  Visible := aEnabled;
+  SetSize(BULLET_WIDTH, BULLET_HEIGHT);
 end;
 
 { TPlayer }
 
-procedure TUnit.Reset();
+procedure TUnit.SetEnabled(const aEnabled: Boolean);
 begin
   Health := HealthMax;
   fT := 0.0;
-  Visible := True;
-  Weapon.Visible := True;
+  Visible := aEnabled;
+  Weapon.Visible := aEnabled;
   Position := dfVec3f(-1000, -1000, 0);
   Weapon.Position := Position + dfVec3f(0, 0, 1);
 end;
@@ -1087,10 +939,12 @@ end;
 constructor TUnit.Create;
 begin
   inherited;
+  Position.z := 1;
   Weapon := TglrSprite.Create(25, 8, dfVec2f(0.0, 0.5));
   Weapon.Position := Position + dfVec3f(0, 0, 1);
 
   fBonusTriple := False;
+  fBonusRicochet := False;
   fT := 0.0;
 end;
 
@@ -1152,9 +1006,7 @@ begin
 
     for i := 0 to count - 1 do
     begin
-      b := Game.BulletManager.GetNewBullet();
-      b.Width := BULLET_WIDTH;
-      b.Height := BULLET_HEIGHT;
+      b := Game.BulletManager.Get();
       b.BType := bSimple;
       b.Owner := fBulletOwner;
       b.Damage := MainWeaponDamage;
@@ -1180,10 +1032,9 @@ begin
   AltWeaponCount -= 1;
 
   for i := 0 to 35 do
-    with Game.BulletManager.GetNewBullet() do
+    with Game.BulletManager.Get() do
     begin
-      Width := 16;
-      Height := 4;
+      SetSize(BULLET_ALT_WIDTH, BULLET_ALT_HEIGHT);
       SetVerticesColor(dfVec4f(24 / 255, 124 / 255, 240 / 255, 1.0));
       BType := bFragile;
       Owner := fBulletOwner;
@@ -1199,8 +1050,7 @@ end;
 
 procedure TUnit.GetKilled();
 begin
-  Visible := False;
-  Weapon.Visible := False;
+
 end;
 
 { TGame }
@@ -1443,10 +1293,11 @@ begin
   // Write here code for destroying all of your objects
   uFMOD_StopSong();
 
-  EnemyManager.Free();
+  EnemyManager.Free(True);
+  PopupManager.Free(True);
+  BonusManager.Free(True);
+  BulletManager.Free(True);
   Player.Free();
-
-  Camera.Free();
 
   AttentionText.Free();
   GameOverText.Free();
@@ -1454,16 +1305,12 @@ begin
   PauseText.Free();
   PauseSprite.Free();
 
-  PopupManager.Free();
-  BonusManager.Free();
-
-  BulletManager.Free();
   ParticleEmitter.Free();
   ShellEmitter.Free();
 
   SpriteBatch.Free();
   FontBatch.Free();
-
+  Camera.Free();
   MainMaterial.Free();
   Font.Free();
 end;
