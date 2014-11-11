@@ -317,6 +317,11 @@ type
 
 
   TglrVertexBufferMapAccess = (maRead, maWrite, maReadWrite);
+  TglrVertexBufferUsage = (
+    uStreamDraw, uStreamRead, uStreamCopy,
+    uStaticDraw, uStaticRead, uStaticCopy,
+    uDynamicDraw, uDynamicRead, uDynamicCopy
+    );
 
   { TglrVertexBuffer }
 
@@ -326,7 +331,8 @@ type
     Count: Integer;
     procedure Bind();
     class procedure Unbind();
-    constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrVertexFormat); virtual;
+    constructor Create(aData: Pointer; aCount: Integer;
+      aFormat: TglrVertexFormat; aUsage: TglrVertexBufferUsage); virtual;
     destructor Destroy(); override;
 
     procedure Update(aData: Pointer; aStart, aCount: Integer); virtual;
@@ -1072,10 +1078,17 @@ uses
 const
   VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3), SizeOf(TglrVertexP3T2C4));
+  VF_USAGE: array[Low(TglrVertexBufferUsage)..High(TglrVertexBufferUsage)] of TGLConst =
+    (GL_STREAM_DRAW, GL_STREAM_READ, GL_STREAM_COPY,
+     GL_STATIC_DRAW, GL_STATIC_READ, GL_STATIC_COPY,
+     GL_DYNAMIC_DRAW, GL_DYNAMIC_READ, GL_DYNAMIC_COPY);
+
   IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
     (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
   IF_FORMAT: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of TGLConst =
   (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INT);
+
+
 
   comparison: array[Low(TglrFuncComparison)..High(TglrFuncComparison)] of TGLConst =
     (GL_NEVER, GL_LESS, GL_EQUAL, GL_LEQUAL, GL_GREATER, GL_NOTEQUAL, GL_GEQUAL, GL_ALWAYS);
@@ -1808,7 +1821,7 @@ begin
   if (aFont = nil) then
     Log.Write(lCritical, 'FontBatch: Null pointer provided, Font object expected');
   fFont := aFont;
-  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2Col4);
+  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2Col4, uStreamDraw);
   fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
 end;
 
@@ -1884,7 +1897,7 @@ end;
 constructor TglrSpriteBatch.Create;
 begin
   inherited Create;
-  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2Col4);
+  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2Col4, uStreamDraw);
   fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
 end;
 
@@ -3738,13 +3751,13 @@ begin
 end;
 
 constructor TglrVertexBuffer.Create(aData: Pointer; aCount: Integer;
-  aFormat: TglrVertexFormat);
+  aFormat: TglrVertexFormat; aUsage: TglrVertexBufferUsage);
 begin
   gl.GenBuffers(1, @Self.Id);
   Self.Format := aFormat;
   Self.Count := aCount;
   gl.BindBuffer(GL_ARRAY_BUFFER, Id);
-  gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[aFormat] * aCount, aData, GL_STATIC_DRAW);
+  gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[aFormat] * aCount, aData, VF_USAGE[aUsage]);
   gl.BindBuffer(GL_ARRAY_BUFFER, 0);
 end;
 
