@@ -125,6 +125,7 @@ type
     GetString      : function (name: TGLConst): PAnsiChar; stdcall;
     GetError       : function (): LongWord; stdcall;
     Flush          : procedure;
+    Finish         : procedure;
     PixelStorei    : procedure (pname: TGLConst; param: LongInt); stdcall;
     GenTextures    : procedure (n: LongInt; textures: Pointer); stdcall;
     DeleteTextures : procedure (n: LongInt; textures: Pointer); stdcall;
@@ -248,6 +249,7 @@ const
     'glGetString',
     'glGetError',
     'glFlush',
+    'glFinish',
     'glPixelStorei',
     'glGenTextures',
     'glDeleteTextures',
