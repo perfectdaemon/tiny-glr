@@ -889,8 +889,8 @@ begin
                 if e.Health <= 0 then
                 begin
                   e.GetKilled();
-                  Game.EnemyManager.Release(e);
                   Game.ParticleBigBoom(dfVec2f(e.Position));
+                  Game.EnemyManager.Release(e);
                 end;
 
                 break;
