@@ -330,7 +330,6 @@ type
     Format: TglrVertexFormat;
     Count: Integer;
     procedure Bind();
-    class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer;
       aFormat: TglrVertexFormat; aUsage: TglrVertexBufferUsage); virtual;
     destructor Destroy(); override;
@@ -346,7 +345,6 @@ type
     Id: TglrIndexBufferId;
     Format: TglrIndexFormat;
     procedure Bind();
-    class procedure Unbind();
     constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrIndexFormat); virtual;
     destructor Destroy(); override;
 
@@ -462,6 +460,8 @@ type
     class procedure SetVerticalSync(aEnabled: Boolean);
     class procedure SetShader(aShader: TglrShaderProgramId);
     class procedure SetTexture(aTexture: TglrTextureId; aSampler: Integer);
+    class procedure SetVertexBuffer(vBuffer: TglrVertexBuffer);
+    class procedure SetIndexBuffer(iBuffer: TglrIndexBuffer);
 
     class procedure DrawTriangles(vBuffer: TglrVertexBuffer; iBuffer: TglrIndexBuffer;
       aStartIndex, aIndicesCount: Integer);
@@ -1889,7 +1889,6 @@ begin
   Render.Params.ModelViewProj := Render.Params.ViewProj;
   fFont.Material.Bind();
   Render.DrawTriangles(fVB, fIB, 0, 6 * fCount);
-  //Font.Material.Unbind();
 end;
 
 { TglrSpriteBatch }
@@ -1955,6 +1954,15 @@ begin
   fIB.Update(@fIData[0], 0, fCount * 6);
   Render.Params.ModelViewProj := Render.Params.ViewProj;
   Render.DrawTriangles(fVB, fIB, 0, fCount * 6);
+  // Nvidia threading optimization (TO) fails when you use
+  // SpriteBatch several times per one frame, like
+  // Start; Draw(); ... Finish();
+  // Start; Draw(); ... Finish();
+  // Nvidia with TO enabled will draw only last batch.
+  // This is shit.
+
+  // Note: suddenly removing of BindBuffer(0) after update helped...
+  // I will save it here for next generations...
 end;
 
 { TglrText }
@@ -3616,6 +3624,60 @@ begin
   end;
 end;
 
+class procedure Render.SetVertexBuffer(vBuffer: TglrVertexBuffer);
+begin
+  if (vBuffer = nil) then
+    gl.BindBuffer(GL_ARRAY_BUFFER, 0)
+  else
+  begin
+    gl.BindBuffer(GL_ARRAY_BUFFER, vBuffer.Id);
+    case vBuffer.Format of
+      vfPos3Tex2:
+      begin
+        gl.EnableVertexAttribArray(Ord(vaCoord));
+        gl.EnableVertexAttribArray(Ord(vaTexCoord0));
+			  gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], nil);
+        gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f)));
+      end;
+      vfPos2Tex2:
+      begin
+        gl.EnableVertexAttribArray(Ord(vaCoord));
+        gl.EnableVertexAttribArray(Ord(vaTexCoord0));
+			  gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], nil);
+			  gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec2f)));
+      end;
+      vfPos3Tex2Nor3:
+      begin
+        gl.EnableVertexAttribArray(Ord(vaCoord));
+        gl.EnableVertexAttribArray(Ord(vaTexCoord0));
+        gl.EnableVertexAttribArray(Ord(vaNormal));
+			  gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], nil);
+        gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f)));
+        gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
+      end;
+      vfPos3Tex2Col4:
+      begin
+        gl.EnableVertexAttribArray(Ord(vaCoord));
+        gl.EnableVertexAttribArray(Ord(vaTexCoord0));
+        gl.EnableVertexAttribArray(Ord(vaColor));
+			  gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], nil);
+			  gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f)));
+        gl.VertexAttribPointer(Ord(vaColor), 4, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
+      end
+      else
+        Log.Write(lCritical, 'Unsupported type of vertexbuffer format. Tinyglr developer is an asshole');
+    end
+  end;
+end;
+
+class procedure Render.SetIndexBuffer(iBuffer: TglrIndexBuffer);
+begin
+  if iBuffer = nil then
+    gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+  else
+    gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, iBuffer.Id);
+end;
+
 class procedure Render.DrawTriangles(vBuffer: TglrVertexBuffer;
   iBuffer: TglrIndexBuffer; aStartIndex, aIndicesCount: Integer);
 begin
@@ -3669,12 +3731,7 @@ end;
 
 procedure TglrIndexBuffer.Bind;
 begin
-  gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, Self.Id);
-end;
-
-class procedure TglrIndexBuffer.Unbind;
-begin
-  gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  Render.SetIndexBuffer(Self);
 end;
 
 constructor TglrIndexBuffer.Create(aData: Pointer; aCount: Integer;
@@ -3682,9 +3739,8 @@ constructor TglrIndexBuffer.Create(aData: Pointer; aCount: Integer;
 begin
   gl.GenBuffers(1, @Self.Id);
   Format := aFormat;
-  Self.Bind();
+  Bind();
   gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[Format] * aCount, aData, GL_STATIC_DRAW);
-  Self.Unbind();
 end;
 
 destructor TglrIndexBuffer.Destroy;
@@ -3695,59 +3751,15 @@ end;
 
 procedure TglrIndexBuffer.Update(aData: Pointer; aStart, aCount: Integer);
 begin
-  gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, Id);
+  Bind();
   gl.BufferSubData(GL_ELEMENT_ARRAY_BUFFER, aStart, aCount * IF_STRIDE[Format], aData);
-  gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-  Render.fIB := 0;
 end;
 
 { TglrVertexBuffer }
 
 procedure TglrVertexBuffer.Bind;
 begin
-  gl.BindBuffer(GL_ARRAY_BUFFER, Self.Id);
-  case Format of
-    vfPos3Tex2:
-    begin
-      gl.EnableVertexAttribArray(Ord(vaCoord));
-      gl.EnableVertexAttribArray(Ord(vaTexCoord0));
-			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[Format], nil);
-      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f)));
-    end;
-    vfPos2Tex2:
-    begin
-      gl.EnableVertexAttribArray(Ord(vaCoord));
-      gl.EnableVertexAttribArray(Ord(vaTexCoord0));
-			gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[Format], nil);
-			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec2f)));
-    end;
-    vfPos3Tex2Nor3:
-    begin
-      gl.EnableVertexAttribArray(Ord(vaCoord));
-      gl.EnableVertexAttribArray(Ord(vaTexCoord0));
-      gl.EnableVertexAttribArray(Ord(vaNormal));
-			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[Format], nil);
-      gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f)));
-      gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
-    end;
-    vfPos3Tex2Col4:
-    begin
-      gl.EnableVertexAttribArray(Ord(vaCoord));
-      gl.EnableVertexAttribArray(Ord(vaTexCoord0));
-      gl.EnableVertexAttribArray(Ord(vaColor));
-			gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[Format], nil);
-			gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f)));
-      gl.VertexAttribPointer(Ord(vaColor), 4, GL_FLOAT, False, VF_STRIDE[Format], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
-    end
-    else
-      Log.Write(lCritical, 'Unsupported type of vertexbuffer format. Tinyglr developer is an asshole');
-  end
-
-end;
-
-class procedure TglrVertexBuffer.Unbind;
-begin
-  gl.BindBuffer(GL_ARRAY_BUFFER, 0);
+  Render.SetVertexBuffer(Self);
 end;
 
 constructor TglrVertexBuffer.Create(aData: Pointer; aCount: Integer;
@@ -3756,17 +3768,14 @@ begin
   gl.GenBuffers(1, @Self.Id);
   Self.Format := aFormat;
   Self.Count := aCount;
-  gl.BindBuffer(GL_ARRAY_BUFFER, Id);
+  Bind();
   gl.BufferData(GL_ARRAY_BUFFER, VF_STRIDE[aFormat] * aCount, aData, VF_USAGE[aUsage]);
-  gl.BindBuffer(GL_ARRAY_BUFFER, 0);
 end;
 
 procedure TglrVertexBuffer.Update(aData: Pointer; aStart, aCount: Integer);
 begin
-  gl.BindBuffer(GL_ARRAY_BUFFER, Id);
+  Bind();
   gl.BufferSubData(GL_ARRAY_BUFFER, aStart, aCount * VF_STRIDE[Format], aData);
-  gl.BindBuffer(GL_ARRAY_BUFFER, 0);
-  Render.fVB := 0;
 end;
 
 function TglrVertexBuffer.Map(aAccess: TglrVertexBufferMapAccess): Pointer;
