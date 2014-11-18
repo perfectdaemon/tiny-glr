@@ -748,7 +748,7 @@ type
     DepthTestFunc: TglrFuncComparison;
   	Cull: TglrCullMode;
 
-    constructor Create(); virtual; overload;
+    constructor Create(aShaderProgram: TglrShaderProgram); virtual; overload;
     constructor Create(aStream: TglrStream;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
     destructor Destroy(); override;
@@ -2287,10 +2287,10 @@ end;
 
 { TglrMaterial }
 
-constructor TglrMaterial.Create;
+constructor TglrMaterial.Create(aShaderProgram: TglrShaderProgram);
 begin
-  inherited;
-  Shader := TglrShaderProgram.Create();
+  inherited Create;
+  Shader := aShaderProgram;
   SetLength(Textures, 0);
 
   Blend := bmAlpha;
@@ -2304,7 +2304,7 @@ end;
 constructor TglrMaterial.Create(aStream: TglrStream;
   aFreeStreamOnFinish: Boolean);
 begin
-  Create();
+  Create(TglrShaderProgram(nil));
   Log.Write(lCritical, 'Material create from stream is not implemented');
 end;
 
@@ -2312,12 +2312,7 @@ destructor TglrMaterial.Destroy;
 var
   i: Integer;
 begin
-  //for i := 0 to Length(Textures) - 1 do
-  //  Textures[i].Texture.Free();
   SetLength(Textures, 0);
-  //Wow, such a hack...
-  if (Shader <> Default.SpriteShader) then
-    Shader.Free();
   inherited Destroy;
 end;
 
