@@ -126,7 +126,7 @@ begin
   meshData[22].tex := dfVec2f(1, 0);
   meshData[23].tex := dfVec2f(0, 0);
 
-  meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2Nor3);
+  meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2Nor3, uStaticDraw);
   meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
 end;
 
@@ -254,9 +254,7 @@ begin
   CameraHud.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
   CameraHud.ProjectionMode := pmOrtho;
 
-  Material := TglrMaterial.Create();
-  Material.Shader.Free();
-  Material.Shader := Default.SpriteShader;
+  Material := TglrMaterial.Create(Default.SpriteShader);
 //  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial12b.bmp'), 'bmp'), 'uDiffuse');
 //  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('data/box.tga'), 'tga'), 'uDiffuse');
 //  Material.Color := dfVec4f(0.7, 0.2, 0.1, 1);
