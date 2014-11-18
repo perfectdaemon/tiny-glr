@@ -2046,10 +2046,11 @@ var
   charCount, i: LongWord;
 begin
   inherited Create();
+  if Default.fInited then
+    Material := TglrMaterial.Create(Default.SpriteShader)
+  else
+    Material := TglrMaterial.Create(TglrShaderProgram(nil));
 
-  Material := TglrMaterial.Create();
-  if Default.fInited then;
-    Material.Shader := Default.SpriteShader;
   Texture := TglrTexture.Create(aStream, 'bmp', False);
   Material.AddTexture(Texture, 'uDiffuse');
 
