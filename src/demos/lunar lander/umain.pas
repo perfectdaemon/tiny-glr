@@ -65,6 +65,7 @@ type
     Atlas: TglrTextureAtlas;
     Font: TglrFont;
     Material, MoonMaterial: TglrMaterial;
+    MoonShader: TglrShaderProgram;
     MoonTexture: TglrTexture;
 
     //Batches
@@ -167,9 +168,7 @@ begin
     FileSystem.ReadResource('lander/atlas.tga'),
     FileSystem.ReadResource('lander/atlas.atlas'),
     'tga', 'cheetah');
-  Material := TglrMaterial.Create();
-  Material.Shader.Free();
-  Material.Shader := Default.SpriteShader;
+  Material := TglrMaterial.Create(Default.SpriteShader);
   Material.AddTexture(Atlas, 'uDiffuse');
 
   Font := TglrFont.Create(FileSystem.ReadResource('lander/Hattori Hanzo17b.bmp'));
@@ -179,10 +178,12 @@ begin
   MoonTexture.SetWrapR(wRepeat);
   MoonTexture.SetWrapT(wRepeat);
 
-  MoonMaterial := TglrMaterial.Create();
-  MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderV.txt'), stVertex);
-  MoonMaterial.Shader.Attach(FileSystem.ReadResource('lander/MoonShaderF.txt'), stFragment);
-  MoonMaterial.Shader.Link();
+  MoonShader := TglrShaderProgram.Create();
+  MoonShader.Attach(FileSystem.ReadResource('lander/MoonShaderV.txt'), stVertex);
+  MoonShader.Attach(FileSystem.ReadResource('lander/MoonShaderF.txt'), stFragment);
+  MoonShader.Link();
+
+  MoonMaterial := TglrMaterial.Create(MoonShader);
   MoonMaterial.AddTexture(MoonTexture, 'uDiffuse');
   MoonMaterial.Color := dfVec4f(0.70, 0.70, 0.55, 1.0);
 
@@ -470,6 +471,7 @@ begin
   FuelLevel.Free();
   Material.Free();
   MoonMaterial.Free();
+  MoonShader.Free();
   Atlas.Free();
   MoonTexture.Free();
   Font.Free();

@@ -96,7 +96,7 @@ constructor TMoon.Create(aMoonMaterial, aMaterial: TglrMaterial;
   aFontBatch: TglrFontBatch);
 begin
   inherited Create();
-  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2);
+  fVB := TglrVertexBuffer.Create(nil, 65536, vfPos3Tex2, uStaticDraw);
   fIB := TglrIndexBuffer.Create(nil, 65536, ifShort);
   fMoonMaterial := aMoonMaterial;
   fMaterial := aMaterial;
