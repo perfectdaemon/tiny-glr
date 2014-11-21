@@ -1063,9 +1063,7 @@ begin
   Render.SetClearColor(0.15, 0.15, 0.15);
   Font := TglrFont.Create(FileSystem.ReadResourceLZO('shooter/font.bmp', False));
 
-  MainMaterial := TglrMaterial.Create();
-  MainMaterial.Shader.Free();
-  MainMaterial.Shader := Default.SpriteShader;
+  MainMaterial := TglrMaterial.Create(Default.SpriteShader);
   MainMaterial.AddTexture({Default.BlankTexture}GenerateTexture(64, 32, 2), 'uDiffuse');
 
   SpriteBatch := TglrSpriteBatch.Create();
