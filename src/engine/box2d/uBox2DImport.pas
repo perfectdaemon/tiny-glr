@@ -73,25 +73,25 @@ type
 
     class procedure ReverseSyncObjects(renderObject: TglrSprite; b2Body: Tb2Body);
 
-    class function ConvertB2ToGL(aVec: TVector2): TdfVec2f;
-    class function ConvertGLToB2(aVec: TdfVec2f): TVector2;
+    class function ConvertB2ToGL(aVec: TVector2): TglrVec2f;
+    class function ConvertGLToB2(aVec: TglrVec2f): TVector2;
 
     class function Box(b2World: Tb2World; const aSprite: TglrSprite; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
-    class function Box(b2World: Tb2World; aPos, aSize: TdfVec2f; aRot: Single; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
+    class function Box(b2World: Tb2World; aPos, aSize: TglrVec2f; aRot: Single; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
 
-    class function BoxSensor(b2World: Tb2World; aPos: TdfVec2f; aSize: TdfVec2f; aRot: Single; mask, cat: Word; IsStatic: Boolean): Tb2Body;
+    class function BoxSensor(b2World: Tb2World; aPos: TglrVec2f; aSize: TglrVec2f; aRot: Single; mask, cat: Word; IsStatic: Boolean): Tb2Body;
 
     class function BoxStatic(b2World: Tb2World; const aSprite: TglrSprite; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
-    class function BoxStatic(b2World: Tb2World; aPos, aSize: TdfVec2f; aRot: Single; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
+    class function BoxStatic(b2World: Tb2World; aPos, aSize: TglrVec2f; aRot: Single; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
 
-    class function Circle(b2World: Tb2World; aRad: Double; aPos: TdfVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
+    class function Circle(b2World: Tb2World; aRad: Double; aPos: TglrVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
     class function Circle(b2World: Tb2World; const aSprite: TglrSprite; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
 
-    class function CircleSensor(b2World: Tb2World; aPos: TdfVec2f; aSize: Single; mask, cat: Word; IsStatic: Boolean): Tb2Body;
+    class function CircleSensor(b2World: Tb2World; aPos: TglrVec2f; aSize: Single; mask, cat: Word; IsStatic: Boolean): Tb2Body;
 
-    class function ChainStatic(b2World: Tb2World; aPos: TdfVec2f; aVertices: array of TdfVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
+    class function ChainStatic(b2World: Tb2World; aPos: TglrVec2f; aVertices: array of TglrVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
 
-    class function Polygon(b2World: Tb2World; aPos: TdfVec2f; aVertices: array of TdfVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
+    class function Polygon(b2World: Tb2World; aPos: TglrVec2f; aVertices: array of TglrVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
   end;
 
 
@@ -193,9 +193,9 @@ end;
 class procedure Box2D.SyncObjects(b2Body: Tb2Body; renderObject: TglrSprite;
   aPositionsOnly: Boolean);
 var
-  pos2d: TdfVec2f;
+  pos2d: TglrVec2f;
 begin
-  pos2d := dfVec2f(b2Body.GetPosition.x, b2Body.GetPosition.y) * C_COEF_INV;
+  pos2d := Vec2f(b2Body.GetPosition.x, b2Body.GetPosition.y) * C_COEF_INV;
   renderObject.Position.x := pos2d.x;
   renderObject.Position.y := pos2d.y;
   if not aPositionsOnly then
@@ -205,19 +205,19 @@ end;
 class procedure Box2D.ReverseSyncObjects(renderObject: TglrSprite;
   b2Body: Tb2Body);
 var
-  p: TdfVec2f;
+  p: TglrVec2f;
 begin
-  p := dfVec2f(renderObject.AbsoluteMatrix.Pos) * C_COEF;
+  p := Vec2f(renderObject.AbsoluteMatrix.Pos) * C_COEF;
   b2Body.SetTransform(ConvertGLToB2(p), renderObject.Rotation * deg2rad);
 //  SyncObjects(b2Body, renderObject);
 end;
 
-class function Box2D.ConvertB2ToGL(aVec: TVector2): TdfVec2f;
+class function Box2D.ConvertB2ToGL(aVec: TVector2): TglrVec2f;
 begin
-  Result := dfVec2f(aVec.x, aVec.y);
+  Result := Vec2f(aVec.x, aVec.y);
 end;
 
-class function Box2D.ConvertGLToB2(aVec: TdfVec2f): TVector2;
+class function Box2D.ConvertGLToB2(aVec: TglrVec2f): TVector2;
 begin
   Result.SetValue(aVec.x, aVec.y);
 end;
@@ -237,7 +237,7 @@ begin
   with BodyDef do
   begin
     bodyType := b2_dynamicBody;
-    position := ConvertGLToB2(dfVec2f(aSprite.Position) * C_COEF);
+    position := ConvertGLToB2(Vec2f(aSprite.Position) * C_COEF);
     angle := aSprite.Rotation * deg2rad;
   end;
 
@@ -278,7 +278,7 @@ begin
 end;          }
 
 
-class function Box2D.Box(b2World: Tb2World; aPos, aSize: TdfVec2f; aRot: Single; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
+class function Box2D.Box(b2World: Tb2World; aPos, aSize: TglrVec2f; aRot: Single; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
 var
   BodyDef: Tb2BodyDef;
   ShapeDef: Tb2PolygonShape;
@@ -316,7 +316,7 @@ begin
   Result.SetSleepingAllowed(False);
 end;
 
-class function Box2D.Circle(b2World: Tb2World; aRad: Double; aPos: TdfVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
+class function Box2D.Circle(b2World: Tb2World; aRad: Double; aPos: TglrVec2f; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
 var
   BodyDef: Tb2BodyDef;
   ShapeDef: Tb2CircleShape;
@@ -356,16 +356,16 @@ end;
 class function Box2D.Circle(b2World: Tb2World; const aSprite: TglrSprite; d, f,
   r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
 begin
-  Result := Circle(b2World, aSprite.Width / 2, dfVec2f(aSprite.Position), d, f, r, mask, Category, group);
+  Result := Circle(b2World, aSprite.Width / 2, Vec2f(aSprite.Position), d, f, r, mask, Category, group);
 end;
 
 class function Box2D.BoxStatic(b2World: Tb2World; const aSprite: TglrSprite; d,
   f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
 begin
-  Result := BoxStatic(b2World, dfVec2f(aSprite.Position), dfVec2f(aSprite.Width, aSprite.Height), aSprite.Rotation, d, f, r, mask, category, group);
+  Result := BoxStatic(b2World, Vec2f(aSprite.Position), Vec2f(aSprite.Width, aSprite.Height), aSprite.Rotation, d, f, r, mask, category, group);
 end;
 
-class function Box2D.BoxStatic(b2World: Tb2World; aPos, aSize: TdfVec2f; aRot: Single; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
+class function Box2D.BoxStatic(b2World: Tb2World; aPos, aSize: TglrVec2f; aRot: Single; d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body; overload;
 var
   BodyDef: Tb2BodyDef;
   ShapeDef: Tb2PolygonShape;
@@ -403,7 +403,7 @@ begin
   Result.SetSleepingAllowed(True);
 end;
 
-class function Box2D.ChainStatic(b2World: Tb2World; aPos: TdfVec2f; aVertices: array of TdfVec2f;
+class function Box2D.ChainStatic(b2World: Tb2World; aPos: TglrVec2f; aVertices: array of TglrVec2f;
   d, f, r: Double; mask, category: UInt16; group: SmallInt): Tb2Body;
 var
   BodyDef: Tb2BodyDef;
@@ -445,8 +445,8 @@ begin
   Result.SetSleepingAllowed(True);
 end;
 
-class function Box2D.Polygon(b2World: Tb2World; aPos: TdfVec2f;
-  aVertices: array of TdfVec2f; d, f, r: Double; mask, category: UInt16;
+class function Box2D.Polygon(b2World: Tb2World; aPos: TglrVec2f;
+  aVertices: array of TglrVec2f; d, f, r: Double; mask, category: UInt16;
   group: SmallInt): Tb2Body;
 var
   BodyDef: Tb2BodyDef;
@@ -492,7 +492,7 @@ begin
   Result.SetSleepingAllowed(False);
 end;
 
-class function Box2D.BoxSensor(b2World: Tb2World; aPos: TdfVec2f; aSize: TdfVec2f;
+class function Box2D.BoxSensor(b2World: Tb2World; aPos: TglrVec2f; aSize: TglrVec2f;
   aRot: Single; mask, cat: Word; IsStatic: Boolean): Tb2Body;
 var
   BodyDef: Tb2BodyDef;
@@ -531,7 +531,7 @@ begin
   Result.SetSleepingAllowed(False);
 end;
 
-class function Box2D.CircleSensor(b2World: Tb2World; aPos: TdfVec2f; aSize: Single;
+class function Box2D.CircleSensor(b2World: Tb2World; aPos: TglrVec2f; aSize: Single;
   mask, cat: Word; IsStatic: Boolean): Tb2Body;
 var
   BodyDef: Tb2BodyDef;

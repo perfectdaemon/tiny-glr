@@ -66,65 +66,65 @@ const
                                    23, 22, 20);
 begin
   SetLength(meshData, 24);
-  meshData[0].vec := dfVec3f(CubeSize/2, CubeSize/2, CubeSize/2);
-  meshData[1].vec := dfVec3f(-CubeSize/2, CubeSize/2, CubeSize/2);
-  meshData[2].vec := dfVec3f(CubeSize/2, -CubeSize/2, CubeSize/2);
-  meshData[3].vec := dfVec3f(-CubeSize/2, -CubeSize/2, CubeSize/2);
+  meshData[0].vec := Vec3f(CubeSize/2, CubeSize/2, CubeSize/2);
+  meshData[1].vec := Vec3f(-CubeSize/2, CubeSize/2, CubeSize/2);
+  meshData[2].vec := Vec3f(CubeSize/2, -CubeSize/2, CubeSize/2);
+  meshData[3].vec := Vec3f(-CubeSize/2, -CubeSize/2, CubeSize/2);
 
-  meshData[4].vec := dfVec3f(CubeSize/2, CubeSize/2, -CubeSize/2);
-  meshData[5].vec := dfVec3f(-CubeSize/2, CubeSize/2, -CubeSize/2);
-  meshData[6].vec := dfVec3f(CubeSize/2, -CubeSize/2, -CubeSize/2);
-  meshData[7].vec := dfVec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2);
+  meshData[4].vec := Vec3f(CubeSize/2, CubeSize/2, -CubeSize/2);
+  meshData[5].vec := Vec3f(-CubeSize/2, CubeSize/2, -CubeSize/2);
+  meshData[6].vec := Vec3f(CubeSize/2, -CubeSize/2, -CubeSize/2);
+  meshData[7].vec := Vec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2);
 
-  meshData[8].vec := dfVec3f(CubeSize/2, CubeSize/2, CubeSize/2); //0
-  meshData[9].vec := dfVec3f(CubeSize/2, CubeSize/2, -CubeSize/2); //4
-  meshData[10].vec := dfVec3f(CubeSize/2, -CubeSize/2, -CubeSize/2); //6
-  meshData[11].vec := dfVec3f(CubeSize/2, -CubeSize/2, CubeSize/2); //2
+  meshData[8].vec := Vec3f(CubeSize/2, CubeSize/2, CubeSize/2); //0
+  meshData[9].vec := Vec3f(CubeSize/2, CubeSize/2, -CubeSize/2); //4
+  meshData[10].vec := Vec3f(CubeSize/2, -CubeSize/2, -CubeSize/2); //6
+  meshData[11].vec := Vec3f(CubeSize/2, -CubeSize/2, CubeSize/2); //2
 
-  meshData[12].vec := dfVec3f(-CubeSize/2, CubeSize/2, CubeSize/2); //1
-  meshData[13].vec := dfVec3f(-CubeSize/2, -CubeSize/2, CubeSize/2); //3
-  meshData[14].vec := dfVec3f(-CubeSize/2, CubeSize/2, -CubeSize/2); //5
-  meshData[15].vec := dfVec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2); //7
+  meshData[12].vec := Vec3f(-CubeSize/2, CubeSize/2, CubeSize/2); //1
+  meshData[13].vec := Vec3f(-CubeSize/2, -CubeSize/2, CubeSize/2); //3
+  meshData[14].vec := Vec3f(-CubeSize/2, CubeSize/2, -CubeSize/2); //5
+  meshData[15].vec := Vec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2); //7
 
-  meshData[16].vec := dfVec3f(CubeSize/2, CubeSize/2, CubeSize/2); //0
-  meshData[17].vec := dfVec3f(-CubeSize/2, CubeSize/2, CubeSize/2); //1
-  meshData[18].vec := dfVec3f(CubeSize/2, CubeSize/2, -CubeSize/2); //4
-  meshData[19].vec := dfVec3f(-CubeSize/2, CubeSize/2, -CubeSize/2); //5
+  meshData[16].vec := Vec3f(CubeSize/2, CubeSize/2, CubeSize/2); //0
+  meshData[17].vec := Vec3f(-CubeSize/2, CubeSize/2, CubeSize/2); //1
+  meshData[18].vec := Vec3f(CubeSize/2, CubeSize/2, -CubeSize/2); //4
+  meshData[19].vec := Vec3f(-CubeSize/2, CubeSize/2, -CubeSize/2); //5
 
-  meshData[20].vec := dfVec3f(CubeSize/2, -CubeSize/2, CubeSize/2); //2
-  meshData[21].vec := dfVec3f(-CubeSize/2, -CubeSize/2, CubeSize/2); //3
-  meshData[22].vec := dfVec3f(CubeSize/2, -CubeSize/2, -CubeSize/2); //6
-  meshData[23].vec := dfVec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2); //7
+  meshData[20].vec := Vec3f(CubeSize/2, -CubeSize/2, CubeSize/2); //2
+  meshData[21].vec := Vec3f(-CubeSize/2, -CubeSize/2, CubeSize/2); //3
+  meshData[22].vec := Vec3f(CubeSize/2, -CubeSize/2, -CubeSize/2); //6
+  meshData[23].vec := Vec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2); //7
 
-  meshData[0].tex := dfVec2f(1, 1);
-  meshData[1].tex := dfVec2f(0, 1);
-  meshData[2].tex := dfVec2f(1, 0);
-  meshData[3].tex := dfVec2f(0, 0);
+  meshData[0].tex := Vec2f(1, 1);
+  meshData[1].tex := Vec2f(0, 1);
+  meshData[2].tex := Vec2f(1, 0);
+  meshData[3].tex := Vec2f(0, 0);
 
-  meshData[4].tex := dfVec2f(0, 1);
-  meshData[5].tex := dfVec2f(1, 1);
-  meshData[6].tex := dfVec2f(0, 0);
-  meshData[7].tex := dfVec2f(1, 0);
+  meshData[4].tex := Vec2f(0, 1);
+  meshData[5].tex := Vec2f(1, 1);
+  meshData[6].tex := Vec2f(0, 0);
+  meshData[7].tex := Vec2f(1, 0);
 
-  meshData[8].tex := dfVec2f(0, 1);
-  meshData[9].tex := dfVec2f(1, 1);
-  meshData[10].tex := dfVec2f(1, 0);
-  meshData[11].tex := dfVec2f(0, 0);
+  meshData[8].tex := Vec2f(0, 1);
+  meshData[9].tex := Vec2f(1, 1);
+  meshData[10].tex := Vec2f(1, 0);
+  meshData[11].tex := Vec2f(0, 0);
 
-  meshData[12].tex := dfVec2f(1, 1);
-  meshData[13].tex := dfVec2f(1, 0);
-  meshData[14].tex := dfVec2f(0, 1);
-  meshData[15].tex := dfVec2f(0, 0);
+  meshData[12].tex := Vec2f(1, 1);
+  meshData[13].tex := Vec2f(1, 0);
+  meshData[14].tex := Vec2f(0, 1);
+  meshData[15].tex := Vec2f(0, 0);
 
-  meshData[16].tex := dfVec2f(1, 0);
-  meshData[17].tex := dfVec2f(0, 0);
-  meshData[18].tex := dfVec2f(1, 1);
-  meshData[19].tex := dfVec2f(0, 1);
+  meshData[16].tex := Vec2f(1, 0);
+  meshData[17].tex := Vec2f(0, 0);
+  meshData[18].tex := Vec2f(1, 1);
+  meshData[19].tex := Vec2f(0, 1);
 
-  meshData[20].tex := dfVec2f(1, 1);
-  meshData[21].tex := dfVec2f(0, 1);
-  meshData[22].tex := dfVec2f(1, 0);
-  meshData[23].tex := dfVec2f(0, 0);
+  meshData[20].tex := Vec2f(1, 1);
+  meshData[21].tex := Vec2f(0, 1);
+  meshData[22].tex := Vec2f(1, 0);
+  meshData[23].tex := Vec2f(0, 0);
 
   meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2Nor3, uStaticDraw);
   meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
@@ -147,9 +147,9 @@ begin
   SetLength(Sprites, count);
   for i := 0 to count - 1 do
   begin
-    Sprites[i] := TglrSprite.Create(30, 30, dfVec2f(0.5, 0.5));
-    Sprites[i].Position := dfVec3f(Random(800), Random(600), Random(15));
-    Sprites[i].SetVerticesColor(dfVec4f(Random(), Random(), Random, 1));
+    Sprites[i] := TglrSprite.Create(30, 30, Vec2f(0.5, 0.5));
+    Sprites[i].Position := Vec3f(Random(800), Random(600), Random(15));
+    Sprites[i].SetVerticesColor(Vec4f(Random(), Random(), Random, 1));
     Sprites[i].SetTextureRegion(atlas.GetRegion('goodline.png'));
   end;
 end;
@@ -160,7 +160,7 @@ begin
   Text := TglrText.Create(UTF8Decode('Hello, world! / Привет, мир! ' + #13#10 +
     'This time it will go over platforms... / На этот раз все будет кроссплатформенно...'));
   Text.LetterSpacing := 1;
-  Text.Position := dfVec3f(10, 150, 90);
+  Text.Position := Vec3f(10, 150, 90);
   FontBatch := TglrFontBatch.Create(Font);
 end;
 
@@ -192,7 +192,7 @@ begin
 
   if (aType = itTouchMove) and (aKey = kLeftButton) then
   begin
-    Camera.Rotate((x - dx) * deg2rad, dfVec3f(0, 1, 0));
+    Camera.Rotate((x - dx) * deg2rad, Vec3f(0, 1, 0));
     Camera.Rotate((y - dy) * deg2rad, Camera.Right);
     dx := X;
     dy := Y;
@@ -200,8 +200,8 @@ begin
 
   if (aType = itTouchMove) and (aKey = kNoInput) then
   begin
-    Sprites[1].Up := (Sprites[1].Position - dfVec3f(Core.Input.Touch[0].Pos, 0)).Normal;
-    Sprites[1].Direction := dfVec3f(0, 0.0, 1.0);
+    Sprites[1].Up := (Sprites[1].Position - Vec3f(Core.Input.Touch[0].Pos, 0)).Normal;
+    Sprites[1].Direction := Vec3f(0, 0.0, 1.0);
   end;
 
   if (aType = itWheel) then
@@ -247,11 +247,11 @@ begin
   Render.SetCullMode(cmBack);
 
   Camera := TglrCamera.Create();
-  Camera.SetCamera(dfVec3f(5, 0, 5), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  Camera.SetCamera(Vec3f(5, 0, 5), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
   Camera.ProjectionMode := pmPerspective;
 
   CameraHud := TglrCamera.Create();
-  CameraHud.SetCamera(dfVec3f(0, 0, 100), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  CameraHud.SetCamera(Vec3f(0, 0, 100), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
   CameraHud.ProjectionMode := pmOrtho;
 
   Material := TglrMaterial.Create(Default.SpriteShader);

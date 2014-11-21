@@ -32,7 +32,7 @@ type
     x1, y1, z1, x2, y2, z2: Integer;
   end;
 
-  TdfBB = record
+  TglrBB = record
     Left, Right, Top, Bottom: Single;
   end;
 
@@ -41,149 +41,149 @@ type
   end;
 
 {$REGION ' Single Vectors '}
-  TdfVec2f = record
+  TglrVec2f = record
     x, y: Single;
-    class operator Equal (const v1, v2: TdfVec2f): Boolean;
-    class operator Add (const v1, v2: TdfVec2f): TdfVec2f;
-    class operator Subtract (const v1, v2: TdfVec2f): TdfVec2f;
-    class operator Multiply (const v1, v2: TdfVec2f): TdfVec2f;
-    class operator Multiply (const v: TdfVec2f; a: Single): TdfVec2f;
-    class operator Multiply (const a: Single; const v: TdfVec2f): TdfVec2f;
-    function Dot(const v: TdfVec2f): Single;
-    function Reflect(const n: TdfVec2f): TdfVec2f;
-    function Refract(const n: TdfVec2f; Factor: Single): TdfVec2f;
+    class operator Equal (const v1, v2: TglrVec2f): Boolean;
+    class operator Add (const v1, v2: TglrVec2f): TglrVec2f;
+    class operator Subtract (const v1, v2: TglrVec2f): TglrVec2f;
+    class operator Multiply (const v1, v2: TglrVec2f): TglrVec2f;
+    class operator Multiply (const v: TglrVec2f; a: Single): TglrVec2f;
+    class operator Multiply (const a: Single; const v: TglrVec2f): TglrVec2f;
+    function Dot(const v: TglrVec2f): Single;
+    function Reflect(const n: TglrVec2f): TglrVec2f;
+    function Refract(const n: TglrVec2f; Factor: Single): TglrVec2f;
     function Length: Single;
     function LengthQ: Single;
-    function Normal: TdfVec2f;
-    function Dist(const v: TdfVec2f): Single;
-    function Lerp(const v: TdfVec2f; t: Single): TdfVec2f;
-    function Clamp(const Min, Max: TdfVec2f): TdfVec2f; overload;
-    function Clamp(const Min, Max: Single): TdfVec2f; overload;
-    function Rotate(Angle: Single): TdfVec2f;
-    function Angle(const v: TdfVec2f): Single;
-    function NegateVector(): TdfVec2f;
+    function Normal: TglrVec2f;
+    function Dist(const v: TglrVec2f): Single;
+    function Lerp(const v: TglrVec2f; t: Single): TglrVec2f;
+    function Clamp(const Min, Max: TglrVec2f): TglrVec2f; overload;
+    function Clamp(const Min, Max: Single): TglrVec2f; overload;
+    function Rotate(Angle: Single): TglrVec2f;
+    function Angle(const v: TglrVec2f): Single;
+    function NegateVector(): TglrVec2f;
     procedure Negate;
     procedure Normalize();
     procedure Reset();
     function GetRotationAngle(): Single;
   end;
 
-  TdfVec3f = record
+  TglrVec3f = record
     x, y, z: Single;
-    class operator Equal(const v1, v2: TdfVec3f): Boolean;
-    class operator Add(const v1, v2: TdfVec3f): TdfVec3f;
-    class operator Subtract(const v1, v2: TdfVec3f): TdfVec3f;
-    class operator Multiply(const v1, v2: TdfVec3f): TdfVec3f;
-    class operator Multiply(const v: TdfVec3f; a: Single): TdfVec3f;
-    class operator Multiply(const a: Single; const v: TdfVec3f): TdfVec3f;
-    function Lerp(const v: TdfVec3f; t: Single): TdfVec3f;
-    function Dot(const v: TdfVec3f): Single;
-    function Cross(const v: TdfVec3f): TdfVec3f;
-    function Normal: TdfVec3f;
+    class operator Equal(const v1, v2: TglrVec3f): Boolean;
+    class operator Add(const v1, v2: TglrVec3f): TglrVec3f;
+    class operator Subtract(const v1, v2: TglrVec3f): TglrVec3f;
+    class operator Multiply(const v1, v2: TglrVec3f): TglrVec3f;
+    class operator Multiply(const v: TglrVec3f; a: Single): TglrVec3f;
+    class operator Multiply(const a: Single; const v: TglrVec3f): TglrVec3f;
+    function Lerp(const v: TglrVec3f; t: Single): TglrVec3f;
+    function Dot(const v: TglrVec3f): Single;
+    function Cross(const v: TglrVec3f): TglrVec3f;
+    function Normal: TglrVec3f;
     procedure Normalize;
     function Length: Single;
     function LengthQ: Single;
-    function DistAbs(const v: TdfVec3f): Single;
-    function Reflect(const n: TdfVec3f): TdfVec3f;
-    function Refract(const n: TdfVec3f; Factor: Single): TdfVec3f;
-    function Clamp(const Min, Max: TdfVec3f): TdfVec3f;
-    function Rotate(Angle: Single; const Axis: TdfVec3f): TdfVec3f;
-    function NegateVector(): TdfVec3f;
+    function DistAbs(const v: TglrVec3f): Single;
+    function Reflect(const n: TglrVec3f): TglrVec3f;
+    function Refract(const n: TglrVec3f; Factor: Single): TglrVec3f;
+    function Clamp(const Min, Max: TglrVec3f): TglrVec3f;
+    function Rotate(Angle: Single; const Axis: TglrVec3f): TglrVec3f;
+    function NegateVector(): TglrVec3f;
     procedure Negate;
     procedure Reset();
   end;
 
-  { TdfVec4f }
+  { TglrVec4f }
 
-  TdfVec4f = record
+  TglrVec4f = record
     x, y, z, w: Single;
-    class operator Equal(const v1, v2: TdfVec4f): Boolean;
-    class operator Multiply(const A: Single; v: TdfVec4f): TdfVec4f;
-    class operator Multiply(const v: TdfVec4f; a: Single): TdfVec4f;
-    class operator Multiply(const v1, v2: TdfVec4f): TdfVec4f;
-    class operator Add(const v1, v2: TdfVec4f): TdfVec4f;
-    class operator Subtract(const v1, v2: TdfVec4f): TdfVec4f;
-    function Dot(const v: TdfVec3f): Single;
-    function Normal: TdfVec4f;
+    class operator Equal(const v1, v2: TglrVec4f): Boolean;
+    class operator Multiply(const A: Single; v: TglrVec4f): TglrVec4f;
+    class operator Multiply(const v: TglrVec4f; a: Single): TglrVec4f;
+    class operator Multiply(const v1, v2: TglrVec4f): TglrVec4f;
+    class operator Add(const v1, v2: TglrVec4f): TglrVec4f;
+    class operator Subtract(const v1, v2: TglrVec4f): TglrVec4f;
+    function Dot(const v: TglrVec3f): Single;
+    function Normal: TglrVec4f;
     procedure Normalize;
   end;
 {$ENDREGION}
 
 {$REGION ' Quaternions '}
-  TdfQuat = record
+  TglrQuat = record
     x, y, z, w : Single;
-    class operator Equal(const q1, q2: TdfQuat): Boolean;
-    class operator Add(const q1, q2: TdfQuat): TdfQuat;
-    class operator Subtract(const q1, q2: TdfQuat): TdfQuat;
-    class operator Multiply(const q: TdfQuat; x: Single): TdfQuat;
-    class operator Multiply(const q1, q2: TdfQuat): TdfQuat;
-    class operator Multiply(const q: TdfQuat; const v: TdfVec3f): TdfVec3f;
-    function Invert: TdfQuat;
-    function Lerp(const q: TdfQuat; t: Single): TdfQuat;
-    function Dot(const q: TdfQuat): Single;
+    class operator Equal(const q1, q2: TglrQuat): Boolean;
+    class operator Add(const q1, q2: TglrQuat): TglrQuat;
+    class operator Subtract(const q1, q2: TglrQuat): TglrQuat;
+    class operator Multiply(const q: TglrQuat; x: Single): TglrQuat;
+    class operator Multiply(const q1, q2: TglrQuat): TglrQuat;
+    class operator Multiply(const q: TglrQuat; const v: TglrVec3f): TglrVec3f;
+    function Invert: TglrQuat;
+    function Lerp(const q: TglrQuat; t: Single): TglrQuat;
+    function Dot(const q: TglrQuat): Single;
     procedure Normalize;
-    function FromVectorAngle(const v: TdfVec3f; Angle: Single): TdfQuat;
-    function Euler: TdfVec3f;
+    function FromVectorAngle(const v: TglrVec3f; Angle: Single): TglrQuat;
+    function Euler: TglrVec3f;
   end;
 
-  TdfDualQuat = record
+  TglrDualQuat = record
   private
-    function GetPos: TdfVec3f;
+    function GetPos: TglrVec3f;
   public
-    Real, Dual : TdfQuat;      
-    class operator Multiply(const dq1, dq2: TdfDualQuat): TdfDualQuat;
-    function Lerp(const dq: TdfDualQuat; t: Single): TdfDualQuat;
-    property Pos: TdfVec3f read GetPos;
-    property Rot: TdfQuat read Real;
+    Real, Dual : TglrQuat;
+    class operator Multiply(const dq1, dq2: TglrDualQuat): TglrDualQuat;
+    function Lerp(const dq: TglrDualQuat; t: Single): TglrDualQuat;
+    property Pos: TglrVec3f read GetPos;
+    property Rot: TglrQuat read Real;
   end;
 {$ENDREGION}
 
 {$REGION ' Matrices '}
-  PdfMat4fArray = ^TdfMat4fArray;
-  TdfMat4fArray = array [0..3, 0..3] of Single;
+  PglrMat4fArray = ^TglrMat4fArray;
+  TglrMat4fArray = array [0..3, 0..3] of Single;
 
-  PdfMat4fRowArray = ^TdfMat4fRowArray;
-  TdfMat4fRowArray = array [0..3] of TdfVec4f;
+  PglrMat4fRowArray = ^TglrMat4fRowArray;
+  TglrMat4fRowArray = array [0..3] of TglrVec4f;
 
-  TdfMat4f = record
+  TglrMat4f = record
   private
-    function  GetPos: TdfVec3f;
-    procedure SetPos(const v: TdfVec3f);
-    function  GetRot: TdfQuat;
-    procedure SetRot(const q: TdfQuat);
+    function  GetPos: TglrVec3f;
+    procedure SetPos(const v: TglrVec3f);
+    function  GetRot: TglrQuat;
+    procedure SetRot(const q: TglrQuat);
   public
     e00, e10, e20, e30,
     e01, e11, e21, e31,
     e02, e12, e22, e32,
     e03, e13, e23, e33: Single;
-    class operator Add(const a, b: TdfMat4f): TdfMat4f;
-    class operator Multiply(const m: TdfMat4f; v: TdfVec3f): TdfVec3f;
-    class operator Multiply(const a, b: TdfMat4f): TdfMat4f;
-    class operator Multiply(const a: TdfMat4f; x: Single): TdfMat4f;
+    class operator Add(const a, b: TglrMat4f): TglrMat4f;
+    class operator Multiply(const m: TglrMat4f; v: TglrVec3f): TglrVec3f;
+    class operator Multiply(const a, b: TglrMat4f): TglrMat4f;
+    class operator Multiply(const a: TglrMat4f; x: Single): TglrMat4f;
     procedure Identity;
     function  Det: Single;
-    function  Inverse: TdfMat4f;
-    function  Transpose: TdfMat4f;
-    function  FromVectorAngle(const v: TdfVec3f; Angle: Single): TdfMat4f;
+    function  Inverse: TglrMat4f;
+    function  Transpose: TglrMat4f;
+    function  FromVectorAngle(const v: TglrVec3f; Angle: Single): TglrMat4f;
     procedure Ortho(Left, Right, Bottom, Top, ZNear, ZFar: Single);
     procedure Frustum(Left, Right, Bottom, Top, ZNear, ZFar: Single);
     procedure Perspective(FOV, Aspect, ZNear, ZFar: Single);
-    procedure Translate(const v: TdfVec3f);
-    procedure Rotate(Angle: Single; const v: TdfVec3f);
-    procedure Scale(const v: TdfVec3f);
+    procedure Translate(const v: TglrVec3f);
+    procedure Rotate(Angle: Single; const v: TglrVec3f);
+    procedure Scale(const v: TglrVec3f);
 
-    property Pos: TdfVec3f read GetPos write SetPos;
-    property Rot: TdfQuat read GetRot write SetRot;
+    property Pos: TglrVec3f read GetPos write SetPos;
+    property Rot: TglrQuat read GetRot write SetRot;
   end;
 
 {$ENDREGION}
 
-  PdfVec2f = ^TdfVec2f;
-  PdfVec3f = ^TdfVec3f;
-  PdfVec4f = ^TdfVec4f;
+  PglrVec2f = ^TglrVec2f;
+  PglrVec3f = ^TglrVec3f;
+  PglrVec4f = ^TglrVec4f;
 
 const
-    IdentMat : TdfMat4f = (
+    IdentMat : TglrMat4f = (
     e00: 1; e10: 0; e20: 0; e30: 0;
     e01: 0; e11: 1; e21: 0; e31: 0;
     e02: 0; e12: 0; e22: 1; e32: 0;
@@ -197,9 +197,9 @@ function Min(x, y: Integer): Integer; overload; inline;
 function Sign(x: Single): Integer; inline;
 function Equalf(x, y: Single): Boolean; inline;
 
-function IsPointInBox(aPoint: TdfVec2f; aMin, aMax: TdfVec2f): Boolean;
-function LineCircleIntersect(aLineStart, aLineVec: TdfVec2f;
-  aCircleCenter: TdfVec2f; aRadius: Single): Boolean;
+function IsPointInBox(aPoint: TglrVec2f; aMin, aMax: TglrVec2f): Boolean;
+function LineCircleIntersect(aLineStart, aLineVec: TglrVec2f;
+  aCircleCenter: TglrVec2f; aRadius: Single): Boolean;
 
 function Ceil(const X: Extended): Integer;
 function Floor(const X: Extended): Integer;
@@ -217,19 +217,19 @@ function Pow(x, y: Single): Single;
 function Lerp(aFrom, aTo, aT: Single): Single;
 function LerpAngles(aFrom, aTo, t: Single): Single;
 
-function Hsv2Rgb(hsv: TdfVec3f): TdfVec3f;
-function Hsva2Rgba(hsva: TdfVec4f): TdfVec4f;
+function Hsv2Rgb(hsv: TglrVec3f): TglrVec3f;
+function Hsva2Rgba(hsva: TglrVec4f): TglrVec4f;
   
-function dfVec2f(x, y: Single): TdfVec2f; overload; inline;
-function dfVec2f(v: TdfVec3f): TdfVec2f; overload; inline;
-function dfVec2f(rotationAngle: Single): TdfVec2f; overload; inline;
-function dfVec3f(x, y, z: Single): TdfVec3f; overload; inline;
-function dfVec3f(v: TdfVec2f; z: Single): TdfVec3f; overload; inline;
-function dfVec3f(v: TdfVec4f): TdfVec3f; overload; inline;
-function dfVec4f(x, y, z: Single; w: Single = 0): TdfVec4f; overload; inline;
-function dfVec4f(v: TdfVec3f; w: Single = 0): TdfVec4f; overload; inline;
-function dfQuat(x, y, z, w: Single): TdfQuat; overload; inline;
-function dfQuat(const v: TdfVec3f; Angle: Single): TdfQuat; overload; inline;
+function Vec2f(x, y: Single): TglrVec2f; overload; inline;
+function Vec2f(v: TglrVec3f): TglrVec2f; overload; inline;
+function Vec2f(rotationAngle: Single): TglrVec2f; overload; inline;
+function Vec3f(x, y, z: Single): TglrVec3f; overload; inline;
+function Vec3f(v: TglrVec2f; z: Single): TglrVec3f; overload; inline;
+function Vec3f(v: TglrVec4f): TglrVec3f; overload; inline;
+function Vec4f(x, y, z: Single; w: Single = 0): TglrVec4f; overload; inline;
+function Vec4f(v: TglrVec3f; w: Single = 0): TglrVec4f; overload; inline;
+function Quat(x, y, z, w: Single): TglrQuat; overload; inline;
+function Quat(const v: TglrVec3f; Angle: Single): TglrQuat; overload; inline;
 
 implementation
 
@@ -281,16 +281,16 @@ begin
   Result := Abs(x - y) < cEPS;
 end;
 
-function IsPointInBox(aPoint: TdfVec2f; aMin, aMax: TdfVec2f): Boolean;
+function IsPointInBox(aPoint: TglrVec2f; aMin, aMax: TglrVec2f): Boolean;
 begin
   Result := (aPoint.x >= aMin.x) and (aPoint.x <= aMax.x) and
     (aPoint.y >= aMin.y) and (aPoint.y <= aMax.y);
 end;
 
-function LineCircleIntersect(aLineStart, aLineVec: TdfVec2f;
-  aCircleCenter: TdfVec2f; aRadius: Single): Boolean;
+function LineCircleIntersect(aLineStart, aLineVec: TglrVec2f;
+  aCircleCenter: TglrVec2f; aRadius: Single): Boolean;
 var
-  lineStartToCenter: TdfVec2f;
+  lineStartToCenter: TglrVec2f;
   cosine, sine, lineProjLength, dist, angle: Single;
 begin
   lineStartToCenter := (aCircleCenter - aLineStart);
@@ -421,7 +421,7 @@ end;
 
 {Hue: 0-360, Sat: 0-100, Value: 0-100}
 {R, G, B: 0-1}
-function Hsv2Rgb(hsv: TdfVec3f): TdfVec3f;
+function Hsv2Rgb(hsv: TglrVec3f): TglrVec3f;
 var
   Hi: Integer;
   Vmin, Vinc, Vdec, a: Single;
@@ -434,81 +434,65 @@ begin
   Vinc := Vmin + a;
   Vdec := hsv.z - a;
   case Hi of
-    0: Exit(dfVec3f(hsv.z, Vinc, Vmin) * 0.01);
-    1: Exit(dfVec3f(Vdec, hsv.z, Vmin) * 0.01);
-    2: Exit(dfVec3f(Vmin, hsv.z, Vinc) * 0.01);
-    3: Exit(dfVec3f(Vmin, Vdec, hsv.z) * 0.01);
-    4: Exit(dfVec3f(Vinc, Vmin, hsv.z) * 0.01);
-    5: Exit(dfVec3f(hsv.z, Vmin, Vdec) * 0.01);
+    0: Exit(Vec3f(hsv.z, Vinc, Vmin) * 0.01);
+    1: Exit(Vec3f(Vdec, hsv.z, Vmin) * 0.01);
+    2: Exit(Vec3f(Vmin, hsv.z, Vinc) * 0.01);
+    3: Exit(Vec3f(Vmin, Vdec, hsv.z) * 0.01);
+    4: Exit(Vec3f(Vinc, Vmin, hsv.z) * 0.01);
+    5: Exit(Vec3f(hsv.z, Vmin, Vdec) * 0.01);
   end;
 end;
 
-function Hsva2Rgba(hsva: TdfVec4f): TdfVec4f;
+function Hsva2Rgba(hsva: TglrVec4f): TglrVec4f;
 begin
-  Result := dfVec4f(Hsv2Rgb(dfVec3f(hsva)), hsva.w);
+  Result := Vec4f(Hsv2Rgb(Vec3f(hsva)), hsva.w);
 end;
 
-function Rgb2Hsv(rgb: TdfVec3f): TdfVec3f;
+function Rgb2Hsv(rgb: TglrVec3f): TglrVec3f;
 begin
 
 end;
 
 
-function dfVec2f(x, y: Single): TdfVec2f;
+function Vec2f(x, y: Single): TglrVec2f;
 begin
   Result.x := x;
   Result.y := y;
 end;
 
-function dfVec2f(v: TdfVec3f): TdfVec2f;
+function Vec2f(v: TglrVec3f): TglrVec2f;
 begin
   Result.x := v.x;
   Result.y := v.y;
 end;
 
-function dfVec2f(rotationAngle: Single): TdfVec2f;
+function Vec2f(rotationAngle: Single): TglrVec2f;
 begin
-  Result := dfVec2f(cos(-rotationAngle * deg2rad), sin(rotationAngle * deg2rad)).Normal;
+  Result := Vec2f(cos(-rotationAngle * deg2rad), sin(rotationAngle * deg2rad)).Normal;
 end;
 
-function dfVec3f(x, y, z: Single): TdfVec3f; overload;
+function Vec3f(x, y, z: Single): TglrVec3f; overload;
 begin
   Result.x := x;
   Result.y := y;
   Result.z := z;
 end;
 
-function dfVec3f(v: TdfVec2f; z: Single): TdfVec3f; overload;
+function Vec3f(v: TglrVec2f; z: Single): TglrVec3f; overload;
 begin
   Result.x := v.x;
   Result.y := v.y;
   Result.z := z;
 end;
 
-function dfVec3f(v: TdfVec4f): TdfVec3f; overload;
-begin
-  Result.x := v.x;
-  Result.y := v.y;
-  Result.z := v.z;
-end;
-
-function dfVec4f(x, y, z: Single; w: Single = 0): TdfVec4f; overload;
-begin
-  Result.x := x;
-  Result.y := y;
-  Result.z := z;
-  Result.w := w;
-end;
-
-function dfVec4f(v: TdfVec3f; w: Single = 0): TdfVec4f; overload;
+function Vec3f(v: TglrVec4f): TglrVec3f; overload;
 begin
   Result.x := v.x;
   Result.y := v.y;
   Result.z := v.z;
-  Result.w := w;
 end;
 
-function dfQuat(x, y, z, w: Single): TdfQuat;
+function Vec4f(x, y, z: Single; w: Single = 0): TglrVec4f; overload;
 begin
   Result.x := x;
   Result.y := y;
@@ -516,58 +500,74 @@ begin
   Result.w := w;
 end;
 
-function dfQuat(const v: TdfVec3f; Angle: Single): TdfQuat;
+function Vec4f(v: TglrVec3f; w: Single = 0): TglrVec4f; overload;
+begin
+  Result.x := v.x;
+  Result.y := v.y;
+  Result.z := v.z;
+  Result.w := w;
+end;
+
+function Quat(x, y, z, w: Single): TglrQuat;
+begin
+  Result.x := x;
+  Result.y := y;
+  Result.z := z;
+  Result.w := w;
+end;
+
+function Quat(const v: TglrVec3f; Angle: Single): TglrQuat;
 begin
   Result := Result.FromVectorAngle(v, Angle);
 end;
 
 {$REGION ' Single Vectors '}
-class operator TdfVec2f.Equal(const v1, v2: TdfVec2f): Boolean;
+class operator TglrVec2f.Equal(const v1, v2: TglrVec2f): Boolean;
 begin
   Result := (Abs(v1.x - v2.x) <= cEPS)and
             (Abs(v1.y - v2.y) <= cEPS);
 end;
 
-class operator TdfVec2f.Add(const v1, v2: TdfVec2f): TdfVec2f;
+class operator TglrVec2f.Add(const v1, v2: TglrVec2f): TglrVec2f;
 begin
   Result.x := v1.x + v2.x;
   Result.y := v1.y + v2.y;
 end;
 
-class operator TdfVec2f.Subtract(const v1, v2: TdfVec2f): TdfVec2f;
+class operator TglrVec2f.Subtract(const v1, v2: TglrVec2f): TglrVec2f;
 begin
   Result.x := v1.x - v2.x;
   Result.y := v1.y - v2.y;
 end;
 
-class operator TdfVec2f.Multiply(const v1, v2: TdfVec2f): TdfVec2f;
+class operator TglrVec2f.Multiply(const v1, v2: TglrVec2f): TglrVec2f;
 begin
   Result.x := v1.x * v2.x;
   Result.y := v1.y * v2.y;
 end;
 
-class operator TdfVec2f.Multiply(const v: TdfVec2f; a: Single): TdfVec2f;
+class operator TglrVec2f.Multiply(const v: TglrVec2f; a: Single): TglrVec2f;
 begin
   Result.x := v.x * a;
   Result.y := v.y * a;
 end;
 
-class operator TdfVec2f.Multiply(const a: Single; const v: TdfVec2f): TdfVec2f;
+class operator TglrVec2f.Multiply(const a: Single; const v: TglrVec2f): TglrVec2f;
 begin
   Result := v * a;
 end;
 
-function TdfVec2f.Dot(const v: TdfVec2f): Single;
+function TglrVec2f.Dot(const v: TglrVec2f): Single;
 begin
   Result := x * v.x + y * v.y;
 end;
 
-function TdfVec2f.Reflect(const n: TdfVec2f): TdfVec2f;
+function TglrVec2f.Reflect(const n: TglrVec2f): TglrVec2f;
 begin
   Result := Self - (n * (2 * Dot(n)));
 end;
 
-function TdfVec2f.Refract(const n: TdfVec2f; Factor: Single): TdfVec2f;
+function TglrVec2f.Refract(const n: TglrVec2f; Factor: Single): TglrVec2f;
 var
   d, s : Single;
 begin
@@ -579,43 +579,43 @@ begin
     Result := Self * Factor - n * (sqrt(s) + d * Factor);
 end;
 
-function TdfVec2f.Length: Single;
+function TglrVec2f.Length: Single;
 begin
   Result := sqrt(LengthQ);
 end;
 
-function TdfVec2f.LengthQ: Single;
+function TglrVec2f.LengthQ: Single;
 begin
   Result := sqr(x) + sqr(y);
 end;
 
-function TdfVec2f.Normal: TdfVec2f;
+function TglrVec2f.Normal: TglrVec2f;
 var
   Len : Single;
 begin
   Len := Length;
   if Len < cEPS then
-    Result := dfVec2f(0, 0)
+    Result := Vec2f(0, 0)
   else
     Result := Self * (1 / Len);
 end;
 
-function TdfVec2f.Dist(const v: TdfVec2f): Single;
+function TglrVec2f.Dist(const v: TglrVec2f): Single;
 begin
   Result := (v - Self).Length;
 end;
 
-function TdfVec2f.Lerp(const v: TdfVec2f; t: Single): TdfVec2f;
+function TglrVec2f.Lerp(const v: TglrVec2f; t: Single): TglrVec2f;
 begin
   Result := Self + (v - Self) * t;
 end;
 
-function TdfVec2f.Clamp(const Min, Max: TdfVec2f): TdfVec2f;
+function TglrVec2f.Clamp(const Min, Max: TglrVec2f): TglrVec2f;
 begin
-  Result := dfVec2f(glrMath.Clamp(x, Min.x, Max.x), glrMath.Clamp(y, Min.y, Max.y));
+  Result := Vec2f(glrMath.Clamp(x, Min.x, Max.x), glrMath.Clamp(y, Min.y, Max.y));
 end;
 
-function TdfVec2f.Clamp(const Min, Max: Single): TdfVec2f;
+function TglrVec2f.Clamp(const Min, Max: Single): TglrVec2f;
 begin
   if LengthQ < Sqr(Min) then
     Result := Self.Normal * Min
@@ -625,43 +625,43 @@ begin
     Result := Self;
 end;
 
-function TdfVec2f.Rotate(Angle: Single): TdfVec2f;
+function TglrVec2f.Rotate(Angle: Single): TglrVec2f;
 var
   s, c : Extended;
 begin
   SinCos(Angle, s, c);
-  Result := dfVec2f(x * c - y * s, x * s + y * c);
+  Result := Vec2f(x * c - y * s, x * s + y * c);
 end;
 
-function TdfVec2f.Angle(const v: TdfVec2f): Single;
+function TglrVec2f.Angle(const v: TglrVec2f): Single;
 begin
   Result := ArcCos(Dot(v) / sqrt(LengthQ * v.LengthQ))
 end;
 
-function TdfVec2f.NegateVector(): TdfVec2f;
+function TglrVec2f.NegateVector(): TglrVec2f;
 begin
   Result.x := -x;
   Result.y := -y;
 end;
 
-procedure TdfVec2f.Negate;
+procedure TglrVec2f.Negate;
 begin
   x := -x;
   y := -y;
 end;
 
-procedure TdfVec2f.Normalize();
+procedure TglrVec2f.Normalize();
 begin
   Self := Self.Normal();
 end;
 
-procedure TdfVec2f.Reset();
+procedure TglrVec2f.Reset();
 begin
   x := 0;
   y := 0;
 end;
 
-function TdfVec2f.GetRotationAngle(): Single;
+function TglrVec2f.GetRotationAngle(): Single;
 begin
   Result := {90 + }ArcTan2(y, x) *  rad2deg;
 //  if y > 0 then
@@ -670,66 +670,66 @@ begin
 //    Result := 90 - rad2deg * ArcCos(x);
 end;
 
-//======================dfVec3f
+//======================Vec3f
 
-class operator TdfVec3f.Equal(const v1, v2: TdfVec3f): Boolean;
+class operator TglrVec3f.Equal(const v1, v2: TglrVec3f): Boolean;
 begin
   Result := (Abs(v1.x - v2.x) <= cEPS)and
             (Abs(v1.y - v2.y) <= cEPS)and
             (Abs(v1.z - v2.z) <= cEPS);
 end;
 
-class operator TdfVec3f.Add(const v1, v2: TdfVec3f): TdfVec3f;
+class operator TglrVec3f.Add(const v1, v2: TglrVec3f): TglrVec3f;
 begin
   Result.x := v1.x + v2.x;
   Result.y := v1.y + v2.y;
   Result.z := v1.z + v2.z;
 end;
 
-class operator TdfVec3f.Subtract(const v1, v2: TdfVec3f): TdfVec3f;
+class operator TglrVec3f.Subtract(const v1, v2: TglrVec3f): TglrVec3f;
 begin
   Result.x := v1.x - v2.x;
   Result.y := v1.y - v2.y;
   Result.z := v1.z - v2.z;
 end;
 
-class operator TdfVec3f.Multiply(const v1, v2: TdfVec3f): TdfVec3f;
+class operator TglrVec3f.Multiply(const v1, v2: TglrVec3f): TglrVec3f;
 begin
   Result.x := v1.x * v2.x;
   Result.y := v1.y * v2.y;
   Result.z := v1.z * v2.z;
 end;
 
-class operator TdfVec3f.Multiply(const v: TdfVec3f; a: Single): TdfVec3f;
+class operator TglrVec3f.Multiply(const v: TglrVec3f; a: Single): TglrVec3f;
 begin
   Result.x := a * v.x;
   Result.y := a * v.y;
   Result.z := a * v.z;
 end;
 
-class operator TdfVec3f.Multiply(const a: Single; const v: TdfVec3f): TdfVec3f;
+class operator TglrVec3f.Multiply(const a: Single; const v: TglrVec3f): TglrVec3f;
 begin
   Result := v * a;
 end;
 
-function TdfVec3f.Lerp(const v: TdfVec3f; t: Single): TdfVec3f;
+function TglrVec3f.Lerp(const v: TglrVec3f; t: Single): TglrVec3f;
 begin
   Result := Self + (v - Self) * t;
 end;
 
-function TdfVec3f.Dot(const v: TdfVec3f): Single;
+function TglrVec3f.Dot(const v: TglrVec3f): Single;
 begin
   Result := x * v.x + y * v.y + z * v.z;
 end;
 
-function TdfVec3f.Cross(const v: TdfVec3f): TdfVec3f;
+function TglrVec3f.Cross(const v: TglrVec3f): TglrVec3f;
 begin
   Result.x := y * v.z - z * v.y;
   Result.y := z * v.x - x * v.z;
   Result.z := x * v.y - y * v.x;
 end;
 
-function TdfVec3f.Normal: TdfVec3f;
+function TglrVec3f.Normal: TglrVec3f;
 var
   Len : Single;
 begin
@@ -737,35 +737,35 @@ begin
   if Len > cEPS then
     Result := Self * (1 / Len)
   else
-    Result := dfVec3f(0, 0, 0);
+    Result := Vec3f(0, 0, 0);
 end;
 
-procedure TdfVec3f.Normalize;
+procedure TglrVec3f.Normalize;
 begin
   Self := Normal;
 end;
 
-function TdfVec3f.Length: Single;
+function TglrVec3f.Length: Single;
 begin
   Result := sqrt(LengthQ);
 end;
 
-function TdfVec3f.LengthQ: Single;
+function TglrVec3f.LengthQ: Single;
 begin
   Result := sqr(x) + sqr(y) + sqr(z);
 end;
 
-function TdfVec3f.DistAbs(const v: TdfVec3f): Single;
+function TglrVec3f.DistAbs(const v: TglrVec3f): Single;
 begin
   Result := abs(x - v.x) + abs(y - v.y) + abs(z - v.z);
 end;
 
-function TdfVec3f.Reflect(const n: TdfVec3f): TdfVec3f;
+function TglrVec3f.Reflect(const n: TglrVec3f): TglrVec3f;
 begin
   Result := Self - (n * (2 * Dot(n)));
 end;
 
-function TdfVec3f.Refract(const n: TdfVec3f; Factor: Single): TdfVec3f;
+function TglrVec3f.Refract(const n: TglrVec3f; Factor: Single): TglrVec3f;
 var
   d, s : Single;
 begin
@@ -777,15 +777,15 @@ begin
     Result := Self * Factor  - n * (sqrt(s) + d * Factor);
 end;
 
-function TdfVec3f.Clamp(const Min, Max: TdfVec3f): TdfVec3f;
+function TglrVec3f.Clamp(const Min, Max: TglrVec3f): TglrVec3f;
 begin
-  Result := dfVec3f(glrMath.Clamp(x, Min.x, Max.x), glrMath.Clamp(y, Min.y, Max.y), glrMath.Clamp(z, Min.z, Max.z));
+  Result := Vec3f(glrMath.Clamp(x, Min.x, Max.x), glrMath.Clamp(y, Min.y, Max.y), glrMath.Clamp(z, Min.z, Max.z));
 end;
 
-function TdfVec3f.Rotate(Angle: Single; const Axis: TdfVec3f): TdfVec3f;
+function TglrVec3f.Rotate(Angle: Single; const Axis: TglrVec3f): TglrVec3f;
 var
   s, c : Extended;
-  v0, v1, v2 : TdfVec3f;
+  v0, v1, v2 : TglrVec3f;
 begin
   SinCos(Angle, s, c);
   v0 := Axis * Dot(Axis);
@@ -796,30 +796,30 @@ begin
   Result.z := v0.z + v1.z * c + v2.z * s;
 end;
 
-function TdfVec3f.NegateVector(): TdfVec3f;
+function TglrVec3f.NegateVector(): TglrVec3f;
 begin
   Result.x := -x;
   Result.y := -y;
   Result.z := -z;
 end;
 
-procedure TdfVec3f.Negate;
+procedure TglrVec3f.Negate;
 begin
   x := -x;
   y := -y;
   z := -z;
 end;
 
-procedure TdfVec3f.Reset();
+procedure TglrVec3f.Reset();
 begin
   x := 0;
   y := 0;
   z := 0;
 end;
 
-//======================dfVec4f
+//======================Vec4f
 
-class operator TdfVec4f.Equal(const v1, v2: TdfVec4f): Boolean;
+class operator TglrVec4f.Equal(const v1, v2: TglrVec4f): Boolean;
 begin
   Result := (Abs(v1.x - v2.x) <= cEPS) and
             (Abs(v1.y - v2.y) <= cEPS) and
@@ -827,7 +827,7 @@ begin
             (Abs(v1.w - v2.w) <= cEPS);
 end;
 
-class operator TdfVec4f.Multiply(const A: Single; v: TdfVec4f): TdfVec4f;
+class operator TglrVec4f.Multiply(const A: Single; v: TglrVec4f): TglrVec4f;
 begin
   Result.x := A * v.x;
   Result.y := A * v.y;
@@ -835,12 +835,12 @@ begin
   Result.w := v.w;
 end;
 
-class operator TdfVec4f.Multiply(const v: TdfVec4f; a: Single): TdfVec4f;
+class operator TglrVec4f.Multiply(const v: TglrVec4f; a: Single): TglrVec4f;
 begin
   result := a * v;
 end;
 
-class operator TdfVec4f.Multiply(const v1, v2: TdfVec4f): TdfVec4f;
+class operator TglrVec4f.Multiply(const v1, v2: TglrVec4f): TglrVec4f;
 begin
   Result.x := v1.x * v2.x;
   Result.y := v1.y * v2.y;
@@ -848,7 +848,7 @@ begin
   Result.w := v1.w * v2.w;
 end;
 
-class operator TdfVec4f.Add(const v1, v2: TdfVec4f): TdfVec4f;
+class operator TglrVec4f.Add(const v1, v2: TglrVec4f): TglrVec4f;
 begin
   with Result do
   begin
@@ -859,7 +859,7 @@ begin
   end;
 end;
 
-class operator TdfVec4f.Subtract(const v1, v2: TdfVec4f): TdfVec4f;
+class operator TglrVec4f.Subtract(const v1, v2: TglrVec4f): TglrVec4f;
 begin
   with Result do
   begin
@@ -870,12 +870,12 @@ begin
   end;
 end;
 
-function TdfVec4f.Dot(const v: TdfVec3f): Single;
+function TglrVec4f.Dot(const v: TglrVec3f): Single;
 begin
   Result := x * v.x + y * v.y + z * v.z + w;
 end;
 
-function TdfVec4f.Normal: TdfVec4f;
+function TglrVec4f.Normal: TglrVec4f;
 var
   Len : Single;
 begin
@@ -886,14 +886,14 @@ begin
     Result := Self;
 end;
 
-procedure TdfVec4f.Normalize;
+procedure TglrVec4f.Normalize;
 begin
   Self := Normal;
 end;
 {$ENDREGION}
 
 {$REGION ' Quaternions '}
-class operator TdfQuat.Equal(const q1, q2: TdfQuat): Boolean;
+class operator TglrQuat.Equal(const q1, q2: TglrQuat): Boolean;
 begin
   Result := (abs(q1.x - q2.x) <= cEPS) and
             (abs(q1.y - q2.y) <= cEPS) and
@@ -901,7 +901,7 @@ begin
             (abs(q1.w - q2.w) <= cEPS);
 end;
 
-class operator TdfQuat.Add(const q1, q2: TdfQuat): TdfQuat;
+class operator TglrQuat.Add(const q1, q2: TglrQuat): TglrQuat;
 begin
   Result.x := q1.x + q2.x;
   Result.y := q1.y + q2.y;
@@ -909,7 +909,7 @@ begin
   Result.w := q1.w + q2.w;
 end;
 
-class operator TdfQuat.Subtract(const q1, q2: TdfQuat): TdfQuat;
+class operator TglrQuat.Subtract(const q1, q2: TglrQuat): TglrQuat;
 begin
   Result.x := q1.x - q2.x;
   Result.y := q1.y - q2.y;
@@ -917,7 +917,7 @@ begin
   Result.w := q1.w - q2.w;
 end;
 
-class operator TdfQuat.Multiply(const q: TdfQuat; x: Single): TdfQuat;
+class operator TglrQuat.Multiply(const q: TglrQuat; x: Single): TglrQuat;
 begin
   Result.x := q.x * x;
   Result.y := q.y * x;
@@ -925,7 +925,7 @@ begin
   Result.w := q.w * x;
 end;
 
-class operator TdfQuat.Multiply(const q1, q2: TdfQuat): TdfQuat;
+class operator TglrQuat.Multiply(const q1, q2: TglrQuat): TglrQuat;
 begin
   Result.x := q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y;
   Result.y := q1.w * q2.y + q1.y * q2.w + q1.z * q2.x - q1.x * q2.z;
@@ -933,18 +933,18 @@ begin
   Result.w := q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z;
 end;
 
-class operator TdfQuat.Multiply(const q: TdfQuat; const v: TdfVec3f): TdfVec3f;
+class operator TglrQuat.Multiply(const q: TglrQuat; const v: TglrVec3f): TglrVec3f;
 begin
-  with q * dfQuat(v.x, v.y, v.z, 0) * q.Invert do
-    Result := dfVec3f(x, y, z);
+  with (q * Quat(v.x, v.y, v.z, 0) * q.Invert) do
+    Result := Vec3f(x, y, z);
 end;
 
-function TdfQuat.Invert: TdfQuat;
+function TglrQuat.Invert: TglrQuat;
 begin
-  Result := dfQuat(-x, -y, -z, w);
+  Result := Quat(-x, -y, -z, w);
 end;
 
-function TdfQuat.Lerp(const q: TdfQuat; t: Single): TdfQuat;
+function TglrQuat.Lerp(const q: TglrQuat; t: Single): TglrQuat;
 begin
   if Dot(q) < 0 then
     Result := Self - (q + Self) * t
@@ -952,12 +952,12 @@ begin
     Result := Self + (q - Self) * t;
 end;
 
-function TdfQuat.Dot(const q: TdfQuat): Single;
+function TglrQuat.Dot(const q: TglrQuat): Single;
 begin
   Result := x * q.x + y * q.y + z * q.z + w * q.w;
 end;
 
-procedure TdfQuat.Normalize;
+procedure TglrQuat.Normalize;
 var
   Len : Single;
 begin
@@ -972,7 +972,7 @@ begin
   end;
 end;
 
-function TdfQuat.FromVectorAngle(const v: TdfVec3f; Angle: Single): TdfQuat;
+function TglrQuat.FromVectorAngle(const v: TglrVec3f; Angle: Single): TglrQuat;
 var
   s, c : Extended;
 begin
@@ -983,7 +983,7 @@ begin
   Result.w := c;
 end;
 
-function TdfQuat.Euler: TdfVec3f;
+function TglrQuat.Euler: TglrVec3f;
 var
   D : Single;
 begin
@@ -1004,13 +1004,13 @@ begin
   end;
 end;
 
-class operator TdfDualQuat.Multiply(const dq1, dq2: TdfDualQuat): TdfDualQuat;
+class operator TglrDualQuat.Multiply(const dq1, dq2: TglrDualQuat): TglrDualQuat;
 begin
   Result.Real := dq1.Real * dq2.Real;
   Result.Dual := dq1.Real * dq2.Dual + dq1.Dual * dq2.Real;
 end;
 
-function TdfDualQuat.Lerp(const dq: TdfDualQuat; t: Single): TdfDualQuat;
+function TglrDualQuat.Lerp(const dq: TglrDualQuat; t: Single): TglrDualQuat;
 begin
   if Real.Dot(dq.Real) < 0 then
   begin
@@ -1023,7 +1023,7 @@ begin
   end;
 end;
 
-function TdfDualQuat.GetPos: TdfVec3f;
+function TglrDualQuat.GetPos: TglrVec3f;
 begin
   with Result do
   begin
@@ -1036,11 +1036,11 @@ end;
 {$ENDREGION}
 
 {$REGION ' Matrices '}
-class operator TdfMat4f.Add(const a, b: TdfMat4f): TdfMat4f;
+class operator TglrMat4f.Add(const a, b: TglrMat4f): TglrMat4f;
 var
-  MA   : TdfMat4fArray absolute a;
-  MB   : TdfMat4fArray absolute b;
-  Res  : TdfMat4fArray absolute Result;
+  MA   : TglrMat4fArray absolute a;
+  MB   : TglrMat4fArray absolute b;
+  Res  : TglrMat4fArray absolute Result;
   i, j : Integer;
 begin
   for i := 0 to 3 do
@@ -1048,15 +1048,15 @@ begin
       Res[i][j] := MA[i][j] + MB[i][j];
 end;
 
-class operator TdfMat4f.Multiply(const m: TdfMat4f; v: TdfVec3f): TdfVec3f;
+class operator TglrMat4f.Multiply(const m: TglrMat4f; v: TglrVec3f): TglrVec3f;
 begin
   with m do
-    Result := dfVec3f(e00 * v.x + e01 * v.y + e02 * v.z + e03,
+    Result := Vec3f(e00 * v.x + e01 * v.y + e02 * v.z + e03,
                       e10 * v.x + e11 * v.y + e12 * v.z + e13,
                       e20 * v.x + e21 * v.y + e22 * v.z + e23);
 end;
 
-class operator TdfMat4f.Multiply(const a, b: TdfMat4f): TdfMat4f;
+class operator TglrMat4f.Multiply(const a, b: TglrMat4f): TglrMat4f;
 begin                    
   with Result do
   begin
@@ -1079,23 +1079,23 @@ begin
   end;
 end;
 
-class operator TdfMat4f.Multiply(const a: TdfMat4f; x: Single): TdfMat4f;
+class operator TglrMat4f.Multiply(const a: TglrMat4f; x: Single): TglrMat4f;
 var
   i, j : Integer;
-  Mat  : TdfMat4fArray absolute a;
-  Res  : TdfMat4fArray absolute Result;
+  Mat  : TglrMat4fArray absolute a;
+  Res  : TglrMat4fArray absolute Result;
 begin
   for i := 0 to 3 do
     for j := 0 to 3 do
       Res[i, j] := Mat[i, j] * x;
 end;
 
-procedure TdfMat4f.Identity;
+procedure TglrMat4f.Identity;
 begin
   Self := IdentMat;
 end;
 
-function TdfMat4f.Det: Single;
+function TglrMat4f.Det: Single;
 begin
   Result := e00 * (e11 * (e22 * e33 - e32 * e23) - e21 * (e12 * e33 - e32 * e13) + e31 * (e12 * e23 - e22 * e13)) -
             e10 * (e01 * (e22 * e33 - e32 * e23) - e21 * (e02 * e33 - e32 * e03) + e31 * (e02 * e23 - e22 * e03)) +
@@ -1103,7 +1103,7 @@ begin
             e30 * (e01 * (e12 * e23 - e22 * e13) - e11 * (e02 * e23 - e22 * e03) + e21 * (e02 * e13 - e12 * e03));
 end;
 
-function TdfMat4f.Inverse: TdfMat4f;
+function TglrMat4f.Inverse: TglrMat4f;
 var
   D : Single;
 begin
@@ -1126,17 +1126,17 @@ begin
   Result.e33 :=  (e00 * (e11 * e22 - e21 * e12) - e10 * (e01 * e22 - e21 * e02) + e20 * (e01 * e12 - e11 * e02)) * D;
 end;
 
-function TdfMat4f.Transpose: TdfMat4f;
+function TglrMat4f.Transpose: TglrMat4f;
 var
   i, j : Integer;
   Res  : array [0..3, 0..3] of Single absolute Result;
 begin
   for i := 0 to 3 do
     for j := 0 to 3 do
-      Res[i, j] := PdfMat4fArray(@Self)^[j, i];
+      Res[i, j] := PglrMat4fArray(@Self)^[j, i];
 end;
 
-function TdfMat4f.FromVectorAngle(const v: TdfVec3f; Angle: Single): TdfMat4f;
+function TglrMat4f.FromVectorAngle(const v: TglrVec3f; Angle: Single): TglrMat4f;
 var
   s, c  : Extended;
   ic : Single;
@@ -1163,26 +1163,26 @@ begin
   end;
 end;
 
-procedure TdfMat4f.Translate(const v: TdfVec3f);
+procedure TglrMat4f.Translate(const v: TglrVec3f);
 var
-  m : TdfMat4f;
+  m : TglrMat4f;
 begin
   m.Identity;
   m.Pos := v;
   Self := Self * m;
 end;
 
-procedure TdfMat4f.Rotate(Angle: Single; const v: TdfVec3f);
+procedure TglrMat4f.Rotate(Angle: Single; const v: TglrVec3f);
 var
-  m : TdfMat4f;
+  m : TglrMat4f;
 begin
   m := m.FromVectorAngle(v, Angle);
   Self := Self * m;
 end;
 
-procedure TdfMat4f.Scale(const v: TdfVec3f);
+procedure TglrMat4f.Scale(const v: TglrVec3f);
 var
-  m : TdfMat4f;
+  m : TglrMat4f;
 begin
   m.Identity;
   m.e00 := v.x;
@@ -1191,7 +1191,7 @@ begin
   Self := m * Self;
 end;
 
-procedure TdfMat4f.Ortho(Left, Right, Bottom, Top, ZNear, ZFar: Single);
+procedure TglrMat4f.Ortho(Left, Right, Bottom, Top, ZNear, ZFar: Single);
 begin
   e00 := 2 / (Right - Left);
   e10 := 0;
@@ -1214,7 +1214,7 @@ begin
   e33 := 1;
 end;
 
-procedure TdfMat4f.Frustum(Left, Right, Bottom, Top, ZNear, ZFar: Single);
+procedure TglrMat4f.Frustum(Left, Right, Bottom, Top, ZNear, ZFar: Single);
 begin
   e00 := 2 * ZNear / (Right - Left);
   e10 := 0;
@@ -1237,7 +1237,7 @@ begin
   e33 := 0;
 end;
 
-procedure TdfMat4f.Perspective(FOV, Aspect, ZNear, ZFar: Single);
+procedure TglrMat4f.Perspective(FOV, Aspect, ZNear, ZFar: Single);
 var
   x, y : Single;
 begin
@@ -1247,19 +1247,19 @@ begin
   Frustum(-x, x, -y, y, ZNear, ZFar);
 end;
 
-function TdfMat4f.GetPos: TdfVec3f;
+function TglrMat4f.GetPos: TglrVec3f;
 begin
-  Result := dfVec3f(e03, e13, e23);
+  Result := Vec3f(e03, e13, e23);
 end;
 
-procedure TdfMat4f.SetPos(const v: TdfVec3f);
+procedure TglrMat4f.SetPos(const v: TglrVec3f);
 begin
   e03 := v.x;
   e13 := v.y;
   e23 := v.z;
 end;
 
-function TdfMat4f.GetRot: TdfQuat;
+function TglrMat4f.GetRot: TglrQuat;
 var
   t, s : Single;
 begin
@@ -1301,7 +1301,7 @@ begin
     end;
 end;
 
-procedure TdfMat4f.SetRot(const q: TdfQuat);
+procedure TglrMat4f.SetRot(const q: TglrQuat);
 var
   sqw, sqx, sqy, sqz, invs : Single;
   tmp1, tmp2 : Single;

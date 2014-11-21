@@ -109,7 +109,7 @@ type
   private
     fT, fLifeTime: Single;
     fBonusType: TBonusType;
-    fVelocity: TdfVec3f;
+    fVelocity: TglrVec3f;
     procedure SetEnabled(const aEnabled: Boolean);
     procedure SetBonusType(aBonusType: TBonusType);
   public
@@ -142,7 +142,7 @@ type
     procedure SetEnabled(const aEnabled: Boolean);
   public
     T, LifeTime: Single;
-    Velocity: TdfVec2f;
+    Velocity: TglrVec2f;
     RotationVelocity: Single;
     BType: TBulletType;
     Owner: TBulletOwner;
@@ -167,7 +167,7 @@ type
   TUnit = class (TglrSprite)
   protected
     fBulletOwner: TBulletOwner;
-    fWeaponDir: TdfVec2f;
+    fWeaponDir: TglrVec2f;
     fT, fSmokeT: Single; // for shooting
 
     fBonusTriple, fBonusRicochet: Boolean;
@@ -284,11 +284,11 @@ type
 
     AutoFire: Boolean;
     procedure SetGameOver();
-    procedure ParticleBoom(aPos: TdfVec2f);
-    procedure ParticleBigBoom(aPos: TdfVec2f);
-    procedure ParticleSmoke(aPos: TdfVec2f);
+    procedure ParticleBoom(aPos: TglrVec2f);
+    procedure ParticleBigBoom(aPos: TglrVec2f);
+    procedure ParticleSmoke(aPos: TglrVec2f);
 
-    procedure ParticleShells(aPos, aDir: TdfVec2f);
+    procedure ParticleShells(aPos, aDir: TglrVec2f);
 
     procedure ParticleUpdate(const dt: Double);
     procedure ShellUpdate(const dt: Double);
@@ -308,7 +308,7 @@ type
     procedure OnUpdate(const dt: Double); override;
   end;
 
-function PointToSpriteIntersect(aPoint: TdfVec2f; aSprite: TglrSprite): Boolean;
+function PointToSpriteIntersect(aPoint: TglrVec2f; aSprite: TglrSprite): Boolean;
 
 var
   Game: TGame;
@@ -318,23 +318,23 @@ implementation
 uses
   uFMOD, music;
 
-function PointToSpriteIntersect(aPoint: TdfVec2f; aSprite: TglrSprite): Boolean;
+function PointToSpriteIntersect(aPoint: TglrVec2f; aSprite: TglrSprite): Boolean;
 var
   aRad: Single;
   i: Integer;
-  p1, p2: TdfVec2f;
+  p1, p2: TglrVec2f;
 begin
   // Get maximum possible bounding sphere
   aRad := sqr(aSprite.Width) + sqr(aSprite.Height);
-  if ((dfVec2f(aSprite.Position) - aPoint).LengthQ > aRad) then
+  if ((Vec2f(aSprite.Position) - aPoint).LengthQ > aRad) then
     Exit(False);
 
   // Sum all of angles between sprite vertices and point
   aRad := 0; // Now it will be used for sum
   for i := 0 to 3 do
   begin
-    p1 := dfVec2f(aSprite.AbsoluteMatrix * aSprite.Vertices[i].vec) - aPoint;
-    p2 := dfVec2f(aSprite.AbsoluteMatrix * aSprite.Vertices[(i + 1) mod 4].vec) - aPoint;
+    p1 := Vec2f(aSprite.AbsoluteMatrix * aSprite.Vertices[i].vec) - aPoint;
+    p2 := Vec2f(aSprite.AbsoluteMatrix * aSprite.Vertices[(i + 1) mod 4].vec) - aPoint;
     p1.Normalize();
     p2.Normalize();
     aRad += p1.Dot(p2);
@@ -387,7 +387,7 @@ procedure TPopupText.SetEnabled(const aEnabled: Boolean);
 begin
   Visible := aEnabled;
   Text := '';
-  Color := dfVec4f(1,1,1,1);
+  Color := Vec4f(1,1,1,1);
   T := 2.0;
   Scale := 0.7;
 end;
@@ -414,10 +414,10 @@ begin
         magnitude := Abs(sin(fT * 2));
 
         case BonusType of
-          bTripleShot:      Color := dfVec4f(0.3 + magnitude, 0.3 + magnitude, 1.0, 1.0);
-          bHealth:          Color := dfVec4f(1.0, 0.3 + magnitude, 0.3 + magnitude, 1.0);
-          bRicochet:        Color := dfVec4f(0.3 + magnitude, 1.0, 0.3 + magnitude, 1.0);
-          bAlternativeShot: Color := dfVec4f(0.6 + magnitude, 0.3 + magnitude, 0.0, 1.0);
+          bTripleShot:      Color := Vec4f(0.3 + magnitude, 0.3 + magnitude, 1.0, 1.0);
+          bHealth:          Color := Vec4f(1.0, 0.3 + magnitude, 0.3 + magnitude, 1.0);
+          bRicochet:        Color := Vec4f(0.3 + magnitude, 1.0, 0.3 + magnitude, 1.0);
+          bAlternativeShot: Color := Vec4f(0.6 + magnitude, 0.3 + magnitude, 0.0, 1.0);
         end;
 
         magnitude := (Position - Game.Player.Position).LengthQ;
@@ -454,7 +454,7 @@ begin
   fT := 0;
   fLifeTime := BONUS_LIFETIME;
   fVelocity.Reset();
-  Color := dfVec4f(1, 1, 1, 1);
+  Color := Vec4f(1, 1, 1, 1);
   Visible := True;
   Scale := 1.3;
   Visible := aEnabled;
@@ -490,7 +490,7 @@ begin
           Text := 'Full health!'
         else
           Text := '+' + Convert.ToString(HEALTH_BONUS) + ' health';
-        Color := dfVec4f(0.1, 0.6, 0.1, 1.0);
+        Color := Vec4f(0.1, 0.6, 0.1, 1.0);
         Position := Self.Position;
         T := 3;
       end;
@@ -502,7 +502,7 @@ begin
       with Game.PopupManager.Get() do
       begin
         Text := '+ 1 super bomb';
-        Color := dfVec4f(0.1, 0.6, 0.1, 1.0);
+        Color := Vec4f(0.1, 0.6, 0.1, 1.0);
         Position := Self.Position;
         T := 3;
       end;
@@ -540,15 +540,15 @@ begin
   fBulletOwner := bEnemy;
   SetSize(45, 25);
 
-  SetVerticesColor(dfVec4f(0.7 + 0.4 * Random(), 0.25 + 0.2 * Random(), 0.3, 1.0));
-  Weapon.SetVerticesColor(dfVec4f(0.6, 0.2, 0.2, 1.0));
+  SetVerticesColor(Vec4f(0.7 + 0.4 * Random(), 0.25 + 0.2 * Random(), 0.3, 1.0));
+  Weapon.SetVerticesColor(Vec4f(0.6, 0.2, 0.2, 1.0));
 end;
 
 procedure TEnemy.Update(const dt: Double; axisX, axisY: Integer);
 begin
   if not Enabled then
     Exit();
-  fWeaponDir := dfVec2f(Game.Player.Position - Position).Normal;
+  fWeaponDir := Vec2f(Game.Player.Position - Position).Normal;
   Weapon.Rotation := fWeaponDir.GetRotationAngle();
 
 
@@ -557,7 +557,7 @@ begin
     Rotation := LerpAngles(Rotation, fWeaponDir.GetRotationAngle(), RotateSpeed * dt);
   end
   else
-    Rotation := LerpAngles(Rotation, dfVec2f(-fWeaponDir.y, fWeaponDir.x).GetRotationAngle(), RotateSpeed * dt);
+    Rotation := LerpAngles(Rotation, Vec2f(-fWeaponDir.y, fWeaponDir.x).GetRotationAngle(), RotateSpeed * dt);
 
   // Always move!
   axisX := 1;
@@ -577,7 +577,7 @@ begin
   with Game.PopupManager.Get() do
   begin
     Text := '+' + Convert.ToString(SCORES_FOR_ENEMY + Game.EnemyManager.WaveCount) + ' points';
-    Color := dfVec4f(0.6, 0.6, 0.1, 1.0);
+    Color := Vec4f(0.6, 0.6, 0.1, 1.0);
     Position := Self.Position;
     T := 3;
   end;
@@ -613,18 +613,18 @@ constructor TPlayer.Create;
 begin
   inherited Create;
   BonusInfo := TglrText.Create();
-  BonusInfo.Color := dfVec4f(0.3, 0.7, 0.3, 0.5);
+  BonusInfo.Color := Vec4f(0.3, 0.7, 0.3, 0.5);
   BonusInfo.Scale := 0.7;
 
   HealthText := TglrText.Create('Low health!');
   HealthText.Scale := 0.7;
-  HealthText.Color := dfVec4f(1.0, 0.0, 0.0, 1.0);
+  HealthText.Color := Vec4f(1.0, 0.0, 0.0, 1.0);
   HealthText.Visible := False;
   fHealthAnimateT := 0;
 
   AltWeaponText := TglrText.Create();
   AltWeaponText.Scale := 0.7;
-  AltWeaponText.Color := dfVec4f(0.3, 0.7, 0.3, 0.5);
+  AltWeaponText.Color := Vec4f(0.3, 0.7, 0.3, 0.5);
   AltWeaponText.Visible := True;
 
   fBulletOwner := bPlayer;
@@ -633,9 +633,9 @@ begin
   HealthMax := HEALTH_PLAYER;
   Health := HealthMax;
 
-  Position := dfVec3f(Render.Width / 2, Render.Height / 2, 2);
-  SetVerticesColor(dfVec4f(0.3, 0.7, 0.3, 1.0));
-  Weapon.SetVerticesColor(dfVec4f(0.2, 0.6, 0.2, 1.0));
+  Position := Vec3f(Render.Width / 2, Render.Height / 2, 2);
+  SetVerticesColor(Vec4f(0.3, 0.7, 0.3, 1.0));
+  Weapon.SetVerticesColor(Vec4f(0.2, 0.6, 0.2, 1.0));
 
   RotateSpeed := PLAYER_ROTATE_SPEED;
   DirectSpeed := PLAYER_DIRECT_SPEED;
@@ -650,9 +650,9 @@ begin
 
   AltWeaponCount := 1;
 
-  FrontBumper := TglrSprite.Create(10, 25, dfVec2f(0, 0.5));
-  FrontBumper.SetVerticesColor(dfVec4f(0.2, 0.6, 0.2, 1.0));
-  FrontBumper.Position := dfVec3f(23, 0, 1);
+  FrontBumper := TglrSprite.Create(10, 25, Vec2f(0, 0.5));
+  FrontBumper.SetVerticesColor(Vec4f(0.2, 0.6, 0.2, 1.0));
+  FrontBumper.Position := Vec3f(23, 0, 1);
   FrontBumper.Parent := Self;
   FrontBumper.Vertices[0].vec.y -= 5;
   FrontBumper.Vertices[1].vec.y += 5;
@@ -681,7 +681,7 @@ begin
     Exit();
   end;
 
-  fWeaponDir := (Core.Input.MousePos - dfVec2f(Position)).Normal;
+  fWeaponDir := (Core.Input.MousePos - Vec2f(Position)).Normal;
   Weapon.Rotation := fWeaponDir.GetRotationAngle();
 
   if Position.x < - (Width / 2) then
@@ -706,9 +706,9 @@ begin
     add += 35;
   end;
 
-  BonusInfo.Position := Position + dfVec3f(-30, -add, 4);
-  HealthText.Position := Position + dfVec3f(-30, 30, 4);
-  AltWeaponText.Position := Position + dfVec3f(30, 0, 4);
+  BonusInfo.Position := Position + Vec3f(-30, -add, 4);
+  HealthText.Position := Position + Vec3f(-30, 30, 4);
+  AltWeaponText.Position := Position + Vec3f(30, 0, 4);
 
   if Health <= (HealthMax div 2) then
   begin
@@ -771,7 +771,7 @@ begin
     fT := EnemySpawnInterval;
     for i := 0 to EnemySpawnCount - 1 do
       with Get() do
-        Position := dfVec3f(dfVec2f(Random(360)) * 700 + dfVec2f(Render.Width / 2, Render.Height / 2), 3);
+        Position := Vec3f(Vec2f(Random(360)) * 700 + Vec2f(Render.Width / 2, Render.Height / 2), 3);
   end;
 
   if ((Game.EnemiesKilled - Game.PreviouslyKilled) > ENEMY_WAVE_COUNT * (WaveCount + 1)) and (WaveCount < 5) then
@@ -832,7 +832,7 @@ begin
           Release(Items[i])
         else
         begin
-          Position += dfVec3f(Velocity * dt, 0);
+          Position += Vec3f(Velocity * dt, 0);
           Rotation := Rotation + RotationVelocity * dt;
 
           if (Owner = bEnemy) then
@@ -840,17 +840,17 @@ begin
             if not Game.Player.Visible then
               continue;
 
-            if (PointToSpriteIntersect(dfVec2f(Position), Game.Player)) then
+            if (PointToSpriteIntersect(Vec2f(Position), Game.Player)) then
             begin
-              Game.ParticleBoom(dfVec2f(Position));
+              Game.ParticleBoom(Vec2f(Position));
 
               if Game.Player.fBonusRicochet then
               begin
                 T := 0;
-                Velocity := Velocity.Reflect(dfVec2f(Game.Player.Rotation));
+                Velocity := Velocity.Reflect(Vec2f(Game.Player.Rotation));
                 Rotation := Velocity.GetRotationAngle();
                 Owner := bPlayer;
-                SetVerticesColor(dfVec4f(1, 0.5, 0.5, 1));
+                SetVerticesColor(Vec4f(1, 0.5, 0.5, 1));
               end
               else
               begin
@@ -858,7 +858,7 @@ begin
                 with Game.PopupManager.Get() do
                 begin
                   Text := '-' + Convert.ToString(Damage) + ' health';
-                  Color := dfVec4f(0.9, 0.1, 0.1, 1.0);
+                  Color := Vec4f(0.9, 0.1, 0.1, 1.0);
                   Position := Items[i].Position;
                   T := 3;
                 end;
@@ -866,7 +866,7 @@ begin
                 Game.Player.Health -= Damage;
                 if (Game.Player.Health  <= 0) then
                 begin
-                  Game.ParticleBigBoom(dfVec2f(Game.Player.Position));
+                  Game.ParticleBigBoom(Vec2f(Game.Player.Position));
                   Game.Player.GetKilled();
                 end;
 
@@ -879,9 +879,9 @@ begin
             for j := 0 to Game.EnemyManager.Count - 1 do
             begin
               e := Game.EnemyManager[j];
-              if (e.Visible) and (PointToSpriteIntersect(dfVec2f(Position), e)) then
+              if (e.Visible) and (PointToSpriteIntersect(Vec2f(Position), e)) then
               begin
-                Game.ParticleBoom(dfVec2f(Position));
+                Game.ParticleBoom(Vec2f(Position));
                 Release(Items[i]);
 
                 e.Health -= Damage;
@@ -889,7 +889,7 @@ begin
                 if e.Health <= 0 then
                 begin
                   e.GetKilled();
-                  Game.ParticleBigBoom(dfVec2f(e.Position));
+                  Game.ParticleBigBoom(Vec2f(e.Position));
                   Game.EnemyManager.Release(e);
                 end;
 
@@ -916,10 +916,10 @@ procedure TBullet.SetEnabled(const aEnabled: Boolean);
 begin
   T := 0;
   LifeTime := 3;
-  Velocity := dfVec2f(0, 0);
+  Velocity := Vec2f(0, 0);
   RotationVelocity := 0;
   Visible := True;
-  SetVerticesColor(dfVec4f(1, 1, 1, 1));
+  SetVerticesColor(Vec4f(1, 1, 1, 1));
   Visible := aEnabled;
   SetSize(BULLET_WIDTH, BULLET_HEIGHT);
 end;
@@ -932,16 +932,16 @@ begin
   fT := 0.0;
   Visible := aEnabled;
   Weapon.Visible := aEnabled;
-  Position := dfVec3f(-1000, -1000, 0);
-  Weapon.Position := Position + dfVec3f(0, 0, 1);
+  Position := Vec3f(-1000, -1000, 0);
+  Weapon.Position := Position + Vec3f(0, 0, 1);
 end;
 
 constructor TUnit.Create;
 begin
   inherited;
   Position.z := 1;
-  Weapon := TglrSprite.Create(25, 8, dfVec2f(0.0, 0.5));
-  Weapon.Position := Position + dfVec3f(0, 0, 1);
+  Weapon := TglrSprite.Create(25, 8, Vec2f(0.0, 0.5));
+  Weapon.Position := Position + Vec3f(0, 0, 1);
 
   fBonusTriple := False;
   fBonusRicochet := False;
@@ -961,9 +961,9 @@ begin
   if not Visible then
     Exit();
   Rotation := Rotation + (RotateSpeed * dt * axisY);
-  Position += dfVec3f(DirectSpeed * dt * axisX * dfVec2f(Rotation), 0);
+  Position += Vec3f(DirectSpeed * dt * axisX * Vec2f(Rotation), 0);
 
-  Weapon.Position := Position + dfVec3f(0, 0, 1);
+  Weapon.Position := Position + Vec3f(0, 0, 1);
 
   for i := Low(TBonusType) to High(TBonusType) do
     if fBonusT[i] > 0 then
@@ -982,14 +982,14 @@ begin
   else
   begin
     fSmokeT := 0.01;
-    Game.ParticleSmoke(dfVec2f(Position) - dfVec2f(Rotation) * (Width - 15));
+    Game.ParticleSmoke(Vec2f(Position) - Vec2f(Rotation) * (Width - 15));
   end;
 end;
 
 procedure TUnit.Fire;
 var
   b: TBullet;
-  bulletDir: TdfVec2f;
+  bulletDir: TglrVec2f;
   i, count: Integer;
 begin
   if (fT <= 0) then
@@ -1002,7 +1002,7 @@ begin
       count := 1;
 
     bulletDir := fWeaponDir +
-      dfVec2f(- fWeaponDir.y, fWeaponDir.x) * MainWeaponDispersion * (0.5 - Random());
+      Vec2f(- fWeaponDir.y, fWeaponDir.x) * MainWeaponDispersion * (0.5 - Random());
 
     for i := 0 to count - 1 do
     begin
@@ -1013,11 +1013,11 @@ begin
 
       b.Velocity := bulletDir * MainWeaponVelocity;
       b.Rotation := b.Velocity.GetRotationAngle();
-      b.Position := Weapon.Position + dfVec3f(fWeaponDir * 20, 0);
+      b.Position := Weapon.Position + Vec3f(fWeaponDir * 20, 0);
       if fBonusTriple then
-        b.Position += dfVec3f(dfVec2f(-bulletDir.y, bulletDir.x) * (-1 + i) * 5, 0);
-      Game.ParticleShells(dfVec2f(b.Position) + dfVec2f(i * 5, i* 5),
-        (dfVec2f(-fWeaponDir.y, fWeaponDir.x) + dfVec2f(10 - Random(20))).Normal);
+        b.Position += Vec3f(Vec2f(-bulletDir.y, bulletDir.x) * (-1 + i) * 5, 0);
+      Game.ParticleShells(Vec2f(b.Position) + Vec2f(i * 5, i* 5),
+        (Vec2f(-fWeaponDir.y, fWeaponDir.x) + Vec2f(10 - Random(20))).Normal);
     end;
   end;
 end;
@@ -1035,17 +1035,17 @@ begin
     with Game.BulletManager.Get() do
     begin
       SetSize(BULLET_ALT_WIDTH, BULLET_ALT_HEIGHT);
-      SetVerticesColor(dfVec4f(24 / 255, 124 / 255, 240 / 255, 1.0));
+      SetVerticesColor(Vec4f(24 / 255, 124 / 255, 240 / 255, 1.0));
       BType := bFragile;
       Owner := fBulletOwner;
       Damage := AltWeaponDamage;
-      Velocity := dfVec2f(i * 10) * AltWeaponVelocity;
+      Velocity := Vec2f(i * 10) * AltWeaponVelocity;
       Rotation := Velocity.GetRotationAngle();
       Position := Self.Position;
       RotationVelocity := 150;
       LifeTime := 1.0;
     end;
-  Game.ParticleBoom(dfVec2f(Self.Position));
+  Game.ParticleBoom(Vec2f(Self.Position));
 end;
 
 procedure TUnit.GetKilled();
@@ -1082,11 +1082,11 @@ begin
   PopupManager := TPopupManager.Create(FontBatch);
 
   DebugText := TglrText.Create();
-  DebugText.Position := dfVec3f(10, 10, 1);
+  DebugText.Position := Vec3f(10, 10, 1);
 
   PauseText := TglrText.Create();
-  PauseText.Position := dfVec3f(Render.Width / 2, 100, 30)
-    - dfVec3f(300, 0, 0);
+  PauseText.Position := Vec3f(Render.Width / 2, 100, 30)
+    - Vec3f(300, 0, 0);
   PauseText.Text := '              P A U S E' + #13#10 +
     'Press "Escape" to continue exterminate enemies' + #13#10#13#10 +
     'Control' + #13#10 +
@@ -1102,16 +1102,16 @@ begin
   PauseText.Visible := False;
 
   GameOverText := TglrText.Create();
-  GameOverText.Position := dfVec3f(Render.Width / 2 - 200, 100, 30);
+  GameOverText.Position := Vec3f(Render.Width / 2 - 200, 100, 30);
   GameOverText.Visible := False;
 
   AttentionText := TglrText.Create();
   AttentionText.Scale := 1.5;
-  AttentionText.Position := dfVec3f(Render.Width / 2 - 200, 50, 25);
+  AttentionText.Position := Vec3f(Render.Width / 2 - 200, 50, 25);
   AttentionText.Visible := False;
 
-  PauseSprite := TglrSprite.Create(Render.Width, Render.Height, dfVec2f(0, 0));
-  PauseSprite.SetVerticesColor(dfVec4f(0.1, 0.1, 0.1, 0.5));
+  PauseSprite := TglrSprite.Create(Render.Width, Render.Height, Vec2f(0, 0));
+  PauseSprite.SetVerticesColor(Vec4f(0.1, 0.1, 0.1, 0.5));
   PauseSprite.Position.z := 25;
   PauseSprite.Visible := False;
 
@@ -1119,9 +1119,9 @@ begin
   Camera.ProjectionMode := pmOrtho;
   Camera.ProjectionModePivot := pTopLeft;
   Camera.SetCamera(
-    dfVec3f(0, 0, 100),
-    dfVec3f(0, 0, 0),
-    dfVec3f(0, 1, 0));
+    Vec3f(0, 0, 100),
+    Vec3f(0, 0, 0),
+    Vec3f(0, 1, 0));
   Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
 
   Player := TPlayer.Create();
@@ -1154,64 +1154,64 @@ begin
   GameOverText.Visible := True;
 end;
 
-procedure TGame.ParticleBoom(aPos: TdfVec2f);
+procedure TGame.ParticleBoom(aPos: TglrVec2f);
 var
   i: Integer;
 begin
   for i := 0 to 19 do
     with ParticleEmitter.GetNewParticle() do
     begin
-      Position := dfVec3f(aPos, 5);
+      Position := Vec3f(aPos, 5);
       Position.z += 1;
-      Position += dfVec3f(10 - Random(20), 10 - Random(20), Random(3));
+      Position += Vec3f(10 - Random(20), 10 - Random(20), Random(3));
       Rotation := Random(180);
-      //SetVerticesColor(dfVec4f(Random(), Random(), Random(), 1.0));
-      //SetVerticesColor(dfVec4f(1.0, 0.5 * Random(), 0.3 * Random(), 1.0));
-      SetVerticesColor(dfVec4f(1.0, 0.5, 0.2, 0.3 + Random()));
+      //SetVerticesColor(Vec4f(Random(), Random(), Random(), 1.0));
+      //SetVerticesColor(Vec4f(1.0, 0.5 * Random(), 0.3 * Random(), 1.0));
+      SetVerticesColor(Vec4f(1.0, 0.5, 0.2, 0.3 + Random()));
       Width := 1 + 5 * Random();
       Height := Width;
       LifeTime := 0.5;
-      Velocity := dfVec2f(Random(360)) * (90 + Random(40));
+      Velocity := Vec2f(Random(360)) * (90 + Random(40));
     end;
 end;
 
-procedure TGame.ParticleBigBoom(aPos: TdfVec2f);
+procedure TGame.ParticleBigBoom(aPos: TglrVec2f);
 var
   i: Integer;
 begin
   for i := 0 to 72 do
     with ParticleEmitter.GetNewParticle() do
     begin
-      Position := dfVec3f(aPos, 5);
+      Position := Vec3f(aPos, 5);
       Position.z += 1;
-      Position += dfVec3f(10 - Random(20), 10 - Random(20), Random(3));
+      Position += Vec3f(10 - Random(20), 10 - Random(20), Random(3));
       Rotation := Random(180);
-      //SetVerticesColor(dfVec4f(Random(), Random(), Random(), 1.0));
-      //SetVerticesColor(dfVec4f(1.0, 0.7 * Random(), 0.6 * Random(), 1.0));
-      SetVerticesColor(dfVec4f(1.0, 0.5, 0.2, 0.3 + Random()));
+      //SetVerticesColor(Vec4f(Random(), Random(), Random(), 1.0));
+      //SetVerticesColor(Vec4f(1.0, 0.7 * Random(), 0.6 * Random(), 1.0));
+      SetVerticesColor(Vec4f(1.0, 0.5, 0.2, 0.3 + Random()));
       Width := 5 + 10 * Random();
       Height := Width;
       LifeTime := 0.7;
-      Velocity := dfVec2f(Random(360)) * (90 + Random(40));
+      Velocity := Vec2f(Random(360)) * (90 + Random(40));
     end;
 end;
 
-procedure TGame.ParticleSmoke(aPos: TdfVec2f);
+procedure TGame.ParticleSmoke(aPos: TglrVec2f);
 var
   i: Integer;
 begin
   for i := 0 to 1 do
     with ParticleEmitter.GetNewParticle() do
     begin
-      Position := dfVec3f(aPos, 5);
+      Position := Vec3f(aPos, 5);
       Position.z += 1;
-      Position += dfVec3f(5 - Random(10), 5 - Random(10), 0);
+      Position += Vec3f(5 - Random(10), 5 - Random(10), 0);
       Rotation := Random(180);
-      SetVerticesColor(dfVec4f(0.3, 0.3, 0.45, 0.7 * Random()));
+      SetVerticesColor(Vec4f(0.3, 0.3, 0.45, 0.7 * Random()));
       Width := 3 + 4 * Random();
       Height := Width;
       LifeTime := 0.5;
-      Velocity := dfVec2f(Random(360)) * (30 + Random(10));
+      Velocity := Vec2f(Random(360)) * (30 + Random(10));
     end;
 end;
 
@@ -1271,14 +1271,14 @@ begin
   fAttT := ATTENTION_POPUP_TIME;
 end;
 
-procedure TGame.ParticleShells(aPos, aDir: TdfVec2f);
+procedure TGame.ParticleShells(aPos, aDir: TglrVec2f);
 begin
   with ShellEmitter.GetNewParticle() do
   begin
-    Position := dfVec3f(aPos + aDir* 5, 5);
-    Rotation := dfVec2f(- aDir.y, aDir.x).GetRotationAngle() + Random(50);
-    //SetVerticesColor(dfVec4f(Random(), Random(), Random(), 1.0));
-    SetVerticesColor(dfVec4f(0.7,  0.6, 0.1, 1.0));
+    Position := Vec3f(aPos + aDir* 5, 5);
+    Rotation := Vec2f(- aDir.y, aDir.x).GetRotationAngle() + Random(50);
+    //SetVerticesColor(Vec4f(Random(), Random(), Random(), 1.0));
+    SetVerticesColor(Vec4f(0.7,  0.6, 0.1, 1.0));
     Width := SHELL_WIDTH;
     Height := SHELL_HEIGHT;
     LifeTime := SHELL_LIFETIME;

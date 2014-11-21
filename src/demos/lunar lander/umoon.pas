@@ -12,7 +12,7 @@ type
   { TLandingZone }
 
   TLandingZone = packed record
-    Pos, Size: TdfVec2f;
+    Pos, Size: TglrVec2f;
     Multiply: Byte;
     Sprite: TglrSprite;
     MultText: TglrText;
@@ -35,7 +35,7 @@ type
     fFontBatch: TglrFontBatch;
   public
     MaxY: Single;
-    Vertices: array of TdfVec2f;
+    Vertices: array of TglrVec2f;
     VerticesPoints: array of TglrSprite;
     LandingZones: array of TLandingZone;
     b2Body: Tb2Body;
@@ -45,12 +45,12 @@ type
 
     procedure UpdateData();
 
-    procedure AddVertex(aPos: TdfVec2f; aIndex: Integer = -1);
+    procedure AddVertex(aPos: TglrVec2f; aIndex: Integer = -1);
     procedure DeleteVertex(aIndex: Integer);
-    function GetVertexIndexAtPos(aPos: TdfVec2f): Integer;
+    function GetVertexIndexAtPos(aPos: TglrVec2f): Integer;
 
-    procedure AddLandingZone(aPos, aSize: TdfVec2f; aMultiply: Byte);
-    function GetLandingZoneAtPos(aPos: TdfVec2f): Integer;
+    procedure AddLandingZone(aPos, aSize: TglrVec2f; aMultiply: Byte);
+    function GetLandingZoneAtPos(aPos: TglrVec2f): Integer;
     procedure DeleteLandingZone(aIndex: Integer);
 
     procedure RenderSelf();
@@ -73,9 +73,9 @@ uses
 procedure TLandingZone.Update;
 begin
   Sprite.SetSize(Size);
-  Sprite.Position := dfVec3f(Pos, 4);
+  Sprite.Position := Vec3f(Pos, 4);
   MultText.Text := Convert.ToString(Multiply) + 'x';
-  MultText.Position := dfVec3f(Pos.x - 20, Pos.y - Size.y / 2 + 10, 5);
+  MultText.Position := Vec3f(Pos.x - 20, Pos.y - Size.y / 2 + 10, 5);
 end;
 
 { TMoon }
@@ -150,10 +150,10 @@ begin
       idata[fIndCount + 5] := 0 + fVecCount;
       fIndCount += 6;
     end;
-    data[fVecCount].vec     := dfVec3f(Vertices[i].x, MaxY, 5);
-    data[fVecCount].tex     := dfVec2f((data[0].vec.x - data[fVecCount].vec.x) / (fMoonMaterial.Textures[0].Texture.Width), 0);
-    data[fVecCount + 1].vec := dfVec3f(Vertices[i], 5);
-    data[fVecCount + 1].tex := dfVec2f(data[fVecCount].tex.x, (data[fVecCount + 1].vec.y - MaxY) / fMoonMaterial.Textures[0].Texture.Width);
+    data[fVecCount].vec     := Vec3f(Vertices[i].x, MaxY, 5);
+    data[fVecCount].tex     := Vec2f((data[0].vec.x - data[fVecCount].vec.x) / (fMoonMaterial.Textures[0].Texture.Width), 0);
+    data[fVecCount + 1].vec := Vec3f(Vertices[i], 5);
+    data[fVecCount + 1].tex := Vec2f(data[fVecCount].tex.x, (data[fVecCount + 1].vec.y - MaxY) / fMoonMaterial.Textures[0].Texture.Width);
     fVecCount += 2;
   end;
 
@@ -163,11 +163,11 @@ begin
   //box2d
   if Assigned(b2Body) then
     b2Body.Free();
-  b2Body := Box2d.ChainStatic(Game.World, dfVec2f(0, 0), Vertices, 1.0, 1.5, 0.0, $0001, $0002, 2);
+  b2Body := Box2d.ChainStatic(Game.World, Vec2f(0, 0), Vertices, 1.0, 1.5, 0.0, $0001, $0002, 2);
   b2Body.UserData := Self;
 end;
 
-procedure TMoon.AddVertex(aPos: TdfVec2f; aIndex: Integer);
+procedure TMoon.AddVertex(aPos: TglrVec2f; aIndex: Integer);
 var
   i: Integer;
 begin
@@ -180,12 +180,12 @@ begin
   else
   begin
     Move(VerticesPoints[aIndex], VerticesPoints[aIndex + 1], SizeOf(TglrSprite) * (i - aIndex));
-    Move(Vertices[aIndex], Vertices[aIndex + 1], SizeOf(TdfVec2f) * (i - aIndex));
+    Move(Vertices[aIndex], Vertices[aIndex + 1], SizeOf(TglrVec2f) * (i - aIndex));
   end;
 
   Vertices[aIndex] := aPos;
-  VerticesPoints[aIndex] := TglrSprite.Create(15, 15, dfVec2f(0.5, 0.5));
-  VerticesPoints[aIndex].Position := dfVec3f(Vertices[aIndex], 10);
+  VerticesPoints[aIndex] := TglrSprite.Create(15, 15, Vec2f(0.5, 0.5));
+  VerticesPoints[aIndex].Position := Vec3f(Vertices[aIndex], 10);
   VerticesPoints[aIndex].SetTextureRegion(fPointTR, False);
 end;
 
@@ -202,14 +202,14 @@ begin
 
   if aIndex <> High(Vertices) then
   begin
-    Move(Vertices[aIndex + 1], Vertices[aIndex], (High(Vertices) - aIndex) * SizeOf(TdfVec2f));
+    Move(Vertices[aIndex + 1], Vertices[aIndex], (High(Vertices) - aIndex) * SizeOf(TglrVec2f));
     Move(VerticesPoints[aIndex + 1], VerticesPoints[aIndex], (High(VerticesPoints) - aIndex) * SizeOf(TglrSprite));
   end;
   SetLength(Vertices, Length(Vertices) - 1);
   SetLength(VerticesPoints, Length(VerticesPoints) - 1);
 end;
 
-function TMoon.GetVertexIndexAtPos(aPos: TdfVec2f): Integer;
+function TMoon.GetVertexIndexAtPos(aPos: TglrVec2f): Integer;
 var
   i: Integer;
 begin
@@ -219,7 +219,7 @@ begin
     Exit(i);
 end;
 
-procedure TMoon.AddLandingZone(aPos, aSize: TdfVec2f; aMultiply: Byte);
+procedure TMoon.AddLandingZone(aPos, aSize: TglrVec2f; aMultiply: Byte);
 var
   i: Integer;
 begin
@@ -233,7 +233,7 @@ begin
 
     Sprite := TglrSprite.Create();
     Sprite.SetTextureRegion(fPointTR, False);
-    Sprite.SetVerticesColor(dfVec4f(0, 1, 0, 0.1));
+    Sprite.SetVerticesColor(Vec4f(0, 1, 0, 0.1));
 
     MultText := TglrText.Create();
 
@@ -241,7 +241,7 @@ begin
   end;
 end;
 
-function TMoon.GetLandingZoneAtPos(aPos: TdfVec2f): Integer;
+function TMoon.GetLandingZoneAtPos(aPos: TglrVec2f): Integer;
 var
   i: Integer;
 begin
@@ -306,11 +306,11 @@ begin
   aStream.Read(count, SizeOf(Word));
   SetLength(Vertices, count);
   SetLength(VerticesPoints, count);
-  aStream.Read(Vertices[0], count * SizeOf(TdfVec2f));
+  aStream.Read(Vertices[0], count * SizeOf(TglrVec2f));
   for i := 0 to count - 1 do
   begin
-    VerticesPoints[i] := TglrSprite.Create(15, 15, dfVec2f(0.5, 0.5));
-    VerticesPoints[i].Position := dfVec3f(Vertices[i], 10);
+    VerticesPoints[i] := TglrSprite.Create(15, 15, Vec2f(0.5, 0.5));
+    VerticesPoints[i].Position := Vec3f(Vertices[i], 10);
     VerticesPoints[i].SetTextureRegion(fPointTR, False);
     VerticesPoints[i].Visible := False;
   end;
@@ -327,7 +327,7 @@ begin
       begin
         Sprite := TglrSprite.Create();
         Sprite.SetTextureRegion(fPointTR, False);
-        Sprite.SetVerticesColor(dfVec4f(0, 1, 0, 0.1));
+        Sprite.SetVerticesColor(Vec4f(0, 1, 0, 0.1));
 
         MultText := TglrText.Create();
 
@@ -347,11 +347,11 @@ var
 begin
   count := Length(Vertices);
   count2 := Length(LandingZones);
-  size := 2 * SizeOf(Word) + count * SizeOf(TdfVec2f) + count2 * SizeOf(TLandingZone);
+  size := 2 * SizeOf(Word) + count * SizeOf(TglrVec2f) + count2 * SizeOf(TLandingZone);
   GetMem(p, size);
   Result := TglrStream.Init(p, size, True);
   Result.Write(count, SizeOf(Word));
-  Result.Write(Vertices[0], count * SizeOf(TdfVec2f));
+  Result.Write(Vertices[0], count * SizeOf(TglrVec2f));
   Result.Write(count2, SizeOf(Word));
   if count2 <> 0 then
     Result.Write(LandingZones[0], count2 * SizeOf(TLandingZone));

@@ -10,7 +10,6 @@ type
   TglrVarType = (vtInteger, vtSingle, vtVector);
   PglrInteger = ^Integer;
   PglrSingle = PSingle;
-  PglrVec3f = ^TdfVec3f;
 
   TglrTweenObject = TObject;
 
@@ -73,9 +72,9 @@ type
 
   TglrBaseVectorTweenItem = class (TglrBaseTweenItem)
   protected
-    FStartValue, FFinishValue: TdfVec3f;
+    FStartValue, FFinishValue: TglrVec3f;
   public
-    constructor Create(aStartValue, aFinishValue: TdfVec3f; aDuration: Single;
+    constructor Create(aStartValue, aFinishValue: TglrVec3f; aDuration: Single;
       aPauseOnStart: Single);
   end;
 
@@ -84,7 +83,7 @@ type
     FValue: PglrVec3f;
   public
     procedure Update(const aDeltaTime: Single); override;
-    constructor Create(aValue: PglrVec3f; aStartValue, aFinishValue: TdfVec3f;
+    constructor Create(aValue: PglrVec3f; aStartValue, aFinishValue: TglrVec3f;
       aDuration: Single; aPauseOnStart: Single);
   end;
 
@@ -116,7 +115,7 @@ type
        const aPauseOnStart: Single = 0): TglrPSingleTweenItem;
 
     function AddTweenPVector(aVariable: PglrVec3f; aTweenStyle: TglrTweenStyle;
-      const aStartValue, aFinishValue: TdfVec3f; aDuration: Single;
+      const aStartValue, aFinishValue: TglrVec3f; aDuration: Single;
       const aPauseOnStart: Single = 0): TglrPVectorTweenItem;
 
     function AddTweenSingle(aObject: TglrTweenObject; aSetValue: TglrSetSingle; aTweenStyle: TglrTweenStyle;
@@ -230,7 +229,7 @@ begin
   FSetSingleEvent := aEvent;
 end;
 
-constructor TglrBaseVectorTweenItem.Create(aStartValue, aFinishValue: TdfVec3f;
+constructor TglrBaseVectorTweenItem.Create(aStartValue, aFinishValue: TglrVec3f;
   aDuration: Single; aPauseOnStart: Single);
 begin
   inherited Create(aDuration, aPauseOnStart);
@@ -249,7 +248,7 @@ begin
   end;
 end;
 
-constructor TglrPVectorTweenItem.Create(aValue: PglrVec3f; aStartValue, aFinishValue: TdfVec3f;
+constructor TglrPVectorTweenItem.Create(aValue: PglrVec3f; aStartValue, aFinishValue: TglrVec3f;
   aDuration: Single; aPauseOnStart: Single);
 begin
   inherited Create(aStartValue, aFinishValue, aDuration, aPauseOnStart);
@@ -338,7 +337,7 @@ begin
 end;
 
 function TglrTweener.AddTweenPVector(aVariable: PglrVec3f; aTweenStyle: TglrTweenStyle;
-  const aStartValue, aFinishValue: TdfVec3f; aDuration: Single;
+  const aStartValue, aFinishValue: TglrVec3f; aDuration: Single;
   const aPauseOnStart: Single = 0): TglrPVectorTweenItem;
 begin
   Result := TglrPVectorTweenItem.Create(aVariable, aStartValue, aFinishValue, aDuration, aPauseOnStart);

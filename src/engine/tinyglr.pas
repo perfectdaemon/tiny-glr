@@ -18,7 +18,7 @@ uses
   ogl, glrMath;
 
 const
-  TINYGLR_VERSION = '0.1 :: stable';
+  TINYGLR_VERSION = '0.2 :: unstable';
   LOG_FILE = 'tinyglr.log';
 
 type
@@ -211,10 +211,10 @@ type
     class function ToString(aVal: Integer): AnsiString; overload;
     class function ToString(aVal: Single; Digits: Integer = 5): AnsiString; overload;
     class function ToString(aVal: Boolean): AnsiString; overload;
-    class function ToString(aVal: TdfMat4f; aDigits: Integer = 5): AnsiString; overload;
-    class function ToString(aVal: TdfVec2f): AnsiString; overload;
-    class function ToString(aVal: TdfVec3f): AnsiString; overload;
-    class function ToString(aVal: TdfVec4f): AnsiString; overload;
+    class function ToString(aVal: TglrMat4f; aDigits: Integer = 5): AnsiString; overload;
+    class function ToString(aVal: TglrVec2f): AnsiString; overload;
+    class function ToString(aVal: TglrVec3f): AnsiString; overload;
+    class function ToString(aVal: TglrVec4f): AnsiString; overload;
     class function ToInt(aStr: AnsiString; aDefault: Integer = -1): Integer; overload;
     class function ToFloat(aStr: AnsiString; aDefault: Single = -1.0): Single; overload;
   end;
@@ -236,24 +236,24 @@ type
   TglrIndexFormat = (ifByte, ifShort, ifInt);
 
   TglrVertexP2T2 = packed record
-    vec, tex: TdfVec2f;
+    vec, tex: TglrVec2f;
   end;
 
   TglrVertexP3T2 = packed record
-    vec: TdfVec3f;
-    tex: TdfVec2f;
+    vec: TglrVec3f;
+    tex: TglrVec2f;
   end;
 
   TglrVertexP3T2N3 = packed record
-    vec: TdfVec3f;
-    tex: TdfVec2f;
-    nor: TdfVec3f;
+    vec: TglrVec3f;
+    tex: TglrVec2f;
+    nor: TglrVec3f;
   end;
 
   TglrVertexP3T2C4 = packed record
-    vec: TdfVec3f;
-    tex: TdfVec2f;
-    col: TdfVec4f;
+    vec: TglrVec3f;
+    tex: TglrVec2f;
+    col: TglrVec4f;
   end;
 
   TglrQuadP3T2C4 = array[0..3] of TglrVertexP3T2C4;
@@ -415,8 +415,8 @@ type
   { TglrRenderParams }
 
   TglrRenderParams = record
-    ViewProj, Model, ModelViewProj: TdfMat4f;
-    Color: TdfVec4f;
+    ViewProj, Model, ModelViewProj: TglrMat4f;
+    Color: TglrVec4f;
     procedure CalculateMVP();
   end;
 
@@ -494,7 +494,7 @@ type
 
   TglrTouch = record
     IsDown: Boolean;
-    Start, Pos: TdfVec2f;
+    Start, Pos: TglrVec2f;
   end;
 
   TglrKey = (
@@ -538,7 +538,7 @@ type
 
   TglrInput = class
     Touch: array[0..9] of TglrTouch;
-    MousePos: TdfVec2f;
+    MousePos: TglrVec2f;
     KeyDown: array[Low(TglrKey)..High(TglrKey)] of Boolean;
     lastWheelDelta: Integer;
 
@@ -624,32 +624,32 @@ type
 
   TglrNode = class
   protected
-    fDir, fRight, fUp: TdfVec3f;
+    fDir, fRight, fUp: TglrVec3f;
     fParent: TglrNode;
-    fAbsMatrix: TdfMat4f;
+    fAbsMatrix: TglrMat4f;
 
     procedure SetParent(AValue: TglrNode);
-    function GetAbsMatrix: TdfMat4f;
-    procedure SetDir(aDir: TdfVec3f);
-    procedure SetRight(aRight: TdfVec3f);
-    procedure SetUp(aUp: TdfVec3f);
-    procedure UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TdfVec3f); virtual;
+    function GetAbsMatrix: TglrMat4f;
+    procedure SetDir(aDir: TglrVec3f);
+    procedure SetRight(aRight: TglrVec3f);
+    procedure SetUp(aUp: TglrVec3f);
+    procedure UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TglrVec3f); virtual;
     procedure UpdateVectorsFromMatrix(); virtual;
     procedure DoRender(); virtual;
   public
     Visible: Boolean;
-    Matrix: TdfMat4f;
-    Position: TdfVec3f;
+    Matrix: TglrMat4f;
+    Position: TglrVec3f;
 
     constructor Create; virtual;
     destructor Destroy; override;
 
-    property AbsoluteMatrix: TdfMat4f read GetAbsMatrix write fAbsMatrix;
+    property AbsoluteMatrix: TglrMat4f read GetAbsMatrix write fAbsMatrix;
     property Parent: TglrNode read fParent write SetParent;
 
-    property Up: TdfVec3f read fUp write SetUp;
-    property Direction: TdfVec3f read fDir write SetDir;
-    property Right: TdfVec3f read fRight write SetRight;
+    property Up: TglrVec3f read fUp write SetUp;
+    property Direction: TglrVec3f read fDir write SetDir;
+    property Right: TglrVec3f read fRight write SetRight;
 
     procedure RenderSelf(); virtual;
   end;
@@ -674,7 +674,7 @@ type
     fProjMode: TglrCameraProjectionMode;
 
     fMode: TglrCameraTargetMode;
-    fTargetPoint: TdfVec3f;
+    fTargetPoint: TglrVec3f;
     fTarget: TglrNode;
     fScale, fFOV, fZNear, fZFar: Single;
     fX, fY, fW, fH: Integer;
@@ -682,7 +682,7 @@ type
     procedure SetProjMode(aMode: TglrCameraProjectionMode);
     procedure UpdateVectorsFromMatrix(); override;
   public
-    fProjMatrix: TdfMat4f;
+    fProjMatrix: TglrMat4f;
 
     constructor Create(); override;
 
@@ -690,20 +690,20 @@ type
     procedure ViewportOnly(x, y, w, h: Integer);
 
     procedure Translate(alongUpVector, alongRightVector, alongDirVector: Single);
-    procedure Rotate(delta: Single; Axis: TdfVec3f);
+    procedure Rotate(delta: Single; Axis: TglrVec3f);
 
     function GetViewport(): TglrViewportParams;
-    function WindowPosToCameraPos(aPos: TdfVec2f): TdfVec2f;
+    function WindowPosToCameraPos(aPos: TglrVec2f): TglrVec2f;
 
     procedure Update;
 
-    procedure SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
+    procedure SetCamera(aPos, aTargetPos, aUp: TglrVec3f);
 
     procedure RenderSelf(); override;
 
     property Scale: Single read fScale write SetScale;
 
-//    procedure SetTarget(aPoint: TdfVec3f); overload;
+//    procedure SetTarget(aPoint: TglrVec3f); overload;
 //    procedure SetTarget(aTarget: IglrNode); overload;
 
     property ProjectionMode: TglrCameraProjectionMode read fProjMode write SetProjMode;
@@ -741,7 +741,7 @@ type
   TglrMaterial = class
     Shader: TglrShaderProgram;
     Textures: array of TglrTextureMaterialInfo;
-    Color: TdfVec4f;
+    Color: TglrVec4f;
   	Blend: TglrBlendingMode;
   	DepthWrite: Boolean;
     DepthTest: Boolean;
@@ -767,29 +767,29 @@ type
   TglrSprite = class (TglrNode)
   protected
     fRot, fWidth, fHeight: Single;
-    fPP: TdfVec2f;
+    fPP: TglrVec2f;
 
     procedure SetRot(const aRot: Single);
     procedure SetWidth(const aWidth: Single);
     procedure SetHeight(const aHeight: Single);
-    procedure SetPP(const aPP: TdfVec2f);
+    procedure SetPP(const aPP: TglrVec2f);
   public
     Vertices: array[0..3] of TglrVertexP3T2C4;
 
     constructor Create(); override; overload;
-    constructor Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f); overload;
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); overload;
     destructor Destroy(); override;
 
     property Rotation: Single read fRot write SetRot;
     property Width: Single read fWidth write SetWidth;
     property Height: Single read fHeight write SetHeight;
-    property PivotPoint: TdfVec2f read fPP write SetPP;
+    property PivotPoint: TglrVec2f read fPP write SetPP;
 
     procedure SetDefaultVertices(); virtual;//Sets vertices due to width, height, pivot point and rotation
     procedure SetDefaultTexCoords(); //Sets default texture coords
-    procedure SetVerticesColor(aColor: TdfVec4f);
+    procedure SetVerticesColor(aColor: TglrVec4f);
     procedure SetSize(aWidth, aHeight: Single); overload;
-    procedure SetSize(aSize: TdfVec2f); overload;
+    procedure SetSize(aSize: TglrVec2f); overload;
 
     procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean = True);
 
@@ -863,7 +863,7 @@ type
   public
     Text: WideString;
     LetterSpacing, LineSpacing: Single;
-    Color: TdfVec4f;
+    Color: TglrVec4f;
     Scale: Single;
     constructor Create(const aText: WideString = ''); virtual;
     destructor Destroy(); override;
@@ -907,7 +907,7 @@ type
   TglrParticle2D = class (TglrSprite)
     T: Single;
     LifeTime: Single;
-    Velocity: TdfVec2f;
+    Velocity: TglrVec2f;
     procedure Reset();
   end;
   TglrParticles2D = TglrObjectList<TglrParticle2D>;
@@ -946,8 +946,8 @@ type
   //Range of byte is 0..100 (means percent of emitter animation duration)
   TglrSingleDic = TglrDictionary<Byte, Single>;
   TglrIntDic = TglrDictionary<Byte, Integer>;
-  TglrVec2fDic = TglrDictionary<Byte, TdfVec2f>;
-  TglrVec4fDic = TglrDictionary<Byte, TdfVec4f>;
+  TglrVec2fDic = TglrDictionary<Byte, TglrVec2f>;
+  TglrVec4fDic = TglrDictionary<Byte, TglrVec4f>;
 
   { TglrParticleEmitter2D }
 
@@ -1020,7 +1020,7 @@ type
 
     ZIndex: Integer;
 
-    HitBox: TdfBB;
+    HitBox: TglrBB;
 
     property Enabled: Boolean read fEnabled write SetEnabled;
     property Focused: Boolean read fFocused write SetFocused;
@@ -1594,7 +1594,7 @@ begin
       Particles[i].Reset();
       if (fTextureRegion <> nil) then
         Particles[i].SetTextureRegion(fTextureRegion);
-      Particles[i].SetVerticesColor(dfVec4f(1, 1, 1, 1));
+      Particles[i].SetVerticesColor(Vec4f(1, 1, 1, 1));
       Exit(Particles[i]);
     end;
 
@@ -1626,7 +1626,7 @@ begin
           fActiveParticles -= 1;
         end
         else
-          Position += dfVec3f(Velocity * dt, 0);
+          Position += Vec3f(Velocity * dt, 0);
       end;
 
   if Assigned(OnUpdate) then
@@ -1737,7 +1737,7 @@ begin
     if fParticles[i].Visible then
       with fParticles[i] do
       begin
-        Position += dfVec3f(Velocity * dt, 0);
+        Position += Vec3f(Velocity * dt, 0);
         T := T + dt;
 
         if T >= LifeTime then
@@ -1866,7 +1866,7 @@ begin
     for k := 0 to 3 do
     begin
       fVData[fCount * 4 + k] := quad[k];
-      fVData[fCount * 4 + k].vec += dfVec3f(x, y, 0);
+      fVData[fCount * 4 + k].vec += Vec3f(x, y, 0);
       fVData[fCount * 4 + k].vec := aText.AbsoluteMatrix * fVData[fCount * 4 + k].vec;
       fVData[fCount * 4 + k].col := aText.Color;
     end;
@@ -1997,7 +1997,7 @@ begin
   Text := aText;
   LineSpacing := 2.0;
   LetterSpacing := 1.0;
-  Color := dfVec4f(1, 1, 1, 1);
+  Color := Vec4f(1, 1, 1, 1);
   Scale := 1.0;
 end;
 
@@ -2020,15 +2020,15 @@ begin
     Exit();
   with Table[aChar]^ do
   begin
-    Result[0].vec := dfVec3f(w, py + h, 0) * aScale;
-    Result[1].vec := dfVec3f(w, py, 0) * aScale;
-    Result[2].vec := dfVec3f(0, py, 0) * aScale;
-    Result[3].vec := dfVec3f(0, py + h, 0) * aScale;
+    Result[0].vec := Vec3f(w, py + h, 0) * aScale;
+    Result[1].vec := Vec3f(w, py, 0) * aScale;
+    Result[2].vec := Vec3f(0, py, 0) * aScale;
+    Result[3].vec := Vec3f(0, py + h, 0) * aScale;
 
-    Result[0].tex := dfVec2f(tx + tw, ty + th);
-    Result[1].tex := dfVec2f(tx + tw, ty);
-    Result[2].tex := dfVec2f(tx, ty);
-    Result[3].tex := dfVec2f(tx, ty + th);
+    Result[0].tex := Vec2f(tx + tw, ty + th);
+    Result[1].tex := Vec2f(tx + tw, ty);
+    Result[2].tex := Vec2f(tx, ty);
+    Result[3].tex := Vec2f(tx, ty + th);
   end;
 end;
 
@@ -2092,7 +2092,7 @@ begin
   if (not Equalf(aRot, fRot)) then
   begin
     Matrix.Identity();
-    Matrix.Rotate(aRot * deg2rad, dfVec3f(0, 0, 1));
+    Matrix.Rotate(aRot * deg2rad, Vec3f(0, 0, 1));
     fRot := aRot;
     if fRot > 360 then
       fRot -= 360
@@ -2119,7 +2119,7 @@ begin
   end;
 end;
 
-procedure TglrSprite.SetPP(const aPP: TdfVec2f);
+procedure TglrSprite.SetPP(const aPP: TglrVec2f);
 begin
   if (aPP <> fPP) then
   begin
@@ -2130,10 +2130,10 @@ end;
 
 constructor TglrSprite.Create;
 begin
-  Create(1, 1, dfVec2f(0.5, 0.5));
+  Create(1, 1, Vec2f(0.5, 0.5));
 end;
 
-constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TdfVec2f);
+constructor TglrSprite.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
 begin
   inherited Create();
   fWidth := aWidth;
@@ -2141,7 +2141,7 @@ begin
   fPP := aPivotPoint;
   SetDefaultVertices();
   SetDefaultTexCoords();
-  SetVerticesColor(dfVec4f(1, 1, 1, 1));
+  SetVerticesColor(Vec4f(1, 1, 1, 1));
 end;
 
 destructor TglrSprite.Destroy;
@@ -2151,21 +2151,21 @@ end;
 
 procedure TglrSprite.SetDefaultVertices;
 begin
-  Vertices[0].vec := dfVec3f((dfVec2f(1, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
-  Vertices[1].vec := dfVec3f((dfVec2f(1, 0) - fPP) * dfVec2f(fWidth, fHeight), 0);
-  Vertices[2].vec := dfVec3f((fPP.NegateVector)    * dfVec2f(fWidth, fHeight), 0);
-  Vertices[3].vec := dfVec3f((dfVec2f(0, 1) - fPP) * dfVec2f(fWidth, fHeight), 0);
+  Vertices[0].vec := Vec3f((Vec2f(1, 1) - fPP) * Vec2f(fWidth, fHeight), 0);
+  Vertices[1].vec := Vec3f((Vec2f(1, 0) - fPP) * Vec2f(fWidth, fHeight), 0);
+  Vertices[2].vec := Vec3f((fPP.NegateVector)    * Vec2f(fWidth, fHeight), 0);
+  Vertices[3].vec := Vec3f((Vec2f(0, 1) - fPP) * Vec2f(fWidth, fHeight), 0);
 end;
 
 procedure TglrSprite.SetDefaultTexCoords;
 begin
-  Vertices[0].tex := dfVec2f(1, 1);
-  Vertices[1].tex := dfVec2f(1, 0);
-  Vertices[2].tex := dfVec2f(0, 0);
-  Vertices[3].tex := dfVec2f(0, 1);
+  Vertices[0].tex := Vec2f(1, 1);
+  Vertices[1].tex := Vec2f(1, 0);
+  Vertices[2].tex := Vec2f(0, 0);
+  Vertices[3].tex := Vec2f(0, 1);
 end;
 
-procedure TglrSprite.SetVerticesColor(aColor: TdfVec4f);
+procedure TglrSprite.SetVerticesColor(aColor: TglrVec4f);
 begin
   Vertices[0].col := aColor;
   Vertices[1].col := aColor;
@@ -2180,7 +2180,7 @@ begin
   SetDefaultVertices();
 end;
 
-procedure TglrSprite.SetSize(aSize: TdfVec2f);
+procedure TglrSprite.SetSize(aSize: TglrVec2f);
 begin
   SetSize(aSize.x, aSize.y);
 end;
@@ -2191,10 +2191,10 @@ begin
   with aRegion^ do
     if not Rotated then
     begin
-      Vertices[0].tex := dfVec2f(tx + tw, ty + th);
-      Vertices[1].tex := dfVec2f(tx + tw, ty);
-      Vertices[2].tex := dfVec2f(tx, ty);
-      Vertices[3].tex := dfVec2f(tx, ty + th);
+      Vertices[0].tex := Vec2f(tx + tw, ty + th);
+      Vertices[1].tex := Vec2f(tx + tw, ty);
+      Vertices[2].tex := Vec2f(tx, ty);
+      Vertices[3].tex := Vec2f(tx, ty + th);
       if aAdjustSpriteSize then
       begin
         Width := tw * Texture.Width;
@@ -2203,10 +2203,10 @@ begin
     end
     else
     begin
-      Vertices[0].tex := dfVec2f(tx, ty + th);
-      Vertices[1].tex := dfVec2f(tx + tw, ty + th);
-      Vertices[2].tex := dfVec2f(tx + tw, ty);
-      Vertices[3].tex := dfVec2f(tx, ty);
+      Vertices[0].tex := Vec2f(tx, ty + th);
+      Vertices[1].tex := Vec2f(tx + tw, ty + th);
+      Vertices[2].tex := Vec2f(tx + tw, ty);
+      Vertices[3].tex := Vec2f(tx, ty);
       if aAdjustSpriteSize then
       begin
         Width := th * Texture.Height;
@@ -2295,7 +2295,7 @@ begin
   SetLength(Textures, 0);
 
   Blend := bmAlpha;
-  Color := dfVec4f(1, 1, 1, 1);
+  Color := Vec4f(1, 1, 1, 1);
   Cull := cmBack;
   DepthTest := True;
   DepthWrite := True;
@@ -2607,7 +2607,7 @@ begin
   fScale := 1.0;
   fProjectionPivot := pTopLeft;
   fProjMatrix.Identity;
-  SetCamera(dfVec3f(0, 0, 10), dfVec3f(0, 0, 0), dfVec3f(0, 1, 0));
+  SetCamera(Vec3f(0, 0, 10), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
 end;
 
 procedure TglrCamera.Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
@@ -2639,14 +2639,14 @@ end;
 procedure TglrCamera.Translate(alongUpVector, alongRightVector,
   alongDirVector: Single);
 var
-  v: TdfVec3f;
+  v: TglrVec3f;
 begin
   v := Up * alongUpVector + Right * alongRightVector + Direction * alongDirVector;
   Position += v;
   UpdateVectorsFromMatrix();
 end;
 
-procedure TglrCamera.Rotate(delta: Single; Axis: TdfVec3f);
+procedure TglrCamera.Rotate(delta: Single; Axis: TglrVec3f);
 begin
   Matrix.Rotate(delta, Axis);
   UpdateVectorsFromMatrix();
@@ -2666,19 +2666,19 @@ begin
   end;
 end;
 
-function TglrCamera.WindowPosToCameraPos(aPos: TdfVec2f): TdfVec2f;
+function TglrCamera.WindowPosToCameraPos(aPos: TglrVec2f): TglrVec2f;
 begin
-  Result := dfVec2f(Position) + aPos * (1 / fScale);
+  Result := Vec2f(Position) + aPos * (1 / fScale);
   case fProjectionPivot of
     pTopLeft: ;
-    pCenter:      Result -= dfVec2f(fW / 2, fH / 2) * (1 / fScale);
-    pBottomRight: Result -= dfVec2f(fW,     fH)     * (1 / fScale);
+    pCenter:      Result -= Vec2f(fW / 2, fH / 2) * (1 / fScale);
+    pBottomRight: Result -= Vec2f(fW,     fH)     * (1 / fScale);
   end;
 end;
 
 procedure TglrCamera.Update;
 begin
-  Matrix.Pos := dfVec3f(0, 0, 0);
+  Matrix.Pos := Vec3f(0, 0, 0);
   Matrix.Pos := Matrix * Position.NegateVector;
   Render.Params.ViewProj := fProjMatrix * Matrix;
   Render.Params.ModelViewProj := Render.Params.ViewProj;
@@ -2688,7 +2688,7 @@ begin
     ViewportOnly(0, 0, Render.Width, Render.Height);
 end;
 
-procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TdfVec3f);
+procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TglrVec3f);
 begin
   Matrix.Identity;
   fUp := aUp.Normal();
@@ -2774,7 +2774,7 @@ begin
     Result := 'False';
 end;
 
-class function Convert.ToString(aVal: TdfMat4f; aDigits: Integer): AnsiString;
+class function Convert.ToString(aVal: TglrMat4f; aDigits: Integer): AnsiString;
 var
   p: PSingle;
   i: Integer;
@@ -2790,17 +2790,17 @@ begin
   //log.Write(lCritical, 'Convert mat to string is not implemented');
 end;
 
-class function Convert.ToString(aVal: TdfVec2f): AnsiString;
+class function Convert.ToString(aVal: TglrVec2f): AnsiString;
 begin
   Result := ToString(aVal.x) + '|' + ToString(aVal.y);
 end;
 
-class function Convert.ToString(aVal: TdfVec3f): AnsiString;
+class function Convert.ToString(aVal: TglrVec3f): AnsiString;
 begin
   Result := ToString(aVal.x) + '|' + ToString(aVal.y) + '|' + ToString(aVal.z);
 end;
 
-class function Convert.ToString(aVal: TdfVec4f): AnsiString;
+class function Convert.ToString(aVal: TglrVec4f): AnsiString;
 begin
   Result := ToString(aVal.x) + '|' + ToString(aVal.y) + '|' + ToString(aVal.z)
    + '|' + ToString(aVal.w);
@@ -2834,7 +2834,7 @@ begin
   //GetAbsMatrix();
 end;
 
-function TglrNode.GetAbsMatrix: TdfMat4f;
+function TglrNode.GetAbsMatrix: TglrMat4f;
 begin
   Matrix.Pos := Position;
   if Assigned(fParent) then
@@ -2844,9 +2844,9 @@ begin
   Exit(fAbsMatrix);
 end;
 
-procedure TglrNode.SetDir(aDir: TdfVec3f);
+procedure TglrNode.SetDir(aDir: TglrVec3f);
 var
-  NewUp, NewRight: TdfVec3f;
+  NewUp, NewRight: TglrVec3f;
 begin
   if (fDir = aDir) then
     Exit;
@@ -2859,9 +2859,9 @@ begin
   UpdateModelMatrix(aDir, NewUp, NewRight);
 end;
 
-procedure TglrNode.SetRight(aRight: TdfVec3f);
+procedure TglrNode.SetRight(aRight: TglrVec3f);
 var
-  NewDir, NewUp: TdfVec3f;
+  NewDir, NewUp: TglrVec3f;
 begin
   if (fRight = aRight) then
     Exit();
@@ -2873,9 +2873,9 @@ begin
   UpdateModelMatrix(NewDir, NewUp, aRight);
 end;
 
-procedure TglrNode.SetUp(aUp: TdfVec3f);
+procedure TglrNode.SetUp(aUp: TglrVec3f);
 var
-  NewDir, NewRight: TdfVec3f;
+  NewDir, NewRight: TglrVec3f;
 begin
   if (fUp = aUp) then
     Exit();
@@ -2888,7 +2888,7 @@ begin
   UpdateModelMatrix(NewDir, aUp, NewRight);
 end;
 
-procedure TglrNode.UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TdfVec3f);
+procedure TglrNode.UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TglrVec3f);
 begin
   with Matrix do
   begin
@@ -3407,15 +3407,15 @@ begin
       with Touch[Ord(aKey)] do
       begin
         IsDown := True;
-        Start := dfVec2f(X, Y);
+        Start := Vec2f(X, Y);
         Pos := Start;
       end;
     itTouchUp:
       Touch[Ord(aKey)].IsDown := False;
     itTouchMove:
     begin
-      Touch[Ord(aKey)].Pos := dfVec2f(X, Y);
-      MousePos := dfVec2f(X, Y);
+      Touch[Ord(aKey)].Pos := Vec2f(X, Y);
+      MousePos := Vec2f(X, Y);
     end;
     itKeyDown:
       k^ := True;
@@ -3493,7 +3493,7 @@ begin
   fIB := 0;
   fFB := 0;
 
-  Params.Color := dfVec4f(1, 1, 1, 1);
+  Params.Color := Vec4f(1, 1, 1, 1);
   Params.ViewProj.Identity;
   Params.Model.Identity;
 end;
@@ -3633,14 +3633,14 @@ begin
         gl.EnableVertexAttribArray(Ord(vaCoord));
         gl.EnableVertexAttribArray(Ord(vaTexCoord0));
 			  gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], nil);
-        gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f)));
+        gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TglrVec3f)));
       end;
       vfPos2Tex2:
       begin
         gl.EnableVertexAttribArray(Ord(vaCoord));
         gl.EnableVertexAttribArray(Ord(vaTexCoord0));
 			  gl.VertexAttribPointer(Ord(vaCoord), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], nil);
-			  gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec2f)));
+			  gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TglrVec2f)));
       end;
       vfPos3Tex2Nor3:
       begin
@@ -3648,8 +3648,8 @@ begin
         gl.EnableVertexAttribArray(Ord(vaTexCoord0));
         gl.EnableVertexAttribArray(Ord(vaNormal));
 			  gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], nil);
-        gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f)));
-        gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
+        gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TglrVec3f)));
+        gl.VertexAttribPointer(Ord(vaNormal), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TglrVec3f) + SizeOf(TglrVec2f)));
       end;
       vfPos3Tex2Col4:
       begin
@@ -3657,8 +3657,8 @@ begin
         gl.EnableVertexAttribArray(Ord(vaTexCoord0));
         gl.EnableVertexAttribArray(Ord(vaColor));
 			  gl.VertexAttribPointer(Ord(vaCoord), 3, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], nil);
-			  gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f)));
-        gl.VertexAttribPointer(Ord(vaColor), 4, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TdfVec3f) + SizeOf(TdfVec2f)));
+			  gl.VertexAttribPointer(Ord(vaTexCoord0), 2, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TglrVec3f)));
+        gl.VertexAttribPointer(Ord(vaColor), 4, GL_FLOAT, False, VF_STRIDE[vBuffer.Format], Pointer(SizeOf(TglrVec3f) + SizeOf(TglrVec2f)));
       end
       else
         Log.Write(lCritical, 'Unsupported type of vertexbuffer format. Tinyglr developer is an asshole');
