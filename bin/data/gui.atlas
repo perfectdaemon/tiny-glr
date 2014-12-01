@@ -1,0 +1,5 @@
+textures: gui.tga
+button_over.png	1	1	70	352	0	0	352	70	r
+button.png	73	1	58	293	0	0	293	58	r
+checkbox_off.png	133	1	37	37	0	0	37	37	
+checkbox_on.png	172	1	37	37	0	0	37	37	
