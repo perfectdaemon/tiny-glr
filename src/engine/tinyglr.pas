@@ -882,6 +882,7 @@ type
     fVB: TglrVertexBuffer;
     fIB: TglrIndexBuffer;
     fFont: TglrFont;
+    function GetTextOrigin(aText: TglrText): TglrVec2f;
   public
     constructor Create(aFont: TglrFont); virtual;
     destructor Destroy(); override;
@@ -1029,7 +1030,7 @@ type
     NormalTextureRegion,
     OverTextureRegion,
     ClickedTextureRegion,
-    DisabledTextureRegion: TglrTextureRegion;
+    DisabledTextureRegion: PglrTextureRegion;
 
     property Enabled: Boolean read fEnabled write SetEnabled;
     property Focused: Boolean read fFocused write SetFocused;
@@ -1456,12 +1457,14 @@ constructor TglrGuiButton.Create;
 begin
   inherited Create;
   Text := TglrText.Create();
+  Text.Parent := Self;
 end;
 
 constructor TglrGuiButton.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
 begin
   inherited Create(aWidth, aHeight, aPivotPoint);
   Text := TglrText.Create();
+  Text.Parent := Self;
 end;
 
 destructor TglrGuiButton.Destroy;
@@ -1557,6 +1560,14 @@ begin
   fEnabled := aValue;
   if Assigned(OnEnable) then
     OnEnable(Self, aValue);
+  if fEnabled then
+  begin
+    if Assigned(NormalTextureRegion) then
+      SetTextureRegion(NormalTextureRegion);
+  end
+  else
+    if Assigned(DisabledTextureRegion) then
+      SetTextureRegion(DisabledTextureRegion);
 end;
 
 procedure TglrGuiElement.SetFocused(const aValue: Boolean);
@@ -1578,6 +1589,8 @@ begin
       begin
         if Assigned(OnTouchDown) then
           OnTouchDown(Self, aType, aKey, X, Y, aOtherParam);
+        if Assigned(ClickedTextureRegion) then
+          SetTextureRegion(ClickedTextureRegion);
         Focused := True;
       end
       else
@@ -1587,6 +1600,8 @@ begin
       begin
         if Assigned(OnTouchUp) then
           OnTouchUp(Self, aType, aKey, X, Y, aOtherParam);
+        if Assigned(OverTextureRegion) then
+          SetTextureRegion(OverTextureRegion);
         if Focused then
           if Assigned(OnClick) then
             OnClick(Self, aType, aKey, X, Y, aOtherParam);
@@ -1598,15 +1613,23 @@ begin
         if Assigned(OnTouchMove) then
           OnTouchMove(Self, aType, aKey, X, Y, aOtherParam);
         if not fIsMouseOver then
+        begin
           if Assigned(OnMouseOver) then
             OnMouseOver(Self, aType, aKey, X, Y, aOtherParam);
+          if Assigned(OverTextureRegion) then
+            SetTextureRegion(OverTextureRegion);
+        end;
         fIsMouseOver := True;
       end
       else
       begin
         if fIsMouseOver then
+        begin
           if Assigned(OnMouseOut) then
             OnMouseOut(Self, aType, aKey, X, Y, aOtherParam);
+          if Assigned(NormalTextureRegion) then
+            SetTextureRegion(NormalTextureRegion);
+        end;
         fIsMouseOver := False;
       end;
     end;
@@ -1667,12 +1690,28 @@ begin
   fIsMouseOver := False;
 
   ZIndex := 0;
+
+  NormalTextureRegion := nil;
+  OverTextureRegion := nil;
+  ClickedTextureRegion := nil;
+  DisabledTextureRegion := nil;
 end;
 
 constructor TglrGuiElement.Create(aWidth, aHeight: Single;
   aPivotPoint: TglrVec2f);
 begin
   inherited Create(aWidth, aHeight, aPivotPoint);
+  UpdateHitBox();
+  fFocused := False;
+  fEnabled := True;
+  fIsMouseOver := False;
+
+  ZIndex := 0;
+
+  NormalTextureRegion := nil;
+  OverTextureRegion := nil;
+  ClickedTextureRegion := nil;
+  DisabledTextureRegion := nil;
 end;
 
 { TglrParticle2D }
@@ -1961,6 +2000,50 @@ end;
 
 { TglrFontBatch }
 
+function TglrFontBatch.GetTextOrigin(aText: TglrText): TglrVec2f;
+var
+  i: Integer;
+  maxWidth: Single;
+  textSize: TglrVec2f;
+begin
+  maxWidth := 0;
+  textSize.Reset();
+  for i := 1 to Length(aText.Text) do
+    if fFont.Table[aText.Text[i]] <> nil then
+      with fFont.Table[aText.Text[i]]^ do
+      begin
+        // Setup text height on first visible character
+        if (textSize.y < 1) and (h > 0) then
+          textSize.y := fFont.MaxCharHeight + aText.LineSpacing;
+
+        if ID = #10 then
+        begin
+          textSize.y += fFont.MaxCharHeight + aText.LineSpacing;
+          if maxWidth > textSize.x then
+            textSize.x := maxWidth;
+          maxWidth := 0;
+          continue;
+        end;
+        maxWidth += w + aText.LetterSpacing;
+      end;
+  textSize.x := Max(textSize.x, maxWidth);
+  textSize := textSize * aText.Scale;
+
+  Result.Reset();
+
+  case aText.HorAlign of
+    haLeft:   Result.x := 0;
+    haCenter: Result.x := -textSize.x / 2.0;
+    haRight:  Result.x := -textSize.x;
+  end;
+
+  case aText.VerAlign of
+    vaTop:    Result.y := 0;
+    vaCenter: Result.y := -textSize.y / 2.0;
+    vaBottom: Result.y := -textSize.y;
+  end;
+end;
+
 constructor TglrFontBatch.Create(aFont: TglrFont);
 begin
   inherited Create;
@@ -1985,21 +2068,22 @@ end;
 
 procedure TglrFontBatch.Draw(aText: TglrText);
 var
-  x, y: Single;
+  origin, start: TglrVec2f;
   quad: TglrQuadP3T2C4;
   j, k: Integer;
 begin
-  x := 0;
-  y := 0;
   if (not aText.Visible) or (aText.Text = '') then
     Exit();
+
+  origin := GetTextOrigin(aText);
+  start := origin;
 
   for j := 1 to Length(aText.Text) do
   begin
     if (aText.Text[j] = #10) then
     begin
-      x := 0;
-      y += (aText.LineSpacing + fFont.MaxCharHeight) * aText.Scale;
+      start.x := origin.x;
+      start.y += (aText.LineSpacing + fFont.MaxCharHeight) * aText.Scale;
       continue;
     end;
 
@@ -2012,7 +2096,7 @@ begin
     for k := 0 to 3 do
     begin
       fVData[fCount * 4 + k] := quad[k];
-      fVData[fCount * 4 + k].vec += Vec3f(x, y, 0);
+      fVData[fCount * 4 + k].vec += Vec3f(start, 0);
       fVData[fCount * 4 + k].vec := aText.AbsoluteMatrix * fVData[fCount * 4 + k].vec;
       fVData[fCount * 4 + k].col := aText.Color;
     end;
@@ -2020,7 +2104,7 @@ begin
     for k := 0 to 5 do
       fIData[fCount * 6 + k] := SpriteIndices[k] + fCount * 4;
 
-    x += quad[0].vec.x + aText.LetterSpacing;
+    start.x += quad[0].vec.x + aText.LetterSpacing;
     fCount += 1;
   end;
 end;
@@ -2118,7 +2202,6 @@ begin
   if fHorAlign = aValue then
     Exit();
   fHorAlign := aValue;
-  Log.Write(lCritical, 'Text.SetHorAlign is not implemented');
 end;
 
 procedure TglrText.SetTextWidth(aValue: Single);
@@ -2134,7 +2217,6 @@ begin
   if fVerAlign = aValue then
     Exit();
   fVerAlign := aValue;
-  Log.Write(lCritical, 'Text.SetVerAlign is not implemented');
 end;
 
 constructor TglrText.Create(const aText: WideString);
