@@ -760,24 +760,21 @@ type
   end;
 
   { TglrSprite }
-const
-  SpriteIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
 
-type
   TglrSprite = class (TglrNode)
   protected
     fRot, fWidth, fHeight: Single;
     fPP: TglrVec2f;
 
-    procedure SetRot(const aRot: Single);
-    procedure SetWidth(const aWidth: Single);
-    procedure SetHeight(const aHeight: Single);
-    procedure SetPP(const aPP: TglrVec2f);
+    procedure SetRot(const aRot: Single); virtual;
+    procedure SetWidth(const aWidth: Single); virtual;
+    procedure SetHeight(const aHeight: Single); virtual;
+    procedure SetPP(const aPP: TglrVec2f); virtual;
   public
     Vertices: array[0..3] of TglrVertexP3T2C4;
 
     constructor Create(); override; overload;
-    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); overload;
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); virtual; overload;
     destructor Destroy(); override;
 
     property Rotation: Single read fRot write SetRot;
@@ -998,7 +995,7 @@ type
   TglrGuiInputCallback = procedure(Sender: TglrGuiElement;
     aType: TglrInputType;
     aKey: TglrKey;
-    X, Y, aOtherParam: Integer) of object;
+    X, Y: Single; aOtherParam: Integer) of object;
 
   { TglrGuiElement }
 
@@ -1006,11 +1003,17 @@ type
   protected
     fIsMouseOver: Boolean;
     fEnabled, fFocused: Boolean;
+
+    procedure SetRot(const aRot: Single); override;
+    procedure SetWidth(const aWidth: Single); override;
+    procedure SetHeight(const aHeight: Single); override;
+    procedure SetPP(const aPP: TglrVec2f); override;
+
     procedure SetEnabled(const aValue: Boolean);
     procedure SetFocused(const aValue: Boolean);
-    procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
+    procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y: Single;
       aOtherParam: Integer);
-    function IsHit(X, Y: Integer): Boolean;
+    function IsHit(X, Y: Single): Boolean;
   public
     // Input events
     OnClick, OnTouchDown, OnTouchUp, OnTouchMove, OnMouseOver, OnMouseOut: TglrGuiInputCallback;
@@ -1022,13 +1025,30 @@ type
 
     HitBox: TglrBB;
 
+    // Texture regions for various states of button
+    NormalTextureRegion,
+    OverTextureRegion,
+    ClickedTextureRegion,
+    DisabledTextureRegion: TglrTextureRegion;
+
     property Enabled: Boolean read fEnabled write SetEnabled;
     property Focused: Boolean read fFocused write SetFocused;
 
     procedure UpdateHitBox();
     procedure SetDefaultVertices(); override;
 
-    constructor Create(); virtual;
+    constructor Create(); override; overload;
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
+  end;
+
+  { TglrGuiButton }
+
+  TglrGuiButton = class (TglrGuiElement)
+  public
+    Text: TglrText;
+    constructor Create(); override; overload;
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
+    destructor Destroy(); override;
   end;
 
   TglrGuiElementsList = TglrObjectList<TglrGuiElement>;
@@ -1037,16 +1057,19 @@ type
 
   TglrGuiManager = class
   protected
+    function GetElementIndexAtPos(X, Y: Integer; aGuiCamera: TglrCamera): Integer;
+    procedure SetFocused(aElement: TglrGuiElement);
   public
     Elements: TglrGuiElementsList;
+    Focused: TglrGuiElement;
 
     constructor Create(); virtual;
     destructor Destroy(); override;
 
     procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer); overload;
-    procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer; aGuiCamera: TglrCamera); overload;
+      aOtherParam: Integer; aGuiCamera: TglrCamera);
+
+    procedure Update(const dt: Double);
   end;
 
   {$ENDREGION}
@@ -1076,6 +1099,8 @@ uses
   resload;
 
 const
+  SpriteIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
+
   VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3), SizeOf(TglrVertexP3T2C4));
   VF_USAGE: array[Low(TglrVertexBufferUsage)..High(TglrVertexBufferUsage)] of TGLConst =
@@ -1425,12 +1450,50 @@ begin
   end;
 end;
 
+{ TglrGuiButton }
+
+constructor TglrGuiButton.Create;
+begin
+  inherited Create;
+  Text := TglrText.Create();
+end;
+
+constructor TglrGuiButton.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+begin
+  inherited Create(aWidth, aHeight, aPivotPoint);
+  Text := TglrText.Create();
+end;
+
+destructor TglrGuiButton.Destroy;
+begin
+  Text.Free();
+  inherited Destroy;
+end;
+
 { TglrGuiManager }
 
-constructor TglrGuiManager.Create;
+function TglrGuiManager.GetElementIndexAtPos(X, Y: Integer;
+  aGuiCamera: TglrCamera): Integer;
 begin
-  inherited;
+  Result := -1;
+end;
+
+procedure TglrGuiManager.SetFocused(aElement: TglrGuiElement);
+begin
+  if (Focused <> nil) then
+    Focused.Focused := False;
+  if (aElement <> nil) then
+    aElement.Focused := True;
+
+  Focused := aElement;
+end;
+
+constructor TglrGuiManager.Create();
+begin
+  inherited Create;
   Elements := TglrGuiElementsList.Create();
+
+  Focused := nil;
 end;
 
 destructor TglrGuiManager.Destroy;
@@ -1440,22 +1503,52 @@ begin
 end;
 
 procedure TglrGuiManager.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
-  Y, aOtherParam: Integer);
+  Y, aOtherParam: Integer; aGuiCamera: TglrCamera);
 var
   i: Integer;
+  touchVec: TglrVec3f;
 begin
+  // WIP, don't kill me
+  touchVec := aGuiCamera.AbsoluteMatrix * Vec3f(X, Y, 0);
+
   for i := 0 to Elements.Count - 1 do
     if Elements[i].Enabled then
-      Elements[i].ProcessInput(aType, aKey, X, Y, aOtherParam);
+      // Send ProcessInput for keys and wheel to focused only elements
+      // Other messages - to all elements
+      if (not (aType in [itKeyDown, itKeyUp, itWheel])) or (Elements[i].Focused) then
+        Elements[i].ProcessInput(aType, aKey, touchVec.X, touchVec.Y, aOtherParam);
 end;
 
-procedure TglrGuiManager.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
-  Y, aOtherParam: Integer; aGuiCamera: TglrCamera);
+procedure TglrGuiManager.Update(const dt: Double);
 begin
-  Log.Write(lCritical, 'Not implemented');
+
 end;
 
 { TglrGuiElement }
+
+procedure TglrGuiElement.SetRot(const aRot: Single);
+begin
+  inherited SetRot(aRot);
+  UpdateHitBox();
+end;
+
+procedure TglrGuiElement.SetWidth(const aWidth: Single);
+begin
+  inherited SetWidth(aWidth);
+  UpdateHitBox();
+end;
+
+procedure TglrGuiElement.SetHeight(const aHeight: Single);
+begin
+  inherited SetHeight(aHeight);
+  UpdateHitBox();
+end;
+
+procedure TglrGuiElement.SetPP(const aPP: TglrVec2f);
+begin
+  inherited SetPP(aPP);
+  UpdateHitBox();
+end;
 
 procedure TglrGuiElement.SetEnabled(const aValue: Boolean);
 begin
@@ -1475,41 +1568,88 @@ begin
     OnFocus(Self, aValue);
 end;
 
-procedure TglrGuiElement.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
-  Y, aOtherParam: Integer);
+procedure TglrGuiElement.ProcessInput(aType: TglrInputType; aKey: TglrKey;
+  X, Y: Single; aOtherParam: Integer);
 begin
+  // Warning! Implemented partially!
   case aType of
     itTouchDown:
-    begin
-      if Assigned(OnTouchDown) then
-        OnTouchDown(Self, aType, aKey, x, y, aOtherParam);
-      Focused := True;
-    end;
+      if IsHit(X, Y) then
+      begin
+        if Assigned(OnTouchDown) then
+          OnTouchDown(Self, aType, aKey, X, Y, aOtherParam);
+        Focused := True;
+      end
+      else
+        Focused := False;
     itTouchUp:
+      if IsHit(X, Y) then
+      begin
+        if Assigned(OnTouchUp) then
+          OnTouchUp(Self, aType, aKey, X, Y, aOtherParam);
+        if Focused then
+          if Assigned(OnClick) then
+            OnClick(Self, aType, aKey, X, Y, aOtherParam);
+      end;
+    itTouchMove:
     begin
-      if Assigned(OnTouchUp) then
-        OnTouchUp(Self, aType, aKey, x, y, aOtherParam);
+      if IsHit(X, Y) then
+      begin
+        if Assigned(OnTouchMove) then
+          OnTouchMove(Self, aType, aKey, X, Y, aOtherParam);
+        if not fIsMouseOver then
+          if Assigned(OnMouseOver) then
+            OnMouseOver(Self, aType, aKey, X, Y, aOtherParam);
+        fIsMouseOver := True;
+      end
+      else
+      begin
+        if fIsMouseOver then
+          if Assigned(OnMouseOut) then
+            OnMouseOut(Self, aType, aKey, X, Y, aOtherParam);
+        fIsMouseOver := False;
+      end;
     end;
-
   end;
-
-  Log.Write(lCritical, 'Not implemented');
 end;
 
-function TglrGuiElement.IsHit(X, Y: Integer): Boolean;
+function TglrGuiElement.IsHit(X, Y: Single): Boolean;
+var
+  i: Integer;
+  Point, p1, p2: TglrVec2f;
+  absMatrix: TglrMat4f;
+  intersect: Boolean;
 begin
-  x += Floor(Position.x);
-  y += Floor(Position.y);
+  // First check out bounding box
+  x -= Position.x;
+  y -= Position.y;
   with HitBox do
     Result := (x >= Left) and (x <= Right) and (y >= Top) and (y <= Bottom);
+  if not Result then
+    Exit();
+
+  // If Point is in bounding box, then make a raycasts
+  Result := False;
+  absMatrix := AbsoluteMatrix;
+  Point := Vec2f(X + Position.x, Y + Position.y);
+  for i := 0 to 3 do
+  begin
+    p1 := Vec2f(absMatrix * Vertices[i].vec);
+    p2 := Vec2f(absMatrix * Vertices[(i + 1) mod 4].vec);
+    intersect := ((p1.y > Point.y) <> (p2.y > Point.y))
+      and (Point.x < (p2.x - p1.x) * (Point.y - p1.y) / (p2.y - p1.y) + p1.x);
+   if (intersect) then
+     Result := not Result;
+  end;
+  Exit(Result);
 end;
 
 procedure TglrGuiElement.UpdateHitBox;
 begin
-  HitBox.Bottom := Max(Vertices[0].vec.y, Vertices[1].vec.y);
-  HitBox.Top := Min(Vertices[2].vec.y, Vertices[3].vec.y);
-  HitBox.Right := Max(Vertices[0].vec.x, Vertices[3].vec.x);
-  HitBox.Left := Min(Vertices[1].vec.x, Vertices[2].vec.x);
+  HitBox.Bottom := Max(Vertices[0].vec.y, Vertices[1].vec.y) + Position.y;
+  HitBox.Top := Min(Vertices[2].vec.y, Vertices[3].vec.y) - Position.y;
+  HitBox.Right := Max(Vertices[0].vec.x, Vertices[3].vec.x) + Position.x;
+  HitBox.Left := Min(Vertices[1].vec.x, Vertices[2].vec.x) - Position.x;
 end;
 
 procedure TglrGuiElement.SetDefaultVertices;
@@ -1520,13 +1660,19 @@ end;
 
 constructor TglrGuiElement.Create;
 begin
-  inherited;
+  inherited Create();
   UpdateHitBox();
   fFocused := False;
   fEnabled := True;
   fIsMouseOver := False;
 
   ZIndex := 0;
+end;
+
+constructor TglrGuiElement.Create(aWidth, aHeight: Single;
+  aPivotPoint: TglrVec2f);
+begin
+  inherited Create(aWidth, aHeight, aPivotPoint);
 end;
 
 { TglrParticle2D }
