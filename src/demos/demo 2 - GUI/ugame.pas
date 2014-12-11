@@ -97,7 +97,7 @@ begin
   Button1.Text.Position.z := 1;
 
   DebugText := TglrText.Create(UTF8Decode('Проверка'#13#10'многострочного'#13#10'и крайне неровного'#13#10'текста'));
-  DebugText.Position := Vec3f(150, 150, 10);
+  DebugText.Position := Vec3f(350, 250, 10);
 
   DebugTextPivotPointSprite := TglrSprite.Create(5, 5, Vec2f(0.5, 0.5));
   DebugTextPivotPointSprite.Position := Vec3f(0, 0, 5);
@@ -164,25 +164,13 @@ begin
   if aType = itKeyDown then
     case aKey of
       kLeft:
-        if DebugText.HorAlign = haRight then
-          DebugText.HorAlign := haCenter
-        else
-          DebugText.HorAlign := haLeft;
+        DebugText.PivotPoint.x := Min(DebugText.PivotPoint.x + 0.5, 1.0);
       kRight:
-        if DebugText.HorAlign = haLeft then
-          DebugText.HorAlign := haCenter
-        else
-          DebugText.HorAlign := haRight;
+        DebugText.PivotPoint.x := Max(DebugText.PivotPoint.x - 0.5, 0);
       kUp:
-        if DebugText.VerAlign = vaBottom then
-          DebugText.VerAlign := vaCenter
-        else
-          DebugText.VerAlign := vaTop;
+        DebugText.PivotPoint.y := Min(DebugText.PivotPoint.y + 0.5, 1.0);
       kDown:
-        if DebugText.VerAlign = vaTop then
-          DebugText.VerAlign := vaCenter
-        else
-          DebugText.VerAlign := vaBottom;
+        DebugText.PivotPoint.y := Max(DebugText.PivotPoint.y - 0.5, 0);
     end
 end;
 

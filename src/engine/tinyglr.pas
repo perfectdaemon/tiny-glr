@@ -847,27 +847,25 @@ type
   end;
 
   TglrTextHorAlign = (haLeft, haCenter, haRight);
-  TglrTextVerAlign = (vaTop, vaCenter, vaBottom);
 
   TglrText = class (TglrNode)
   protected
     fHorAlign: TglrTextHorAlign;
     fTextWidth: Single;
-    fVerAlign: TglrTextVerAlign;
     procedure SetHorAlign(aValue: TglrTextHorAlign);
     procedure SetTextWidth(aValue: Single);
-    procedure SetVerAlign(aValue: TglrTextVerAlign);
   public
     Text: WideString;
     LetterSpacing, LineSpacing: Single;
     Color: TglrVec4f;
     Scale: Single;
+    PivotPoint: TglrVec2f;
     constructor Create(const aText: WideString = ''); virtual;
     destructor Destroy(); override;
 
     property TextWidth: Single read fTextWidth write SetTextWidth;
     property HorAlign: TglrTextHorAlign read fHorAlign write SetHorAlign;
-    property VerAlign: TglrTextVerAlign read fVerAlign write SetVerAlign;
+
 
     procedure RenderSelf(); override;
   end;
@@ -1605,7 +1603,10 @@ begin
         if Focused then
           if Assigned(OnClick) then
             OnClick(Self, aType, aKey, X, Y, aOtherParam);
-      end;
+      end
+      else
+        if Assigned(NormalTextureRegion) then
+          SetTextureRegion(NormalTextureRegion);
     itTouchMove:
     begin
       if IsHit(X, Y) then
@@ -2031,17 +2032,7 @@ begin
 
   Result.Reset();
 
-  case aText.HorAlign of
-    haLeft:   Result.x := 0;
-    haCenter: Result.x := -textSize.x / 2.0;
-    haRight:  Result.x := -textSize.x;
-  end;
-
-  case aText.VerAlign of
-    vaTop:    Result.y := 0;
-    vaCenter: Result.y := -textSize.y / 2.0;
-    vaBottom: Result.y := -textSize.y;
-  end;
+  Result := (-1 * textSize) * aText.PivotPoint;
 end;
 
 constructor TglrFontBatch.Create(aFont: TglrFont);
@@ -2209,14 +2200,7 @@ begin
   if fTextWidth = aValue then
     Exit();
   fTextWidth := aValue;
-  Log.Write(lCritical, 'Text.SetTexWidth is not implemented');
-end;
-
-procedure TglrText.SetVerAlign(aValue: TglrTextVerAlign);
-begin
-  if fVerAlign = aValue then
-    Exit();
-  fVerAlign := aValue;
+  Log.Write(lCritical, 'Text.SetTextWidth is not implemented');
 end;
 
 constructor TglrText.Create(const aText: WideString);
@@ -2227,6 +2211,9 @@ begin
   LetterSpacing := 1.0;
   Color := Vec4f(1, 1, 1, 1);
   Scale := 1.0;
+
+  PivotPoint.Reset();
+  fHorAlign := haLeft;
 end;
 
 destructor TglrText.Destroy;
