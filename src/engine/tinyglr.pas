@@ -866,7 +866,6 @@ type
     property TextWidth: Single read fTextWidth write SetTextWidth;
     property HorAlign: TglrTextHorAlign read fHorAlign write SetHorAlign;
 
-
     procedure RenderSelf(); override;
   end;
 
@@ -2062,12 +2061,42 @@ var
   origin, start: TglrVec2f;
   quad: TglrQuadP3T2C4;
   j, k: Integer;
+
+  lastSpace: Integer;
+  width: Single;
 begin
   if (not aText.Visible) or (aText.Text = '') then
     Exit();
 
   origin := GetTextOrigin(aText);
   start := origin;
+
+  // Make a word wrap
+  if (aText.TextWidth > 0) then
+  begin
+    lastSpace := 0;
+    width := 0;
+    while (j <= Length(aText.Text)) do
+    begin
+      if fFont.Table[aText.Text[j]] = nil then
+        continue;
+      if (aText.Text[j] = #10) then
+        aText.Text[j] := ' ';
+
+      if (aText.Text[j] = ' ') then
+        lastSpace := j;
+
+      width += fFont.Table[aText.Text[j]].w * aText.Scale + aText.LetterSpacing;
+      if (width > aText.TextWidth) and (lastSpace > 0) then
+      begin
+        aText.Text[lastSpace] := #10;
+        j := lastSpace;
+        width := 0;
+        lastSpace := 0;
+      end;
+      j += 1;
+    end;
+  end;
 
   for j := 1 to Length(aText.Text) do
   begin
@@ -2200,7 +2229,7 @@ begin
   if fTextWidth = aValue then
     Exit();
   fTextWidth := aValue;
-  Log.Write(lCritical, 'Text.SetTextWidth is not implemented');
+  //Log.Write(lCritical, 'Text.SetTextWidth is not implemented');
 end;
 
 constructor TglrText.Create(const aText: WideString);
@@ -2214,6 +2243,7 @@ begin
 
   PivotPoint.Reset();
   fHorAlign := haLeft;
+  fTextWidth := -1;
 end;
 
 destructor TglrText.Destroy;

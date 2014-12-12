@@ -23,7 +23,7 @@ type
 
     // Text checks
     DebugText: TglrText;
-    DebugTextPivotPointSprite: TglrSprite;
+    DebugTextPivotPointSprite, DebugTextWidthSprite: TglrSprite;
 
     // Camera
     Camera: TglrCamera;
@@ -96,13 +96,19 @@ begin
   Button1.Text.Text := 'Click me';
   Button1.Text.Position.z := 1;
 
-  DebugText := TglrText.Create(UTF8Decode('Проверка'#13#10'многострочного'#13#10'и крайне неровного'#13#10'текста'));
+  DebugText := TglrText.Create(UTF8Decode('Проверка очень длинного и малосвязного текста с оченьдлинныминеразрывными словами и прочим'));
   DebugText.Position := Vec3f(350, 250, 10);
+  DebugText.TextWidth := 200;
 
   DebugTextPivotPointSprite := TglrSprite.Create(5, 5, Vec2f(0.5, 0.5));
   DebugTextPivotPointSprite.Position := Vec3f(0, 0, 5);
   DebugTextPivotPointSprite.SetVerticesColor(Vec4f(1.0, 0.0, 0.0, 1.0));
   DebugTextPivotPointSprite.Parent := DebugText;
+
+  DebugTextWidthSprite := TglrSprite.Create(20, 5, Vec2f(0.5, 0.5));
+  DebugTextWidthSprite.Position := Vec3f(0, 0, -1);
+  DebugTextWidthSprite.SetVerticesColor(Vec4f(1.0, 1.0, 1.0, 0.5));
+  DebugTextWidthSprite.Parent := DebugText;
 
   Gui := TglrGuiManager.Create();
   Gui.Elements.Add(Button1);
@@ -143,6 +149,7 @@ begin
 
   DebugText.Free();
   DebugTextPivotPointSprite.Free();
+  DebugTextWidthSprite.Free();
 
   SpriteBatch.Free();
   FontBatch.Free();
@@ -171,6 +178,11 @@ begin
         DebugText.PivotPoint.y := Min(DebugText.PivotPoint.y + 0.5, 1.0);
       kDown:
         DebugText.PivotPoint.y := Max(DebugText.PivotPoint.y - 0.5, 0);
+
+      kPlus:
+        DebugText.TextWidth := DebugText.TextWidth + 5.0;
+      kMinus:
+        DebugText.TextWidth := DebugText.TextWidth - 5.0;
     end
 end;
 
@@ -194,6 +206,8 @@ begin
   Camera.Position += Vec3f(moveVec.Normal * 250 * dt, 0);
   }
   Button1.Rotation := Button1.Rotation + dt * 10;
+  DebugTextWidthSprite.Width := DebugText.TextWidth;
+  DebugTextWidthSprite.PivotPoint := DebugText.PivotPoint;
 end;
 
 procedure TGame.OnRender;
@@ -207,6 +221,7 @@ begin
   DefaultMaterial.Bind();
   SpriteBatch.Start();
     SpriteBatch.Draw(DebugTextPivotPointSprite);
+    SpriteBatch.Draw(DebugTextWidthSprite);
   SpriteBatch.Finish();
 
   FontBatch.Start();
