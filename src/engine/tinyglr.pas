@@ -852,6 +852,7 @@ type
   protected
     fHorAlign: TglrTextHorAlign;
     fTextWidth: Single;
+    fTextWidthChanged: Boolean;
     procedure SetHorAlign(aValue: TglrTextHorAlign);
     procedure SetTextWidth(aValue: Single);
   public
@@ -2072,10 +2073,11 @@ begin
   start := origin;
 
   // Make a word wrap
-  if (aText.TextWidth > 0) then
+  if (aText.TextWidth > 0) and (aText.fTextWidthChanged) then
   begin
     lastSpace := 0;
     width := 0;
+    j := 1;
     while (j <= Length(aText.Text)) do
     begin
       if fFont.Table[aText.Text[j]] = nil then
@@ -2090,12 +2092,14 @@ begin
       if (width > aText.TextWidth) and (lastSpace > 0) then
       begin
         aText.Text[lastSpace] := #10;
-        j := lastSpace;
+        j := lastSpace + 1;
         width := 0;
         lastSpace := 0;
-      end;
-      j += 1;
+      end
+      else
+        j += 1;
     end;
+    aText.fTextWidthChanged := False;
   end;
 
   for j := 1 to Length(aText.Text) do
@@ -2229,6 +2233,7 @@ begin
   if fTextWidth = aValue then
     Exit();
   fTextWidth := aValue;
+  fTextWidthChanged := True;
   //Log.Write(lCritical, 'Text.SetTextWidth is not implemented');
 end;
 
@@ -2244,6 +2249,7 @@ begin
   PivotPoint.Reset();
   fHorAlign := haLeft;
   fTextWidth := -1;
+  fTextWidthChanged := False;
 end;
 
 destructor TglrText.Destroy;
