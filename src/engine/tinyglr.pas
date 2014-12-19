@@ -3401,6 +3401,7 @@ begin
     FreeMem(fPackFiles[i].fPackDataPointer, fPackFiles[i].fPackData.Size);
     fPackFiles[i].fPackData.Free();
     fPackFiles[i].fLoaded := False;
+    fPackFiles[i].fPackDataPointer := nil;
     Log.Write(lInformation, 'FileSystem: Unload pack "' + aPackFileName + '" is completed');
   end;
 end;
