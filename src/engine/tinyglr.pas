@@ -627,6 +627,7 @@ type
     fDir, fRight, fUp: TglrVec3f;
     fParent: TglrNode;
     fAbsMatrix: TglrMat4f;
+    fVisible: Boolean;
 
     procedure SetParent(AValue: TglrNode);
     function GetAbsMatrix: TglrMat4f;
@@ -636,8 +637,8 @@ type
     procedure UpdateModelMatrix(aNewDir, aNewUp, aNewRight: TglrVec3f); virtual;
     procedure UpdateVectorsFromMatrix(); virtual;
     procedure DoRender(); virtual;
+    procedure SetVisible(const aVisible: Boolean); virtual;
   public
-    Visible: Boolean;
     Matrix: TglrMat4f;
     Position: TglrVec3f;
 
@@ -650,6 +651,8 @@ type
     property Up: TglrVec3f read fUp write SetUp;
     property Direction: TglrVec3f read fDir write SetDir;
     property Right: TglrVec3f read fRight write SetRight;
+
+    property Visible: Boolean read fVisible write SetVisible;
 
     procedure RenderSelf(); virtual;
   end;
@@ -788,7 +791,7 @@ type
     procedure SetSize(aWidth, aHeight: Single); overload;
     procedure SetSize(aSize: TglrVec2f); overload;
 
-    procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean = True);
+    procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean = True); virtual;
 
     procedure RenderSelf(); override;
   end;
@@ -1040,9 +1043,37 @@ type
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
   end;
 
+  TglrGuiElementsList = TglrObjectList<TglrGuiElement>;
+
+  { TglrGuiLayout }
+
+  TglrGuiLayout = class (TglrGuiElement)
+  protected
+    fX1, fX2, fY1, fY2: Single;
+    fElements: TglrGuiElementsList;
+    fPatches: array[0..7] of TglrSprite; //9th patch is element itself (center one)
+    procedure SetWidth(const aWidth: Single); override;
+    procedure SetHeight(const aHeight: Single); override;
+    procedure SetVisible(const aVisible: Boolean); override;
+  public
+    constructor Create(); override; overload;
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
+    destructor Destroy(); override;
+
+    procedure SetNinePatchBorders(x1, x2, y1, y2: Single);
+
+    procedure AddElement(aElement: TglrGuiElement);
+    procedure RemoveElement(aElement: TglrGuiElement);
+
+    procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean =
+      True); override;
+  end;
+
   { TglrGuiButton }
 
   TglrGuiButton = class (TglrGuiElement)
+  protected
+    procedure SetVisible(const aVisible: Boolean); override;
   public
     Text: TglrText;
     constructor Create(); override; overload;
@@ -1050,13 +1081,12 @@ type
     destructor Destroy(); override;
   end;
 
-  TglrGuiElementsList = TglrObjectList<TglrGuiElement>;
+
 
   { TglrGuiManager }
 
   TglrGuiManager = class
   protected
-    function GetElementIndexAtPos(X, Y: Integer; aGuiCamera: TglrCamera): Integer;
     procedure SetFocused(aElement: TglrGuiElement);
   public
     Elements: TglrGuiElementsList;
@@ -1449,7 +1479,138 @@ begin
   end;
 end;
 
+{ TglrGuiLayout }
+
+procedure TglrGuiLayout.SetWidth(const aWidth: Single);
+begin
+  inherited SetWidth(aWidth);
+end;
+
+procedure TglrGuiLayout.SetHeight(const aHeight: Single);
+begin
+  inherited SetHeight(aHeight);
+end;
+
+procedure TglrGuiLayout.SetVisible(const aVisible: Boolean);
+var
+  i: Integer;
+begin
+  inherited SetVisible(aVisible);
+  for i := 0 to Length(fPatches) - 1 do
+    fPatches[i].Visible := aVisible;
+
+  for i := 0 to fElements.Count - 1 do
+    fElements[i].Visible := aVisible;
+end;
+
+constructor TglrGuiLayout.Create;
+var
+  i: Integer;
+begin
+  inherited Create;
+  for i := 0 to Length(fPatches) - 1 do
+  begin
+    fPatches[i] := TglrSprite.Create();
+    fPatches[i].Visible := False;
+  end;
+
+  fElements := TglrGuiElementsList.Create();
+
+  fX1 := -1.0;
+  fX2 := -1.0;
+  fY1 := -1.0;
+  fY2 := -1.0;
+end;
+
+constructor TglrGuiLayout.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+var
+  i: Integer;
+begin
+  inherited Create(aWidth, aHeight, aPivotPoint);
+  for i := 0 to Length(fPatches) - 1 do
+  begin
+    fPatches[i] := TglrSprite.Create();
+    fPatches[i].Visible := False;
+  end;
+
+  fElements := TglrGuiElementsList.Create();
+end;
+
+destructor TglrGuiLayout.Destroy;
+var
+  i: Integer;
+begin
+  for i := 0 to Length(fPatches) - 1 do
+    fPatches[i].Free();
+
+  fElements.Free(False);
+  inherited Destroy;
+end;
+
+procedure TglrGuiLayout.SetNinePatchBorders(x1, x2, y1, y2: Single);
+begin
+  fX1 := x1;
+  fX2 := x2;
+  fY1 := y1;
+  fY2 := y2;
+  if (NormalTextureRegion) <> nil then
+    SetTextureRegion(NormalTextureRegion);
+  Log.Write(lCritical, 'GuiLayout.SetNinePatchBorders is not implemented');
+end;
+
+procedure TglrGuiLayout.AddElement(aElement: TglrGuiElement);
+begin
+  fElements.Add(aElement);
+  aElement.Parent := Self;
+end;
+
+procedure TglrGuiLayout.RemoveElement(aElement: TglrGuiElement);
+begin
+  fElements.Delete(aElement);
+  aElement.Parent := nil;
+end;
+
+procedure TglrGuiLayout.SetTextureRegion(aRegion: PglrTextureRegion;
+  aAdjustSpriteSize: Boolean);
+begin
+  if (fX2 <= 0) or (fY2 <= 0) then
+    inherited SetTextureRegion(aRegion, aAdjustSpriteSize)
+  else
+    Log.Write(lCritical, 'GuiLayout.SetTextureRegion with 9-patch is not implemented');
+{    with aRegion^ do
+      if not Rotated then
+      begin
+        Vertices[0].tex := Vec2f(tx + tw, ty + th);
+        Vertices[1].tex := Vec2f(tx + tw, ty);
+        Vertices[2].tex := Vec2f(tx, ty);
+        Vertices[3].tex := Vec2f(tx, ty + th);
+        if aAdjustSpriteSize then
+        begin
+          Width := tw * Texture.Width;
+          Height := th * Texture.Height;
+        end;
+      end
+      else
+      begin
+        Vertices[0].tex := Vec2f(tx, ty + th);
+        Vertices[1].tex := Vec2f(tx + tw, ty + th);
+        Vertices[2].tex := Vec2f(tx + tw, ty);
+        Vertices[3].tex := Vec2f(tx, ty);
+        if aAdjustSpriteSize then
+        begin
+          Width := th * Texture.Height;
+          Height := tw * Texture.Width;
+        end;
+      end;    }
+end;
+
 { TglrGuiButton }
+
+procedure TglrGuiButton.SetVisible(const aVisible: Boolean);
+begin
+  inherited SetVisible(aVisible);
+  Text.Visible := aVisible;
+end;
 
 constructor TglrGuiButton.Create;
 begin
@@ -1472,12 +1633,6 @@ begin
 end;
 
 { TglrGuiManager }
-
-function TglrGuiManager.GetElementIndexAtPos(X, Y: Integer;
-  aGuiCamera: TglrCamera): Integer;
-begin
-  Result := -1;
-end;
 
 procedure TglrGuiManager.SetFocused(aElement: TglrGuiElement);
 begin
@@ -3166,6 +3321,11 @@ end;
 procedure TglrNode.DoRender;
 begin
   //nothing
+end;
+
+procedure TglrNode.SetVisible(const aVisible: Boolean);
+begin
+  fVisible := aVisible;
 end;
 
 constructor TglrNode.Create;
