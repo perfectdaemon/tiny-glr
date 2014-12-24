@@ -1039,7 +1039,6 @@ type
     procedure UpdateHitBox();
     procedure SetDefaultVertices(); override;
 
-    constructor Create(); override; overload;
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
   end;
 
@@ -1047,16 +1046,18 @@ type
 
   { TglrGuiLayout }
 
+  { 2014-12-24 : Draft version, do not use }
   TglrGuiLayout = class (TglrGuiElement)
   protected
     fX1, fX2, fY1, fY2: Single;
     fElements: TglrGuiElementsList;
-    fPatches: array[0..7] of TglrSprite; //9th patch is element itself (center one)
     procedure SetWidth(const aWidth: Single); override;
     procedure SetHeight(const aHeight: Single); override;
     procedure SetVisible(const aVisible: Boolean); override;
+
+    procedure UpdatePatchesPosition();
   public
-    constructor Create(); override; overload;
+    Patches: array[0..7] of TglrSprite; //9th patch is element itself (center one)
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
     destructor Destroy(); override;
 
@@ -1076,7 +1077,6 @@ type
     procedure SetVisible(const aVisible: Boolean); override;
   public
     Text: TglrText;
-    constructor Create(); override; overload;
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
     destructor Destroy(); override;
   end;
@@ -1484,11 +1484,13 @@ end;
 procedure TglrGuiLayout.SetWidth(const aWidth: Single);
 begin
   inherited SetWidth(aWidth);
+  UpdatePatchesPosition();
 end;
 
 procedure TglrGuiLayout.SetHeight(const aHeight: Single);
 begin
   inherited SetHeight(aHeight);
+  UpdatePatchesPosition();
 end;
 
 procedure TglrGuiLayout.SetVisible(const aVisible: Boolean);
@@ -1496,42 +1498,49 @@ var
   i: Integer;
 begin
   inherited SetVisible(aVisible);
-  for i := 0 to Length(fPatches) - 1 do
-    fPatches[i].Visible := aVisible;
+  for i := 0 to Length(Patches) - 1 do
+    Patches[i].Visible := aVisible;
 
   for i := 0 to fElements.Count - 1 do
     fElements[i].Visible := aVisible;
 end;
 
-constructor TglrGuiLayout.Create;
-var
-  i: Integer;
+procedure TglrGuiLayout.UpdatePatchesPosition;
 begin
-  inherited Create;
-  for i := 0 to Length(fPatches) - 1 do
-  begin
-    fPatches[i] := TglrSprite.Create();
-    fPatches[i].Visible := False;
-  end;
+  Patches[0].Position := Vec3f(-Width, -Height, 1);
+  Patches[1].Position := Vec3f(0, -Height, 1);
+  Patches[2].Position := Vec3f(Width, -Height, 1);
 
-  fElements := TglrGuiElementsList.Create();
+  Patches[3].Position := Vec3f(-Width, 1, 1);
+  Patches[4].Position := Vec3f(Width, 1, 1);
 
-  fX1 := -1.0;
-  fX2 := -1.0;
-  fY1 := -1.0;
-  fY2 := -1.0;
+  Patches[5].Position := Vec3f(-Width, Height, 1);
+  Patches[6].Position := Vec3f(0, Height, 1);
+  Patches[7].Position := Vec3f(Width, Height, 1);
 end;
 
 constructor TglrGuiLayout.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
 var
   i: Integer;
 begin
-  inherited Create(aWidth, aHeight, aPivotPoint);
-  for i := 0 to Length(fPatches) - 1 do
+  inherited Create(aWidth / 3, aHeight / 3, aPivotPoint * 3 - vec2f(1, 1));
+  for i := 0 to Length(Patches) - 1 do
   begin
-    fPatches[i] := TglrSprite.Create();
-    fPatches[i].Visible := False;
+    Patches[i] := TglrSprite.Create(Width, Height, aPivotPoint * 3 - vec2f(1, 1));
+    Patches[i].Visible := False;
+    Patches[i].Parent := Self;
   end;
+
+  Patches[0].Position := Vec3f(-Width, -Height, 1);
+  Patches[1].Position := Vec3f(0, -Height, 1);
+  Patches[2].Position := Vec3f(Width, -Height, 1);
+
+  Patches[3].Position := Vec3f(-Width, 1, 1);
+  Patches[4].Position := Vec3f(Width, 1, 1);
+
+  Patches[5].Position := Vec3f(-Width, Height, 1);
+  Patches[6].Position := Vec3f(0, Height, 1);
+  Patches[7].Position := Vec3f(Width, Height, 1);
 
   fElements := TglrGuiElementsList.Create();
 end;
@@ -1540,22 +1549,25 @@ destructor TglrGuiLayout.Destroy;
 var
   i: Integer;
 begin
-  for i := 0 to Length(fPatches) - 1 do
-    fPatches[i].Free();
+  for i := 0 to Length(Patches) - 1 do
+    Patches[i].Free();
 
   fElements.Free(False);
   inherited Destroy;
 end;
 
 procedure TglrGuiLayout.SetNinePatchBorders(x1, x2, y1, y2: Single);
+var
+  i: Integer;
 begin
   fX1 := x1;
   fX2 := x2;
   fY1 := y1;
   fY2 := y2;
+  for i := 0 to Length(Patches) - 1 do
+    Patches[i].Visible := True;
   if (NormalTextureRegion) <> nil then
-    SetTextureRegion(NormalTextureRegion);
-  Log.Write(lCritical, 'GuiLayout.SetNinePatchBorders is not implemented');
+    SetTextureRegion(NormalTextureRegion, False);
 end;
 
 procedure TglrGuiLayout.AddElement(aElement: TglrGuiElement);
@@ -1572,36 +1584,47 @@ end;
 
 procedure TglrGuiLayout.SetTextureRegion(aRegion: PglrTextureRegion;
   aAdjustSpriteSize: Boolean);
+
+  function ChangeTextureRegion(aFrom: PglrTextureRegion; x, y, w, h: Single): PglrTextureRegion;
+  begin
+    Result := aFrom;
+    with Result^ do
+    begin
+      tx := x;
+      ty := y;
+      tw := w;
+      th := h;
+    end;
+  end;
+
+var
+  cx1, cx2, cy1, cy2: Single;
+  patchRegion: TglrTextureRegion;
+
 begin
   if (fX2 <= 0) or (fY2 <= 0) then
     inherited SetTextureRegion(aRegion, aAdjustSpriteSize)
   else
-    Log.Write(lCritical, 'GuiLayout.SetTextureRegion with 9-patch is not implemented');
-{    with aRegion^ do
-      if not Rotated then
-      begin
-        Vertices[0].tex := Vec2f(tx + tw, ty + th);
-        Vertices[1].tex := Vec2f(tx + tw, ty);
-        Vertices[2].tex := Vec2f(tx, ty);
-        Vertices[3].tex := Vec2f(tx, ty + th);
-        if aAdjustSpriteSize then
-        begin
-          Width := tw * Texture.Width;
-          Height := th * Texture.Height;
-        end;
-      end
-      else
-      begin
-        Vertices[0].tex := Vec2f(tx, ty + th);
-        Vertices[1].tex := Vec2f(tx + tw, ty + th);
-        Vertices[2].tex := Vec2f(tx + tw, ty);
-        Vertices[3].tex := Vec2f(tx, ty);
-        if aAdjustSpriteSize then
-        begin
-          Width := th * Texture.Height;
-          Height := tw * Texture.Width;
-        end;
-      end;    }
+  begin
+    patchRegion := aRegion^;
+    cx1 := aRegion.tw * fX1;
+    cx2 := aRegion.tw * fX2;
+    cy1 := aRegion.th * fY1;
+    cy2 := aRegion.th * fY2;
+
+    with aRegion^ do
+    begin
+      Patches[0].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty,       cx1,       cy1), aAdjustSpriteSize);
+      Patches[1].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx1, ty,       cx2 - cx1, cy1), aAdjustSpriteSize);
+      Patches[2].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty,       tw - cx2,  cy1), aAdjustSpriteSize);
+      Patches[3].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty + cy1, cx1,       cy2 - cy1), aAdjustSpriteSize);
+      inherited SetTextureRegion(ChangeTextureRegion( @patchRegion, tx + cx1, ty + cy1, cx2 - cx1, cy2 - cy1), aAdjustSpriteSize);
+      Patches[4].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty + cy1, tw - cx2,  cy2 - cy1), aAdjustSpriteSize);
+      Patches[5].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty + cy2, cx1,       th - cy2), aAdjustSpriteSize);
+      Patches[6].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx1, ty + cy2, cx2 - cx1, th - cy2), aAdjustSpriteSize);
+      Patches[7].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty + cy2, tw - cx2,  th - cy2), aAdjustSpriteSize);
+    end;
+  end;
 end;
 
 { TglrGuiButton }
@@ -1610,13 +1633,6 @@ procedure TglrGuiButton.SetVisible(const aVisible: Boolean);
 begin
   inherited SetVisible(aVisible);
   Text.Visible := aVisible;
-end;
-
-constructor TglrGuiButton.Create;
-begin
-  inherited Create;
-  Text := TglrText.Create();
-  Text.Parent := Self;
 end;
 
 constructor TglrGuiButton.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
@@ -1835,22 +1851,6 @@ procedure TglrGuiElement.SetDefaultVertices;
 begin
   inherited SetDefaultVertices;
   UpdateHitBox();
-end;
-
-constructor TglrGuiElement.Create;
-begin
-  inherited Create();
-  UpdateHitBox();
-  fFocused := False;
-  fEnabled := True;
-  fIsMouseOver := False;
-
-  ZIndex := 0;
-
-  NormalTextureRegion := nil;
-  OverTextureRegion := nil;
-  ClickedTextureRegion := nil;
-  DisabledTextureRegion := nil;
 end;
 
 constructor TglrGuiElement.Create(aWidth, aHeight: Single;
@@ -3332,7 +3332,7 @@ constructor TglrNode.Create;
 begin
   inherited Create();
   Matrix.Identity;
-  Visible := True;
+  fVisible := True;
   Parent := nil;
   UpdateVectorsFromMatrix();
 end;
