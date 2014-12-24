@@ -20,6 +20,7 @@ type
     // Gui
     Gui: TglrGuiManager;
     Button1: TglrGuiButton;
+    Layout1: TglrGuiLayout;
 
     // Text checks
     DebugText: TglrText;
@@ -110,8 +111,14 @@ begin
   DebugTextWidthSprite.SetVerticesColor(Vec4f(1.0, 1.0, 1.0, 0.5));
   DebugTextWidthSprite.Parent := DebugText;
 
+  Layout1 := TglrGuiLayout.Create(100, 100, Vec2f(0.5, 0.5));
+  Layout1.SetNinePatchBorders(0.4, 0.6, 0.4, 0.6);
+  Layout1.SetTextureRegion(GuiAtlas.GetRegion('layout_test.png'));
+  Layout1.Position := Vec3f(500, 50, 4);
+
   Gui := TglrGuiManager.Create();
   Gui.Elements.Add(Button1);
+  Gui.Elements.Add(Layout1);
 
   Camera := TglrCamera.Create();
   Camera.ProjectionMode := pmOrtho;
@@ -183,6 +190,15 @@ begin
         DebugText.TextWidth := DebugText.TextWidth + 5.0;
       kMinus:
         DebugText.TextWidth := DebugText.TextWidth - 5.0;
+
+      kA:
+        Layout1.Width := Layout1.Width - 5.0;
+      kD:
+        Layout1.Width := Layout1.Width + 5.0;
+      kW:
+        Layout1.Height := Layout1.Height + 5.0;
+      ks:
+        Layout1.Height := Layout1.Height - 5.0;
     end
 end;
 
@@ -215,6 +231,8 @@ begin
   Camera.Update();
   Material.Bind();
   SpriteBatch.Start();
+    SpriteBatch.Draw(Layout1.Patches);
+    SpriteBatch.Draw(Layout1);
     SpriteBatch.Draw(Button1);
   SpriteBatch.Finish();
 
