@@ -80,6 +80,7 @@ type
     procedure Sort(CompareFunc: TglrListCompareFunc);
     property Count: LongInt read FCount;
     property Items[Index: LongInt]: T read GetItem write SetItem; default;
+    procedure Clear();
   end;
 
   TglrStringList = TglrList<AnsiString>;
@@ -94,6 +95,7 @@ type
     procedure Delete(Item: T; FreeItem: Boolean = False); reintroduce;
     procedure DeleteSafe(Item: T; FreeItem: Boolean = False); reintroduce;
     procedure DeleteSafeByIndex(Index: LongInt; FreeItem: Boolean = False); reintroduce;
+    procedure Clear(FreeItems: Boolean = False);  reintroduce;
   end;
 
   { TglrPool }
@@ -1226,6 +1228,16 @@ begin
   Dec(FCount);
   if Length(FItems) - FCount + 1 > FCapacity then
     SetLength(FItems, Length(FItems) - FCapacity);
+end;
+
+procedure TglrObjectList<T>.Clear(FreeItems: Boolean);
+var
+  i: Integer;
+begin
+  if FreeItems then
+    for i := 0 to FCount - 1 do
+      TObject(FItems[i]).Free();
+  inherited Clear();
 end;
 
 { TglrPool<T> }
@@ -4645,6 +4657,11 @@ procedure TglrList<T>.Sort(CompareFunc: TglrListCompareFunc);
 begin
   if FCount > 1 then
     SortFragment(CompareFunc, 0, FCount - 1);
+end;
+
+procedure TglrList<T>.Clear;
+begin
+  FCount := 0;
 end;
 
 end.
