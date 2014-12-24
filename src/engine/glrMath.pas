@@ -106,6 +106,7 @@ type
     function Dot(const v: TglrVec3f): Single;
     function Normal: TglrVec4f;
     procedure Normalize;
+    procedure Reset();
   end;
 {$ENDREGION}
 
@@ -890,6 +891,15 @@ procedure TglrVec4f.Normalize;
 begin
   Self := Normal;
 end;
+
+procedure TglrVec4f.Reset;
+begin
+  x := 0;
+  y := 0;
+  z := 0;
+  w := 0;
+end;
+
 {$ENDREGION}
 
 {$REGION ' Quaternions '}
