@@ -85,7 +85,7 @@ type
     procedure SetEnabled(const aEnabled: Boolean);
   public
     T: Single;
-    property Enabled: Boolean read Visible write SetEnabled;
+    property Enabled: Boolean read fVisible write SetEnabled;
   end;
 
   { TPopupManager }
@@ -116,7 +116,7 @@ type
     property BonusType: TBonusType read fBonusType write SetBonusType;
     procedure Use();
 
-    property Enabled: Boolean read Visible write SetEnabled;
+    property Enabled: Boolean read fVisible write SetEnabled;
   end;
 
   { TBonusManager }
@@ -147,7 +147,7 @@ type
     BType: TBulletType;
     Owner: TBulletOwner;
     Damage: Integer;
-    property Enabled: Boolean read Visible write SetEnabled;
+    property Enabled: Boolean read fVisible write SetEnabled;
   end;
 
   { TBulletManager }
@@ -194,7 +194,7 @@ type
 
     procedure GetKilled(); virtual;
 
-    property Enabled: Boolean read Visible write SetEnabled;
+    property Enabled: Boolean read fVisible write SetEnabled;
   end;
 
   { TPlayer }
