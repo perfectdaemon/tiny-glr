@@ -1496,12 +1496,16 @@ end;
 procedure TglrGuiLayout.SetWidth(const aWidth: Single);
 begin
   inherited SetWidth(aWidth);
+  Patches[1].Width := Width;
+  Patches[6].Width := Width;
   UpdatePatchesPosition();
 end;
 
 procedure TglrGuiLayout.SetHeight(const aHeight: Single);
 begin
   inherited SetHeight(aHeight);
+  Patches[3].Height := Height;
+  Patches[4].Height := Height;
   UpdatePatchesPosition();
 end;
 
@@ -1519,16 +1523,16 @@ end;
 
 procedure TglrGuiLayout.UpdatePatchesPosition;
 begin
-  Patches[0].Position := Vec3f(-Width, -Height, 1);
-  Patches[1].Position := Vec3f(0, -Height, 1);
-  Patches[2].Position := Vec3f(Width, -Height, 1);
+  Patches[0].Position := Vec3f(-Width / 2, -Height / 2, 1);
+  Patches[1].Position := Vec3f(0, -Height / 2, 1);
+  Patches[2].Position := Vec3f(Width / 2, -Height / 2, 1);
 
-  Patches[3].Position := Vec3f(-Width, 1, 1);
-  Patches[4].Position := Vec3f(Width, 1, 1);
+  Patches[3].Position := Vec3f(-Width / 2, 1, 1);
+  Patches[4].Position := Vec3f(Width / 2, 1, 1);
 
-  Patches[5].Position := Vec3f(-Width, Height, 1);
-  Patches[6].Position := Vec3f(0, Height, 1);
-  Patches[7].Position := Vec3f(Width, Height, 1);
+  Patches[5].Position := Vec3f(-Width / 2, Height / 2, 1);
+  Patches[6].Position := Vec3f(0, Height / 2, 1);
+  Patches[7].Position := Vec3f(Width / 2, Height / 2, 1);
 end;
 
 constructor TglrGuiLayout.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
@@ -1538,21 +1542,12 @@ begin
   inherited Create(aWidth / 3, aHeight / 3, aPivotPoint * 3 - vec2f(1, 1));
   for i := 0 to Length(Patches) - 1 do
   begin
-    Patches[i] := TglrSprite.Create(Width, Height, aPivotPoint * 3 - vec2f(1, 1));
+    Patches[i] := TglrSprite.Create(Width, Height, aPivotPoint{ * 3 - vec2f(1, 1)});
     Patches[i].Visible := False;
     Patches[i].Parent := Self;
   end;
 
-  Patches[0].Position := Vec3f(-Width, -Height, 1);
-  Patches[1].Position := Vec3f(0, -Height, 1);
-  Patches[2].Position := Vec3f(Width, -Height, 1);
-
-  Patches[3].Position := Vec3f(-Width, 1, 1);
-  Patches[4].Position := Vec3f(Width, 1, 1);
-
-  Patches[5].Position := Vec3f(-Width, Height, 1);
-  Patches[6].Position := Vec3f(0, Height, 1);
-  Patches[7].Position := Vec3f(Width, Height, 1);
+  UpdatePatchesPosition();
 
   fElements := TglrGuiElementsList.Create();
 end;
