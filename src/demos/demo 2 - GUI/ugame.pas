@@ -72,7 +72,7 @@ begin
   GuiAtlas := TglrTextureAtlas.Create(
     FileSystem.ReadResource('data/gui.tga'),
     FileSystem.ReadResource('data/gui.atlas'),
-    'tga', 'cheetah');
+    extTga, aextCheetah);
   Material := TglrMaterial.Create(Default.SpriteShader);
   Material.AddTexture(GuiAtlas, 'uDiffuse');
 
@@ -97,24 +97,24 @@ begin
   Button1.Text.Text := 'Click me';
   Button1.Text.Position.z := 1;
 
+  Layout1 := TglrGuiLayout.Create(100, 100, Vec2f(0.5, 0.5));
+  Layout1.SetNinePatchBorders(0.4, 0.6, 0.4, 0.6);
+  Layout1.SetTextureRegion(GuiAtlas.GetRegion('layout_test.png'));
+  Layout1.Position := Vec3f(500, 150, 4);
+
   DebugText := TglrText.Create(UTF8Decode('Проверка очень длинного и малосвязного текста с оченьдлинныминеразрывными словами и прочим'));
   DebugText.Position := Vec3f(350, 250, 10);
   DebugText.TextWidth := 200;
 
   DebugTextPivotPointSprite := TglrSprite.Create(5, 5, Vec2f(0.5, 0.5));
-  DebugTextPivotPointSprite.Position := Vec3f(0, 0, 5);
+  DebugTextPivotPointSprite.Position := Vec3f(0, 0, 10);
   DebugTextPivotPointSprite.SetVerticesColor(Vec4f(1.0, 0.0, 0.0, 1.0));
-  DebugTextPivotPointSprite.Parent := DebugText;
+  DebugTextPivotPointSprite.Parent := Layout1;
 
   DebugTextWidthSprite := TglrSprite.Create(20, 5, Vec2f(0.5, 0.5));
   DebugTextWidthSprite.Position := Vec3f(0, 0, -1);
   DebugTextWidthSprite.SetVerticesColor(Vec4f(1.0, 1.0, 1.0, 0.5));
   DebugTextWidthSprite.Parent := DebugText;
-
-  Layout1 := TglrGuiLayout.Create(100, 100, Vec2f(0.5, 0.5));
-  Layout1.SetNinePatchBorders(0.4, 0.6, 0.4, 0.6);
-  Layout1.SetTextureRegion(GuiAtlas.GetRegion('layout_test.png'));
-  Layout1.Position := Vec3f(500, 50, 4);
 
   Gui := TglrGuiManager.Create();
   Gui.Elements.Add(Button1);

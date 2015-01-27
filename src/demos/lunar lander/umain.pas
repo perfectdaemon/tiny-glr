@@ -167,13 +167,13 @@ begin
   Atlas := TglrTextureAtlas.Create(
     FileSystem.ReadResource('lander/atlas.tga'),
     FileSystem.ReadResource('lander/atlas.atlas'),
-    'tga', 'cheetah');
+    extTga, aextCheetah);
   Material := TglrMaterial.Create(Default.SpriteShader);
   Material.AddTexture(Atlas, 'uDiffuse');
 
   Font := TglrFont.Create(FileSystem.ReadResource('lander/Hattori Hanzo17b.bmp'));
 
-  MoonTexture := TglrTexture.Create(FileSystem.ReadResource('lander/moon.tga'), 'tga', True);
+  MoonTexture := TglrTexture.Create(FileSystem.ReadResource('lander/moon.tga'), extTga, True);
   MoonTexture.SetWrapS(wRepeat);
   MoonTexture.SetWrapR(wRepeat);
   MoonTexture.SetWrapT(wRepeat);

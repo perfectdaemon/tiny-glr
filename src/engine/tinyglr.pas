@@ -266,6 +266,8 @@ type
 
   TglrTexWrap = (wClamp, wRepeat, wClampToEdge, wClampToBorder, wMirrorRepeat);
 
+  TglrTextureExt = (extBmp, extTga);
+
   TglrTexture = class
   protected
     Target: TGLConst;
@@ -281,7 +283,7 @@ type
 
     //constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
     constructor Create(aData: Pointer; aWidth, aHeight: Integer; aFormat: TglrTextureFormat); virtual; overload;
-    constructor Create(aStream: TglrStream; aExt: AnsiString;
+    constructor Create(aStream: TglrStream; aExt: TglrTextureExt;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
     //constructor CreateEmpty2D(aWidth, aHeight, aFormat: TGLConst);
     //todo 1d, 3d
@@ -300,6 +302,8 @@ type
   end;
 
 
+  TglrTextureAtlasExt = (aextCheetah);
+
   { TglrTextureAtlas }
 
   TglrTextureAtlas = class (TglrTexture)
@@ -310,7 +314,7 @@ type
       fRegions: TglrTextureRegionsList;
   public
     constructor Create(aImageStream, aInfoStream: TglrStream;
-      aImageExt, aInfoExt: AnsiString;
+      aImageExt: TglrTextureExt; aInfoExt: TglrTextureAtlasExt;
       aFreeStreamsOnFinish: Boolean = True); virtual;
     destructor Destroy(); override;
 
@@ -1152,6 +1156,11 @@ const
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
 
+  TEXTURE_EXT: array[Low(TglrTextureExt)..High(TglrTextureExt)] of AnsiString =
+    ('bmp', 'tga');
+  TEXTURE_ATLAS_EXT: array[Low(TglrTextureAtlasExt)..High(TglrTextureAtlasExt)] of AnsiString =
+    ('cheetah');
+
 { TglrTextureAtlas }
 
 function ParseLine(const aLine: AnsiString): TglrStringList;
@@ -1522,24 +1531,27 @@ begin
 end;
 
 procedure TglrGuiLayout.UpdatePatchesPosition;
+var
+  pp: TglrVec2f;
 begin
-  Patches[0].Position := Vec3f(-Width / 2, -Height / 2, 1);
-  Patches[1].Position := Vec3f(0, -Height / 2, 1);
-  Patches[2].Position := Vec3f(Width / 2, -Height / 2, 1);
+  pp := Vec2f(0.5, 0.5);
+  Patches[0].Position := Vec3f(-Width * pp.x, -Height * pp.y, 1);
+  Patches[1].Position := Vec3f( 0,            -Height * pp.y, 1);
+  Patches[2].Position := Vec3f( Width * pp.x, -Height * pp.y, 1);
 
-  Patches[3].Position := Vec3f(-Width / 2, 1, 1);
-  Patches[4].Position := Vec3f(Width / 2, 1, 1);
+  Patches[3].Position := Vec3f(-Width * pp.x,              0, 1);
+  Patches[4].Position := Vec3f( Width * pp.x,              0, 1);
 
-  Patches[5].Position := Vec3f(-Width / 2, Height / 2, 1);
-  Patches[6].Position := Vec3f(0, Height / 2, 1);
-  Patches[7].Position := Vec3f(Width / 2, Height / 2, 1);
+  Patches[5].Position := Vec3f(-Width * pp.x,  Height * pp.y, 1);
+  Patches[6].Position := Vec3f( 0,             Height * pp.y, 1);
+  Patches[7].Position := Vec3f( Width * pp.x,  Height * pp.y, 1);
 end;
 
 constructor TglrGuiLayout.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
 var
   i: Integer;
 begin
-  inherited Create(aWidth / 3, aHeight / 3, aPivotPoint * 3 - vec2f(1, 1));
+  inherited Create(aWidth, aHeight, aPivotPoint * 3 - vec2f(1, 1));
   for i := 0 to Length(Patches) - 1 do
   begin
     Patches[i] := TglrSprite.Create(Width, Height, aPivotPoint{ * 3 - vec2f(1, 1)});
@@ -2102,13 +2114,14 @@ begin
 end;
 
 constructor TglrTextureAtlas.Create(aImageStream, aInfoStream: TglrStream;
-  aImageExt, aInfoExt: AnsiString; aFreeStreamsOnFinish: Boolean);
+  aImageExt: TglrTextureExt; aInfoExt: TglrTextureAtlasExt;
+  aFreeStreamsOnFinish: Boolean);
 var
   lines, list: TglrStringList;
   i: Integer;
   p: PglrTextureRegion;
 begin
-  if aInfoExt = 'cheetah' then
+  if aInfoExt = aextCheetah then
   begin
     inherited Create(aImageStream, aImageExt, aFreeStreamsOnFinish);
     fRegions := TglrTextureRegionsList.Create(8);
@@ -2138,7 +2151,7 @@ begin
       aInfoStream.Free();
   end
   else
-    Log.Write(lCritical, 'TextureAtlas: unrecognizable info file extension: `' + aInfoExt + '`');
+    Log.Write(lCritical, 'TextureAtlas: unrecognizable info file extension: `' + TEXTURE_ATLAS_EXT[aInfoExt] + '`');
 end;
 
 destructor TglrTextureAtlas.Destroy;
@@ -2464,7 +2477,7 @@ begin
   else
     Material := TglrMaterial.Create(TglrShaderProgram(nil));
 
-  Texture := TglrTexture.Create(aStream, 'bmp', False);
+  Texture := TglrTexture.Create(aStream, extBmp, False);
   Material.AddTexture(Texture, 'uDiffuse');
 
   data := LoadFontData(aStream, charCount);
@@ -4444,7 +4457,7 @@ begin
   Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load completed');
 end;
 
-constructor TglrTexture.Create(aStream: TglrStream; aExt: AnsiString;
+constructor TglrTexture.Create(aStream: TglrStream; aExt: TglrTextureExt;
   aFreeStreamOnFinish: Boolean);
 var
   data: Pointer;
@@ -4453,7 +4466,7 @@ var
 
   aFormat: TglrTextureFormat;
 begin
-  data := LoadTexture(aStream, aExt, iFormat, cFormat, dType, pSize, Self.Width, Self.Height);
+  data := LoadTexture(aStream, TEXTURE_EXT[aExt], iFormat, cFormat, dType, pSize, Self.Width, Self.Height);
   case cFormat of
     GL_BGR:  aFormat := tfBGR8;
     GL_BGRA: aFormat := tfBGRA8;

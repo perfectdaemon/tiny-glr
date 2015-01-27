@@ -141,7 +141,8 @@ const
 var
   i: Integer;
 begin
-  atlas := TglrTextureAtlas.Create(FileSystem.ReadResource('data/atlas.tga'), FileSystem.ReadResource('data/atlas.atlas'), 'tga', 'cheetah');
+  atlas := TglrTextureAtlas.Create(FileSystem.ReadResource('data/atlas.tga'),
+  FileSystem.ReadResource('data/atlas.atlas'), extTga, aextCheetah);
 
   Batch := TglrSpriteBatch.Create();
   SetLength(Sprites, count);
