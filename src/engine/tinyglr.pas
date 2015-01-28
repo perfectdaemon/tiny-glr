@@ -145,6 +145,9 @@ type
   end;
 
 
+  function StrTrim(const s: AnsiString): AnsiString;
+  function StrSplit(aString: AnsiString; aSeparator: AnsiChar): TglrStringList;
+
   { FileSystem }
 
 const
@@ -217,6 +220,7 @@ type
     class function ToString(aVal: TglrVec2f): AnsiString; overload;
     class function ToString(aVal: TglrVec3f): AnsiString; overload;
     class function ToString(aVal: TglrVec4f): AnsiString; overload;
+    class function ToString(aVal: Pointer): AnsiString; overload;
     class function ToInt(aStr: AnsiString; aDefault: Integer = -1): Integer; overload;
     class function ToFloat(aStr: AnsiString; aDefault: Single = -1.0): Single; overload;
   end;
@@ -901,6 +905,10 @@ type
 
   {$ENDREGION}
 
+  // RawGlr - Internal framework format
+  // Obj    - Wavefront .obj format
+  TglrMeshFormat = (mfRawGlr, mfObj);
+
   TglrMesh = class (TglrNode)
 
   end;
@@ -1160,6 +1168,33 @@ const
     ('bmp', 'tga');
   TEXTURE_ATLAS_EXT: array[Low(TglrTextureAtlasExt)..High(TglrTextureAtlasExt)] of AnsiString =
     ('cheetah');
+
+function StrTrim(const s: AnsiString): AnsiString;
+var
+  Ofs, Len: sizeint;
+begin
+  Len := Length(S);
+  while (Len > 0) and (S[Len] <= ' ') do
+    Dec(Len);
+  Ofs := 1;
+  while (Ofs <= Len) and (S[Ofs] <= ' ') do
+    Inc(Ofs);
+  Result := Copy(S, Ofs, 1 + Len - Ofs);
+end;
+
+function StrSplit(aString: AnsiString; aSeparator: AnsiChar): TglrStringList;
+var
+  i, start: Integer;
+begin
+  Result := TglrStringList.Create();
+  start := 0;
+  for i := 1 to Length(aString) do
+    if aString[i] = aSeparator then
+    begin
+      Result.Add(Copy(aString, start + 1, i - start - 1));
+      start := i;
+    end;
+end;
 
 { TglrTextureAtlas }
 
@@ -3230,6 +3265,11 @@ class function Convert.ToString(aVal: TglrVec4f): AnsiString;
 begin
   Result := ToString(aVal.x) + '|' + ToString(aVal.y) + '|' + ToString(aVal.z)
    + '|' + ToString(aVal.w);
+end;
+
+class function Convert.ToString(aVal: Pointer): AnsiString;
+begin
+  Result := '#' + Convert.ToString(Integer(aVal));
 end;
 
 class function Convert.ToInt(aStr: AnsiString; aDefault: Integer): Integer;
