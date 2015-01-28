@@ -13,7 +13,7 @@ type
     Camera, CameraHud: TglrCamera;
     Material: TglrMaterial;
 
-    meshData: array of TglrVertexP3T2N3;
+    meshData: array of TglrVertexP3T2C4;
     meshBuffer: TglrVertexBuffer;
     meshIBuffer: TglrIndexBuffer;
 
@@ -64,6 +64,8 @@ const
 
                                    23, 20, 21, //bottom
                                    23, 22, 20);
+var
+  i: Integer;
 begin
   SetLength(meshData, 24);
   meshData[0].vec := Vec3f(CubeSize/2, CubeSize/2, CubeSize/2);
@@ -95,6 +97,8 @@ begin
   meshData[21].vec := Vec3f(-CubeSize/2, -CubeSize/2, CubeSize/2); //3
   meshData[22].vec := Vec3f(CubeSize/2, -CubeSize/2, -CubeSize/2); //6
   meshData[23].vec := Vec3f(-CubeSize/2, -CubeSize/2, -CubeSize/2); //7
+  for i := 0 to 23 do
+    meshData[i].col := Vec4f(1, 1, 1, 1);
 
   meshData[0].tex := Vec2f(1, 1);
   meshData[1].tex := Vec2f(0, 1);
@@ -126,7 +130,7 @@ begin
   meshData[22].tex := Vec2f(1, 0);
   meshData[23].tex := Vec2f(0, 0);
 
-  meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2Nor3, uStaticDraw);
+  meshBuffer := TglrVertexBuffer.Create(@meshData[0], 24, vfPos3Tex2Col4, uStaticDraw);
   meshIBuffer := TglrIndexBuffer.Create(@indices[0], 36, ifByte);
 end;
 
@@ -218,11 +222,12 @@ end;
 
 procedure TGame.OnRender;
 begin
-  Material.Bind();
   Camera.Update();
+  Material.Bind();
   RenderMesh();
 
   CameraHud.Update();
+  Material.Bind();
   Batch.Start();
   Batch.Draw(Sprites);
   Batch.Finish();
