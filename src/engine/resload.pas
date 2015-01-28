@@ -7,7 +7,30 @@ unit resload;
 interface
 
 uses
-  ogl, tinyglr;
+  ogl, tinyglr, glrMath;
+
+type
+
+  TglrObjFace = record
+    v, vt, vn: array[0..2] of LongWord;
+  end;
+
+  TglrRawMeshData_Obj = class
+  public
+    v, vn: array of TglrVec3f;
+    vt: array of TglrVec2f;
+    f: array of TglrObjFace;
+  end;
+
+  { TglrMeshData }
+
+  TglrMeshData = record
+    vfFormat: TglrVertexFormat;
+    ifFormat: TglrIndexFormat;
+    vCount, iCount: LongWord;
+    vData, iData: Pointer;
+    procedure FreeMemory();
+  end;
 
 function LoadTexture(const Stream: TglrStream; ext: String;
   out iFormat,cFormat,dType: TGLConst;
@@ -18,6 +41,7 @@ function LoadFontData(const Stream: TglrStream; out CharCount: LongWord): Pointe
 
 function LoadText(const Stream: TglrStream): PAnsiChar;
 function LoadStringList(const Stream: TglrStream): TglrStringList;
+function LoadMesh(const Stream: TglrStream; aFormat: TglrMeshFormat): TglrMeshData;
 
 implementation
 
@@ -398,5 +422,149 @@ begin
     end;
 end;
 
+function LoadRawMeshData_Obj(const Stream: TglrStream): TglrRawMeshData_Obj;
+
+  function GetVec3(s: TglrStringList): TglrVec3f;
+  begin
+    Result := Vec3f(Convert.ToFloat(s[1]),
+      Convert.ToFloat(s[2]),
+      Convert.ToFloat(s[3]));
+  end;
+
+  function GetVec2(s: TglrStringList): TglrVec2f;
+  begin
+    Result := Vec2f(Convert.ToFloat(s[1]),
+      Convert.ToFloat(s[2]));
+  end;
+
+  function GetFace(s: TglrStringList): TglrObjFace;
+  var
+    s1: TglrStringList;
+    i: Integer;
+  begin
+    for i := 0 to 2 do
+    begin
+      s1 := StrSplit(s[1 + i], '/');
+      Result.v[i]  := Convert.ToInt(s1[1], 0);
+      Result.vt[i] := Convert.ToInt(s1[2], 0);
+      Result.vn[i] := Convert.ToInt(s1[3], 0);
+      s1.Free();
+    end;
+  end;
+
+var
+  stringList, splitStr: TglrStringList;
+  firstChar, secondChar: AnsiChar;
+  i: Integer;
+  vCount, vtCount, vnCount, fCount: Integer;
+begin
+  stringList := LoadStringList(Stream);
+  Result := TglrRawMeshData_Obj.Create();
+
+  vCount := 0;
+  vtCount := 0;
+  vnCount := 0;
+  fCount := 0;
+  // first run - count array length
+  for i := 0 to stringList.Count - 1 do
+  begin
+    firstChar := StrTrim(stringList[i])[1];
+    secondChar := StrTrim(stringList[i])[2];
+
+    case firstChar of
+      '#': continue;
+      'f': fCount += 1;
+      'v':
+        case secondChar of
+          ' ': vCount += 1;
+          'n': vnCount += 1;
+          't': vtCount += 1;
+        end;
+    end;
+  end;
+
+  SetLength(Result.v, vCount + 1);
+  SetLength(Result.vn, vnCount + 1);
+  SetLength(Result.vt, vtCount + 1);
+  SetLength(Result.f, fCount + 1);
+
+  // second run - read information
+  vCount := 1;
+  vtCount := 1;
+  vnCount := 1;
+  fCount := 1;
+  for i := 0 to stringList.Count - 1 do
+  begin
+    firstChar := StrTrim(stringList[i])[1];
+    if (firstChar = '#') then
+      continue;
+
+    splitStr := StrSplit(StrTrim(stringList[i]), ' ');
+    if (splitStr[0] = 'v') then
+    begin
+      Result.v[vCount] := GetVec3(splitStr);
+      vCount += 1;
+    end
+    else if (splitStr[0] = 'vn') then
+    begin
+      Result.vn[vnCount] := GetVec3(splitStr);
+      vnCount += 1;
+    end
+    else if (splitStr[0] = 'vt') then
+    begin
+      Result.vt[vtCount] := GetVec2(splitStr);
+      vtCount += 1;
+    end
+    else if (splitStr[0] = 'f') then
+    begin
+      Result.f[fCount] := GetFace(splitStr);
+      fCount += 1;
+    end;
+
+    splitStr.Free();
+  end;
+end;
+
+function MeshDataFromRawMeshData_Obj(Raw: TglrRawMeshData_Obj): TglrMeshData;
+var
+  i: Integer;
+begin
+  Log.Write(lCritical, 'MeshDataFromRawMeshData_Obj is not implemented');
+  for i := 0 to Length(Raw.f) - 1 do
+  begin
+
+  end;
+end;
+
+function LoadMesh(const Stream: TglrStream; aFormat: TglrMeshFormat): TglrMeshData;
+var
+  raw: TglrRawMeshData_Obj;
+begin
+  case aFormat of
+    mfObj:
+    begin
+      Log.Write(lInformation, 'Mesh load: start loading .obj stream ' + Convert.ToString(Pointer(Stream)));
+      raw := LoadRawMeshData_Obj(Stream);
+      Log.Write(lInformation, 'Mesh load: raw data loaded successfully');
+      Log.Write(lInformation, 'Mesh load: start converting raw data to mesh data');
+      Result := MeshDataFromRawMeshData_Obj(raw);
+      Log.Write(lInformation, 'Mesh load: converted successfully');
+      raw.Free();
+      Log.Write(lInformation, 'Mesh load: successfully loaded ' + Convert.ToString(Pointer(Stream)));
+    end;
+    mfRawGlr:
+    begin
+      Log.Write(lCritical, 'LoadMesh(RawGlr) is not implemented');
+    end;
+  end;
+end;
+
+{ TglrMeshData }
+
+procedure TglrMeshData.FreeMemory;
+begin
+  FreeMem(vData);
+  FreeMem(iData);
+end;
 
 end.
