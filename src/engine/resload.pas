@@ -9,28 +9,48 @@ interface
 uses
   ogl, tinyglr, glrMath;
 
+
 type
-
-  TglrObjFace = record
-    v, vt, vn: array[0..2] of LongWord;
+  BITMAPFILEHEADER = packed record
+    bfType : Word;
+    bfSize : LongWord;
+    bfReserved1 : Word;
+    bfReserved2 : Word;
+    bfOffBits : LongWord;
   end;
 
-  TglrRawMeshData_Obj = class
-  public
-    v, vn: array of TglrVec3f;
-    vt: array of TglrVec2f;
-    f: array of TglrObjFace;
+  BITMAPINFOHEADER = record
+    biSize : LongWord;
+    biWidth : LongInt;
+    biHeight : LongInt;
+    biPlanes : Word;
+    biBitCount : Word;
+    biCompression : LongWord;
+    biSizeImage : LongWord;
+    biXPelsPerMeter : LongInt;
+    biYPelsPerMeter : LongInt;
+    biClrUsed : LongWord;
+    biClrImportant : LongWord;
   end;
 
-  { TglrMeshData }
-
-  TglrMeshData = record
-    vfFormat: TglrVertexFormat;
-    ifFormat: TglrIndexFormat;
-    vCount, iCount: LongWord;
-    vData, iData: Pointer;
-    procedure FreeMemory();
+type
+   TTGAHeader = packed record
+     IDLength          : Byte;
+     ColorMapType      : Byte;
+     ImageType         : Byte;
+     ColorMapOrigin    : Word;
+     ColorMapLength    : Word;
+     ColorMapEntrySize : Byte;
+     XOrigin           : Word;
+     YOrigin           : Word;
+     Width             : Word;
+     Height            : Word;
+     PixelSize         : Byte;
+     ImageDescriptor   : Byte;
   end;
+
+   PByteArray = ^TByteArray;
+   TByteArray = Array[0..32767] of Byte;
 
 function LoadTexture(const Stream: TglrStream; ext: String;
   out iFormat,cFormat,dType: TGLConst;
@@ -71,28 +91,6 @@ begin
   FreeMem(tempBuf);
 end;
 
-type
-  BITMAPFILEHEADER = packed record
-    bfType : Word;
-    bfSize : LongWord;
-    bfReserved1 : Word;
-    bfReserved2 : Word;
-    bfOffBits : LongWord;
-  end;
-
-  BITMAPINFOHEADER = record
-    biSize : LongWord;
-    biWidth : LongInt;
-    biHeight : LongInt;
-    biPlanes : Word;
-    biBitCount : Word;
-    biCompression : LongWord;
-    biSizeImage : LongWord;
-    biXPelsPerMeter : LongInt;
-    biYPelsPerMeter : LongInt;
-    biClrUsed : LongWord;
-    biClrImportant : LongWord;
-  end;
 
 function myLoadBMPTexture(Stream: TglrStream; out Format : TGLConst; out Width, Height: Integer): Pointer;
 var
@@ -144,25 +142,6 @@ end;
 {------------------------------------------------------------------}
 {  Loads 24 and 32bpp (alpha channel) TGA textures                 }
 {------------------------------------------------------------------}
-
-type
-   TTGAHeader = packed record
-     IDLength          : Byte;
-     ColorMapType      : Byte;
-     ImageType         : Byte;
-     ColorMapOrigin    : Word;
-     ColorMapLength    : Word;
-     ColorMapEntrySize : Byte;
-     XOrigin           : Word;
-     YOrigin           : Word;
-     Width             : Word;
-     Height            : Word;
-     PixelSize         : Byte;
-     ImageDescriptor   : Byte;
-  end;
-
-   PByteArray = ^TByteArray;
-   TByteArray = Array[0..32767] of Byte;
 
 function myLoadTGATexture(Stream: TglrStream; out Format: TGLConst; out Width, Height: Integer): Pointer;
 var
@@ -422,7 +401,7 @@ begin
     end;
 end;
 
-function LoadRawMeshData_Obj(const Stream: TglrStream): TglrRawMeshData_Obj;
+function LoadRawMeshData_Obj(const Stream: TglrStream): TglrRawMeshData_ObjList;
 
   function GetVec3(s: TglrStringList): TglrVec3f;
   begin
@@ -445,9 +424,9 @@ function LoadRawMeshData_Obj(const Stream: TglrStream): TglrRawMeshData_Obj;
     for i := 0 to 2 do
     begin
       s1 := StrSplit(s[1 + i], '/');
-      Result.v[i]  := Convert.ToInt(s1[1], 0);
-      Result.vt[i] := Convert.ToInt(s1[2], 0);
-      Result.vn[i] := Convert.ToInt(s1[3], 0);
+      Result.v[i]  := Convert.ToInt(s1[0], 0) - 1;
+      Result.vt[i] := Convert.ToInt(s1[1], 0) - 1;
+      Result.vn[i] := Convert.ToInt(s1[2], 0) - 1;
       s1.Free();
     end;
   end;
@@ -455,97 +434,109 @@ function LoadRawMeshData_Obj(const Stream: TglrStream): TglrRawMeshData_Obj;
 var
   stringList, splitStr: TglrStringList;
   firstChar, secondChar: AnsiChar;
-  i: Integer;
-  vCount, vtCount, vnCount, fCount: Integer;
+  i, j: Integer;
 begin
   stringList := LoadStringList(Stream);
-  Result := TglrRawMeshData_Obj.Create();
+  Result := TglrRawMeshData_ObjList.Create(1);
 
-  vCount := 0;
-  vtCount := 0;
-  vnCount := 0;
-  fCount := 0;
-  // first run - count array length
+  j := Result.Add(TglrRawMeshData_Obj.Create());
   for i := 0 to stringList.Count - 1 do
   begin
-    firstChar := StrTrim(stringList[i])[1];
-    secondChar := StrTrim(stringList[i])[2];
+    splitStr := StrSplit(StrTrim(stringList[i]), ' '#9);
 
-    case firstChar of
-      '#': continue;
-      'f': fCount += 1;
-      'v':
-        case secondChar of
-          ' ': vCount += 1;
-          'n': vnCount += 1;
-          't': vtCount += 1;
-        end;
-    end;
-  end;
-
-  SetLength(Result.v, vCount + 1);
-  SetLength(Result.vn, vnCount + 1);
-  SetLength(Result.vt, vtCount + 1);
-  SetLength(Result.f, fCount + 1);
-
-  // second run - read information
-  vCount := 1;
-  vtCount := 1;
-  vnCount := 1;
-  fCount := 1;
-  for i := 0 to stringList.Count - 1 do
-  begin
-    firstChar := StrTrim(stringList[i])[1];
-    if (firstChar = '#') then
-      continue;
-
-    splitStr := StrSplit(StrTrim(stringList[i]), ' ');
-    if (splitStr[0] = 'v') then
-    begin
-      Result.v[vCount] := GetVec3(splitStr);
-      vCount += 1;
-    end
-    else if (splitStr[0] = 'vn') then
-    begin
-      Result.vn[vnCount] := GetVec3(splitStr);
-      vnCount += 1;
-    end
-    else if (splitStr[0] = 'vt') then
-    begin
-      Result.vt[vtCount] := GetVec2(splitStr);
-      vtCount += 1;
-    end
+    if (splitStr[0] = '#') then
+      continue
     else if (splitStr[0] = 'f') then
-    begin
-      Result.f[fCount] := GetFace(splitStr);
-      fCount += 1;
-    end;
-
+      Result[j].f.Add(GetFace(splitStr))
+    else if (splitStr[0] = 'v') then
+      Result[j].v.Add(GetVec3(splitStr))
+    else if (splitStr[0] = 'vn') then
+      Result[j].vn.Add(GetVec3(splitStr))
+    else if (splitStr[0] = 'vt') then
+      Result[j].vt.Add(GetVec2(splitStr))
+    else if (splitStr[0] = 'o') then
+      if (Result[j].f.Count = 0) then
+        Result[j].Name := splitStr[1]
+      else
+      begin
+        j := Result.Add(TglrRawMeshData_Obj.Create());
+        Result[j].Name := splitStr[1];
+      end;
     splitStr.Free();
   end;
+  stringList.Free();
 end;
 
-function MeshDataFromRawMeshData_Obj(Raw: TglrRawMeshData_Obj): TglrMeshData;
+function MeshDataFromRawMeshData_Obj(Raw: TglrRawMeshData_ObjList): TglrMeshData;
 var
-  i: Integer;
-begin
-  Log.Write(lCritical, 'MeshDataFromRawMeshData_Obj is not implemented');
-  for i := 0 to Length(Raw.f) - 1 do
-  begin
+  i, j: Integer;
 
+  verts: TglrObjIndexList;
+  vertices: TglrVertexP3T2N3List;
+  indices: TglrLongWordList;
+
+  function GetVertIndex(aRawObjInd: Integer; V, VN, VT: LongWord): LongWord;
+  var
+    k: Integer;
+    nPTN: ^TglrVertexP3T2N3;
+    nVert: ^TglrObjIndex;
+  begin
+    for k := 0 to verts.Count -1 do
+      if (verts[k].v = V) and (verts[k].vn = VN) and (verts[k].vt = VT) then
+        Exit(k);
+
+    New(nVert);
+    nVert^.v := V;
+    nVert^.vn := VN;
+    nVert^.vt := VT;
+    Result := verts.Add(nVert^);
+    Dispose(nVert);
+
+    New(nPTN);
+    nPTN^.vec := Raw[aRawObjInd].v[v];
+    nPTN^.nor := Raw[aRawObjInd].vn[vn];
+    nPTN^.tex := Raw[aRawObjInd].vt[vt];
+    vertices.Add(nPTN^);
+    Dispose(nPTN);
   end;
+
+begin
+  vertices := TglrVertexP3T2N3List.Create(Raw[0].v.Count);
+  indices := TglrLongWordList.Create(Raw[0].v.Count);
+  verts := TglrObjIndexList.Create(Raw[0].v.Count);
+
+  SetLength(Result.subMeshes, Raw.Count);
+  for i := 0 to Raw.Count - 1 do
+  begin
+    Result.subMeshes[i].name := Raw[i].Name;
+    Result.subMeshes[i].start := indices.Count;
+    Result.subMeshes[i].count := Raw[i].f.Count * 3;
+    for j := 0 to Raw[i].f.Count - 1 do
+    begin
+      indices.Add(GetVertIndex(i, Raw[i].f[j].v[0], Raw[i].f[j].vn[0], Raw[i].f[j].vt[0]));
+      indices.Add(GetVertIndex(i, Raw[i].f[j].v[1], Raw[i].f[j].vn[1], Raw[i].f[j].vt[1]));
+      indices.Add(GetVertIndex(i, Raw[i].f[j].v[2], Raw[i].f[j].vn[2], Raw[i].f[j].vt[2]));
+    end;
+  end;
+
+  Result.iBuffer := TglrIndexBuffer.Create(@indices, indices.Count, ifInt);
+  Result.vBuffer := TglrVertexBuffer.Create(@vertices, vertices.Count, vfPos3Tex2Nor3, uStaticDraw);
+
+  verts.Free();
+  vertices.Free();
+  indices.Free();
 end;
 
 function LoadMesh(const Stream: TglrStream; aFormat: TglrMeshFormat): TglrMeshData;
 var
-  raw: TglrRawMeshData_Obj;
+  raw: TglrRawMeshData_ObjList;
 begin
   case aFormat of
     mfObj:
     begin
       Log.Write(lInformation, 'Mesh load: start loading .obj stream ' + Convert.ToString(Pointer(Stream)));
       raw := LoadRawMeshData_Obj(Stream);
-      Log.Write(lInformation, 'Mesh load: raw data loaded successfully');
+      Log.Write(lInformation, 'Mesh load: raw data loaded successfully. Total objects: ' + Convert.ToString(raw.Count));
       Log.Write(lInformation, 'Mesh load: start converting raw data to mesh data');
       Result := MeshDataFromRawMeshData_Obj(raw);
       Log.Write(lInformation, 'Mesh load: converted successfully');
@@ -557,14 +548,6 @@ begin
       Log.Write(lCritical, 'LoadMesh(RawGlr) is not implemented');
     end;
   end;
-end;
-
-{ TglrMeshData }
-
-procedure TglrMeshData.FreeMemory;
-begin
-  FreeMem(vData);
-  FreeMem(iData);
 end;
 
 end.

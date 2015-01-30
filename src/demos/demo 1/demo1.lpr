@@ -1,7 +1,7 @@
 program demo1;
 
 uses
-  tinyglr, glrMath, ogl, sys_win;
+  tinyglr, glrMath, ogl, sys_win, resload;
 
 type
 
@@ -197,8 +197,8 @@ begin
 
   if (aType = itTouchMove) and (aKey = kLeftButton) then
   begin
-    Camera.Rotate((x - dx) * deg2rad, Vec3f(0, 1, 0));
-    Camera.Rotate((y - dy) * deg2rad, Camera.Right);
+    Camera.Rotate((x - dx) * deg2rad * 0.2, Vec3f(0, 1, 0));
+    Camera.Rotate((y - dy) * deg2rad * 0.2, Camera.Right);
     dx := X;
     dy := Y;
   end;
@@ -228,9 +228,9 @@ begin
 
   CameraHud.Update();
   Material.Bind();
-  Batch.Start();
-  Batch.Draw(Sprites);
-  Batch.Finish();
+//  Batch.Start();
+//  Batch.Draw(Sprites);
+//  Batch.Finish();
   FontBatch.Start();
   FontBatch.Draw(Text);
   FontBatch.Finish();
@@ -255,6 +255,7 @@ begin
   Camera := TglrCamera.Create();
   Camera.SetCamera(Vec3f(5, 0, 5), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
   Camera.ProjectionMode := pmPerspective;
+  Camera.Viewport(0, 0, Render.Width, Render.Height, 35, 0.1, 1000);
 
   CameraHud := TglrCamera.Create();
   CameraHud.SetCamera(Vec3f(0, 0, 100), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
@@ -269,6 +270,8 @@ begin
   CreateSprites();
   CreateFont();
   Material.AddTexture(atlas, 'uDiffuse');
+
+  LoadMesh(FileSystem.ReadResource('data/Lara_Croft_default.obj', False), mfObj);
 end;
 
 procedure TGame.OnUpdate(const dt: Double);

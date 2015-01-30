@@ -85,6 +85,7 @@ type
 
   TglrStringList = TglrList<AnsiString>;
   TglrWordList = TglrList<Word>;
+  TglrLongWordList = TglrList<LongWord>;
 
   { TglrObjectList }
 
@@ -146,7 +147,8 @@ type
 
 
   function StrTrim(const s: AnsiString): AnsiString;
-  function StrSplit(aString: AnsiString; aSeparator: AnsiChar): TglrStringList;
+  function StrSplit(aString: AnsiString; aSeparator: AnsiChar): TglrStringList; overload;
+  function StrSplit(aString: AnsiString; aSeparators: AnsiString): TglrStringList; overload;
 
   { FileSystem }
 
@@ -255,6 +257,7 @@ type
     tex: TglrVec2f;
     nor: TglrVec3f;
   end;
+  TglrVertexP3T2N3List = TglrList<TglrVertexP3T2N3>;
 
   TglrVertexP3T2C4 = packed record
     vec: TglrVec3f;
@@ -905,6 +908,52 @@ type
 
   {$ENDREGION}
 
+
+  TglrObjFace = record
+    v, vt, vn: array[0..2] of LongWord;
+  end;
+
+  { TglrRawMeshData_Obj }
+
+  TglrVec3fList = TglrList<TglrVec3f>;
+  TglrVec2fList = TglrList<TglrVec2f>;
+  TglrObjFaceList = TglrList<TglrObjFace>;
+
+  TglrRawMeshData_Obj = class
+  public
+    Name: AnsiString;
+    v, vn: TglrVec3fList;
+    vt: TglrVec2fList;
+    f: TglrObjFaceList;
+
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+  end;
+
+  TglrRawMeshData_ObjList = TglrObjectList<TglrRawMeshData_Obj>;
+
+  { TglrMeshData }
+
+  TglrObjIndex = record
+    v, vn, vt: LongWord;
+  end;
+
+  TglrObjIndexList = TglrList<TglrObjIndex>;
+
+
+  TglrSubMeshData = record
+    name: AnsiString;
+    start, count: LongWord;
+  end;
+
+  TglrMeshData = record
+    vBuffer: TglrVertexBuffer;
+    iBuffer: TglrIndexBuffer;
+    vData, iData: Pointer;
+    subMeshes: array of TglrSubMeshData;
+    procedure FreeMemory();
+  end;
+
   // RawGlr - Internal framework format
   // Obj    - Wavefront .obj format
   TglrMeshFormat = (mfRawGlr, mfObj);
@@ -1182,18 +1231,35 @@ begin
   Result := Copy(S, Ofs, 1 + Len - Ofs);
 end;
 
-function StrSplit(aString: AnsiString; aSeparator: AnsiChar): TglrStringList;
+function StrSplit(aString: AnsiString; aSeparator: AnsiChar): TglrStringList; overload;
+begin
+  Result := StrSplit(aString, AnsiString(aSeparator));
+end;
+
+function StrSplit(aString: AnsiString; aSeparators: AnsiString): TglrStringList; overload;
+
+  function CheckSeparators(Char: AnsiChar): Boolean;
+  var
+    i: Integer;
+  begin
+    Result := False;
+    for i := 1 to Length(aSeparators) do
+      if (Char = aSeparators[i]) then
+        Exit(True);
+  end;
+
 var
   i, start: Integer;
 begin
   Result := TglrStringList.Create();
   start := 0;
   for i := 1 to Length(aString) do
-    if aString[i] = aSeparator then
+    if CheckSeparators(aString[i]) then
     begin
       Result.Add(Copy(aString, start + 1, i - start - 1));
       start := i;
     end;
+  Result.Add(Copy(aString, start + 1, Length(aString)));
 end;
 
 { TglrTextureAtlas }
@@ -1533,6 +1599,35 @@ begin
     SetLength(fKeys, Length(fKeys) - fCapacity);
     SetLength(fValues, Length(fValues) - fCapacity);
   end;
+end;
+
+{ TglrRawMeshData_Obj }
+
+constructor TglrRawMeshData_Obj.Create;
+begin
+  inherited;
+  Name := '';
+  v := TglrVec3fList.Create(32);
+  vn := TglrVec3fList.Create(32);
+  vt := TglrVec2fList.Create(32);
+  f := TglrObjFaceList.Create(32);
+end;
+
+destructor TglrRawMeshData_Obj.Destroy;
+begin
+  v.Free();
+  vn.Free();
+  vt.Free();
+  f.Free();
+  inherited Destroy;
+end;
+
+{ TglrMeshData }
+
+procedure TglrMeshData.FreeMemory;
+begin
+  FreeMem(vData);
+  FreeMem(iData);
 end;
 
 { TglrGuiLayout }
