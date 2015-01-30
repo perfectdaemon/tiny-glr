@@ -1,0 +1,9 @@
+varying vec2 texCoord0;
+uniform sampler2D uDiffuse;
+
+void main(void)
+{
+  gl_FragColor = texture2D( uDiffuse, texCoord0 );
+  if (gl_FragColor.a < 0.001)
+    discard;
+}
