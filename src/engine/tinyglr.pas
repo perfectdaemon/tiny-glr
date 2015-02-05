@@ -275,10 +275,10 @@ type
   TglrVertexAtrib = (vaCoord = 0, vaNormal = 1, vaTexCoord0 = 2, vaTexCoord1 = 3, vaColor = 4{, ...});
 
 const
-  VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
+  VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of LongWord =
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3), SizeOf(TglrVertexP3T2C4));
 
-  IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
+  IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of LongWord =
     (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
 
 type
