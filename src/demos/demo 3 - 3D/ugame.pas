@@ -102,7 +102,7 @@ begin
   end;
 
   if (aType = itWheel) then
-    Camera.Translate(0, 0, -Sign(10 * aOtherParam));
+    Camera.Translate(0, 0, -Sign(2 * aOtherParam));
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
@@ -120,7 +120,7 @@ begin
   else if (Core.Input.KeyDown[kD]) then
     v.y := 1;
 
-  Camera.Translate(0, v.y * 40 * dt, v.x * 40 * dt);
+  Camera.Translate(0, v.y * 15 * dt, v.x * 15 * dt);
 end;
 
 procedure TGame.OnRender;
