@@ -9,6 +9,20 @@ interface
 uses
   ogl, tinyglr, glrMath;
 
+function LoadTexture(const Stream: TglrStream; ext: String;
+  out iFormat,cFormat,dType: TGLConst;
+  out pSize: Integer;
+  out Width, Height: Integer): Pointer;
+
+function LoadFontData(const Stream: TglrStream; out CharCount: LongWord): Pointer;
+
+function LoadText(const Stream: TglrStream): PAnsiChar;
+function LoadStringList(const Stream: TglrStream): TglrStringList;
+function LoadMesh(const Stream: TglrStream; aFormat: TglrMeshFormat): TglrMeshData;
+
+function SaveMesh(const meshData: TglrMeshData; aFormat: TglrMeshFormat): TglrStream;
+
+implementation
 
 type
   BITMAPFILEHEADER = packed record
@@ -51,19 +65,6 @@ type
 
    PByteArray = ^TByteArray;
    TByteArray = Array[0..32767] of Byte;
-
-function LoadTexture(const Stream: TglrStream; ext: String;
-  out iFormat,cFormat,dType: TGLConst;
-  out pSize: Integer;
-  out Width, Height: Integer): Pointer;
-
-function LoadFontData(const Stream: TglrStream; out CharCount: LongWord): Pointer;
-
-function LoadText(const Stream: TglrStream): PAnsiChar;
-function LoadStringList(const Stream: TglrStream): TglrStringList;
-function LoadMesh(const Stream: TglrStream; aFormat: TglrMeshFormat): TglrMeshData;
-
-implementation
 
 procedure flipSurface(chgData: Pbyte; w, h, pSize: integer);
 var
@@ -401,7 +402,7 @@ begin
     end;
 end;
 
-function LoadRawMeshData_Obj(const Stream: TglrStream): TglrRawMeshData_ObjList;
+function LoadRaw_Obj(const Stream: TglrStream): TglrObjRawMeshData;
 
   function GetVec3(s: TglrStringList): TglrVec3f;
   begin
@@ -424,22 +425,29 @@ function LoadRawMeshData_Obj(const Stream: TglrStream): TglrRawMeshData_ObjList;
     for i := 0 to 2 do
     begin
       s1 := StrSplit(s[1 + i], '/');
-      Result.v[i]  := Convert.ToInt(s1[0], 0) - 1;
-      Result.vt[i] := Convert.ToInt(s1[1], 0) - 1;
-      Result.vn[i] := Convert.ToInt(s1[2], 0) - 1;
+      Result.v[i]  := Convert.ToInt(s1[0], 0);
+      if s1.Count > 1 then
+        Result.vt[i] := Convert.ToInt(s1[1], 0)
+      else
+        Result.vt[i] := 0;
+
+      if s1.Count > 2 then
+        Result.vn[i] := Convert.ToInt(s1[2], 0)
+      else
+        Result.vn[i] := 0;
+
       s1.Free();
     end;
   end;
 
 var
   stringList, splitStr: TglrStringList;
-  firstChar, secondChar: AnsiChar;
   i, j: Integer;
 begin
   stringList := LoadStringList(Stream);
-  Result := TglrRawMeshData_ObjList.Create(1);
+  Result := TglrObjRawMeshData.Create();
 
-  j := Result.Add(TglrRawMeshData_Obj.Create());
+  j := Result.subs.Add(TglrObjRawSubMeshData.Create());
   for i := 0 to stringList.Count - 1 do
   begin
     splitStr := StrSplit(StrTrim(stringList[i]), ' '#9);
@@ -447,27 +455,27 @@ begin
     if (splitStr[0] = '#') then
       continue
     else if (splitStr[0] = 'f') then
-      Result[j].f.Add(GetFace(splitStr))
+      Result.subs[j].f.Add(GetFace(splitStr))
     else if (splitStr[0] = 'v') then
-      Result[j].v.Add(GetVec3(splitStr))
+      Result.v.Add(GetVec3(splitStr))
     else if (splitStr[0] = 'vn') then
-      Result[j].vn.Add(GetVec3(splitStr))
+      Result.vn.Add(GetVec3(splitStr))
     else if (splitStr[0] = 'vt') then
-      Result[j].vt.Add(GetVec2(splitStr))
+      Result.vt.Add(GetVec2(splitStr))
     else if (splitStr[0] = 'o') then
-      if (Result[j].f.Count = 0) then
-        Result[j].Name := splitStr[1]
+      if (Result.subs[j].f.Count = 0) then
+        Result.subs[j].Name := splitStr[1]
       else
       begin
-        j := Result.Add(TglrRawMeshData_Obj.Create());
-        Result[j].Name := splitStr[1];
+        j := Result.subs.Add(TglrObjRawSubMeshData.Create());
+        Result.subs[j].Name := splitStr[1];
       end;
     splitStr.Free();
   end;
   stringList.Free();
 end;
 
-function MeshDataFromRawMeshData_Obj(Raw: TglrRawMeshData_ObjList): TglrMeshData;
+function GetMeshDataFromRaw(Raw: TglrObjRawMeshData): TglrMeshData; overload;
 var
   i, j: Integer;
 
@@ -475,78 +483,260 @@ var
   vertices: TglrVertexP3T2N3List;
   indices: TglrLongWordList;
 
-  function GetVertIndex(aRawObjInd: Integer; V, VN, VT: LongWord): LongWord;
+  function GetVertIndex(V, VT, VN: LongWord): LongWord;
   var
     k: Integer;
     nPTN: ^TglrVertexP3T2N3;
     nVert: ^TglrObjIndex;
   begin
-    for k := 0 to verts.Count -1 do
+    for k := verts.Count - 1 downto 0 do
       if (verts[k].v = V) and (verts[k].vn = VN) and (verts[k].vt = VT) then
         Exit(k);
 
     New(nVert);
     nVert^.v := V;
-    nVert^.vn := VN;
     nVert^.vt := VT;
+    nVert^.vn := VN;
     Result := verts.Add(nVert^);
     Dispose(nVert);
 
     New(nPTN);
-    nPTN^.vec := Raw[aRawObjInd].v[v];
-    nPTN^.nor := Raw[aRawObjInd].vn[vn];
-    nPTN^.tex := Raw[aRawObjInd].vt[vt];
+    nPTN^.vec := Raw.v[v - 1];
+    if (vt > 0) then
+      nPTN^.tex := Raw.vt[vt - 1]
+    else
+      nPTN^.tex := Vec2f(0, 0);
+    if (vn > 0) then
+      nPTN^.nor := Raw.vn[vn - 1]
+    else
+      //TODO: auto calculate normal
+      nPTN^.nor := Vec3f(0, 0, 0);
     vertices.Add(nPTN^);
     Dispose(nPTN);
   end;
 
 begin
-  vertices := TglrVertexP3T2N3List.Create(Raw[0].v.Count);
-  indices := TglrLongWordList.Create(Raw[0].v.Count);
-  verts := TglrObjIndexList.Create(Raw[0].v.Count);
+  vertices := TglrVertexP3T2N3List.Create(Raw.v.Count);
+  indices := TglrLongWordList.Create(Raw.v.Count);
+  verts := TglrObjIndexList.Create(Raw.v.Count);
 
-  SetLength(Result.subMeshes, Raw.Count);
-  for i := 0 to Raw.Count - 1 do
+  SetLength(Result.subMeshes, Raw.subs.Count);
+  for i := 0 to Raw.subs.Count - 1 do
   begin
-    Result.subMeshes[i].name := Raw[i].Name;
+    Result.subMeshes[i].name := Raw.subs[i].Name;
     Result.subMeshes[i].start := indices.Count;
-    Result.subMeshes[i].count := Raw[i].f.Count * 3;
-    for j := 0 to Raw[i].f.Count - 1 do
+    Result.subMeshes[i].count := Raw.subs[i].f.Count * 3;
+    for j := 0 to Raw.subs[i].f.Count - 1 do
     begin
-      indices.Add(GetVertIndex(i, Raw[i].f[j].v[0], Raw[i].f[j].vn[0], Raw[i].f[j].vt[0]));
-      indices.Add(GetVertIndex(i, Raw[i].f[j].v[1], Raw[i].f[j].vn[1], Raw[i].f[j].vt[1]));
-      indices.Add(GetVertIndex(i, Raw[i].f[j].v[2], Raw[i].f[j].vn[2], Raw[i].f[j].vt[2]));
+      indices.Add(GetVertIndex(Raw.subs[i].f[j].v[0], Raw.subs[i].f[j].vt[0], Raw.subs[i].f[j].vn[0]));
+      indices.Add(GetVertIndex(Raw.subs[i].f[j].v[1], Raw.subs[i].f[j].vt[1], Raw.subs[i].f[j].vn[1]));
+      indices.Add(GetVertIndex(Raw.subs[i].f[j].v[2], Raw.subs[i].f[j].vt[2], Raw.subs[i].f[j].vn[2]));
     end;
   end;
 
-  Result.iBuffer := TglrIndexBuffer.Create(@indices, indices.Count, ifInt);
-  Result.vBuffer := TglrVertexBuffer.Create(@vertices, vertices.Count, vfPos3Tex2Nor3, uStaticDraw);
+  Result.vBuffer := TglrVertexBuffer.Create(vertices.FirstElementAddr, vertices.Count, vfPos3Tex2Nor3, uStaticDraw);
+  Result.iBuffer := TglrIndexBuffer.Create(indices.FirstElementAddr, indices.Count, ifInt);
+
+  Result.vLength := vertices.Count * SizeOf(TglrVertexP3T2N3);
+  Result.iLength := indices.Count * SizeOf(LongWord);
+  Result.vData := GetMem(Result.vLength);
+  Result.iData := GetMem(Result.iLength);
+  Move(vertices.FirstElementAddr^, Result.vData^, vertices.Count * SizeOf(TglrVertexP3T2N3));
+  Move(indices.FirstElementAddr^, Result.iData^, indices.Count * SizeOf(LongWord));
 
   verts.Free();
   vertices.Free();
   indices.Free();
 end;
 
+// Load .raw files
+// Structure
+//  4 bytes     LongWord    Magic number 0xA505FF75
+//  1 bytes     Byte        Version
+//  1 byte      Byte        Vertex format [0 - vfPos2Tex2, 1 - vfPos3Tex2, 2 - vfPos3Tex2Nor3, 3 - vfPos3Tex2Col4]
+//  1 byte      Byte        Index format [0 - ifByte, 1 - ifShort, 2 - ifInt]
+//  4 bytes     LongWord    Vertex data V size in bytes
+//  4 bytes     LongWord    Index data I size in bytes
+//  V bytes     ---         Vertex data
+//  I bytes     ---         Index data
+//  2 bytes     Word        Submesh count N
+//  N records with structure:
+//      2 bytes     Word        Submesh name' length
+//      L bytes     AnsiString  Submesh name
+//      4 bytes     LongWord    Submesh start index
+//      4 bytes     LongWord    Submesh index count
+
+const
+  RAWMESH_MAGIC: LongWord = $A505FF75;
+function GetMeshDataFromRaw(const Stream: TglrStream): TglrMeshData; overload;
+var
+  // Buffers
+  w: Word;
+  lw: LongWord;
+  b: Byte;
+
+  vertexFormat: TglrVertexFormat;
+  indexFormat: TglrIndexFormat;
+  i: Integer;
+begin
+  FillChar(Result, SizeOf(TglrMeshData), 0);
+
+  //Check magic number
+  Stream.Read(lw, SizeOf(LongWord));
+  if (lw <> RAWMESH_MAGIC) then
+    Log.Write(lCritical, 'Mesh load: .raw stream has wrong format');
+
+  // Check version
+  Stream.Read(b, SizeOf(Byte));
+  // No action required
+
+  // Read vertex format
+  Stream.Read(b, SizeOf(Byte));
+  vertexFormat := TglrVertexFormat(b);
+
+  // Read index format
+  Stream.Read(b, SizeOf(Byte));
+  indexFormat := TglrIndexFormat(b);
+
+  // Read vertex and index data length in bytes
+  Stream.Read(Result.vLength, SizeOf(LongWord));
+  Stream.Read(Result.iLength, SizeOf(LongWord));
+
+  // Allocate memory for vertex and index data pointers
+  GetMem(Result.vData, Result.vLength);
+  GetMem(Result.iData, Result.iLength);
+
+  // Read vertex and index data
+  Stream.Read(Result.vData^, Result.vLength);
+  Stream.Read(Result.iData^, Result.iLength);
+
+  // Read submesh count
+  Stream.Read(w, SizeOf(Word));
+  SetLength(Result.subMeshes, w);
+
+  // Read submeshes data
+  for i := 0 to w - 1 do
+  begin
+    // Read name
+    Result.subMeshes[i].name := Stream.ReadAnsi();
+
+    // Read start and count data
+    Stream.Read(Result.subMeshes[i].start, SizeOf(LongWord));
+    Stream.Read(Result.subMeshes[i].count, SizeOf(LongWord));
+  end;
+
+  // Build bufer objects
+  with Result do
+  begin
+    vBuffer := TglrVertexBuffer.Create(vData, vLength div VF_STRIDE[vertexFormat], vertexFormat, uStaticDraw);
+    iBuffer := TglrIndexBuffer.Create(iData, iLength div IF_STRIDE[indexFormat], indexFormat);
+  end;
+end;
+
 function LoadMesh(const Stream: TglrStream; aFormat: TglrMeshFormat): TglrMeshData;
 var
-  raw: TglrRawMeshData_ObjList;
+  raw: TglrObjRawMeshData;
 begin
   case aFormat of
     mfObj:
     begin
       Log.Write(lInformation, 'Mesh load: start loading .obj stream ' + Convert.ToString(Pointer(Stream)));
-      raw := LoadRawMeshData_Obj(Stream);
-      Log.Write(lInformation, 'Mesh load: raw data loaded successfully. Total objects: ' + Convert.ToString(raw.Count));
-      Log.Write(lInformation, 'Mesh load: start converting raw data to mesh data');
-      Result := MeshDataFromRawMeshData_Obj(raw);
+      raw := LoadRaw_Obj(Stream);
+      Log.Write(lInformation, 'Mesh load: .obj data loaded successfully. Total objects: ' + Convert.ToString(raw.subs.Count));
+      Log.Write(lInformation, 'Mesh load: start converting .obj data to mesh data');
+      Result := GetMeshDataFromRaw(raw);
       Log.Write(lInformation, 'Mesh load: converted successfully');
       raw.Free();
       Log.Write(lInformation, 'Mesh load: successfully loaded ' + Convert.ToString(Pointer(Stream)));
     end;
+
     mfRawGlr:
     begin
-      Log.Write(lCritical, 'LoadMesh(RawGlr) is not implemented');
+      Log.Write(lInformation, 'Mesh load: start loading .raw stream ' + Convert.ToString(Pointer(Stream)));
+      Result := GetMeshDataFromRaw(Stream);
+      Log.Write(lInformation, 'Mesh load: .raw data loaded successfully. Total objects: ' + Convert.ToString(Length(Result.subMeshes)));
+      Log.Write(lInformation, 'Mesh load: successfully loaded ' + Convert.ToString(Pointer(Stream)));
     end;
+  end;
+end;
+
+const
+  RAWGLR_VERSION: Byte = $01;
+
+function SaveMesh(const meshData: TglrMeshData; aFormat: TglrMeshFormat): TglrStream;
+
+  function CalculateMemSize(): LongWord;
+  var
+    i: Integer;
+  begin
+    Result := SizeOf(LongWord) {Magic}
+      + SizeOf(Byte) {Version}
+      + SizeOf(Byte) {Vertex format}
+      + SizeOf(Byte) {Index format}
+      + SizeOf(LongWord) {Vertex data size}
+      + SizeOf(LongWord) {Index data size}
+      + meshData.vLength
+      + meshData.iLength
+      + SizeOf(Word) {Submesh count}
+      + (SizeOf(Word) + SizeOf(LongWord) + SizeOf(LongWord)) * Length(meshData.subMeshes); {submesh data excluding name string}
+    for i := 0 to Length(meshData.subMeshes) - 1 do
+      Result += Length(meshData.subMeshes[i].name);
+  end;
+
+var
+  size: LongWord;
+  i: Integer;
+  // Word buffer
+  w: Word;
+begin
+  case aFormat of
+    mfRawGlr:
+    begin
+      size := CalculateMemSize();
+      Result := TglrStream.Init(GetMem(size), size, True);
+      Log.Write(lInformation, 'Mesh save: start saving mesh data to stream ' + Convert.ToString(@Result));
+      Log.Write(lInformation, 'Mesh save: calculated memory size in bytes: ' + Convert.ToString(size));
+
+      // Write magic
+      Result.Write(RAWMESH_MAGIC, SizeOf(LongWord));
+
+      // Write version
+      Result.Write(RAWGLR_VERSION, SizeOf(Byte));
+
+      // Write vertex format
+      Result.Write(meshData.vBuffer.Format, SizeOf(Byte));
+
+      // Write index format
+      Result.Write(meshData.iBuffer.Format, SizeOf(Byte));
+
+      // Write vertex and index data length in bytes
+      Result.Write(meshData.vLength, SizeOf(LongWord));
+      Result.Write(meshData.iLength, SizeOf(LongWord));
+
+      // Write vertex and index data
+      Result.Write(meshData.vData^, meshData.vLength);
+      Result.Write(meshData.iData^, meshData.iLength);
+
+      // Write submesh count
+      w := Word(Length(meshData.subMeshes));
+      Result.Write(w, SizeOf(Word));
+
+      // Write submeshes data
+      for i := 0 to Length(meshData.subMeshes) - 1 do
+      begin
+        // Write name' length
+        Result.WriteAnsi(meshData.subMeshes[i].name);
+
+        // Write start and count data
+        Result.Write(meshData.subMeshes[i].start, SizeOf(LongWord));
+        Result.Write(meshData.subMeshes[i].count, SizeOf(LongWord));
+      end;
+
+      Log.Write(lInformation, 'Mesh save: successfully saved to stream ' + Convert.ToString(@Result));
+    end;
+
+    mfObj:
+      Log.Write(lCritical, 'Mesh save: Save to .obj is not implemented');
   end;
 end;
 

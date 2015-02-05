@@ -66,6 +66,7 @@ type
     function GetItem(Index: LongInt): T; inline;
     procedure SetItem(Index: LongInt; Value: T); inline;
     procedure SortFragment(CompareFunc: TglrListCompareFunc; L, R: LongInt);
+    function GetFirstElementAddr(): Pointer;
   public
     constructor Create(aCapacity: LongInt = 4); virtual;
     destructor Destroy(); override;
@@ -81,11 +82,14 @@ type
     property Count: LongInt read FCount;
     property Items[Index: LongInt]: T read GetItem write SetItem; default;
     procedure Clear();
+    property FirstElementAddr: Pointer read GetFirstElementAddr;
   end;
 
   TglrStringList = TglrList<AnsiString>;
   TglrWordList = TglrList<Word>;
   TglrLongWordList = TglrList<LongWord>;
+  TglrVec3fList = TglrList<TglrVec3f>;
+  TglrVec2fList = TglrList<TglrVec2f>;
 
   { TglrObjectList }
 
@@ -216,6 +220,7 @@ type
   Convert = class
   public
     class function ToString(aVal: Integer): AnsiString; overload;
+    class function ToString(aVal: LongWord): AnsiString; overload;
     class function ToString(aVal: Single; Digits: Integer = 5): AnsiString; overload;
     class function ToString(aVal: Boolean): AnsiString; overload;
     class function ToString(aVal: TglrMat4f; aDigits: Integer = 5): AnsiString; overload;
@@ -240,26 +245,26 @@ type
   TglrIndex = type Word;
 
   TglrTextureFormat = (tfRGB8, tfRGBA8, tfBGR8, tfBGRA8);
-  TglrVertexFormat = (vfPos2Tex2, vfPos3Tex2, vfPos3Tex2Nor3, vfPos3Tex2Col4);
-  TglrIndexFormat = (ifByte, ifShort, ifInt);
+  TglrVertexFormat = (vfPos2Tex2 = 0, vfPos3Tex2, vfPos3Tex2Nor3, vfPos3Tex2Col4);
+  TglrIndexFormat = (ifByte = 0, ifShort, ifInt);
 
-  TglrVertexP2T2 = packed record
+  TglrVertexP2T2 = record
     vec, tex: TglrVec2f;
   end;
 
-  TglrVertexP3T2 = packed record
+  TglrVertexP3T2 = record
     vec: TglrVec3f;
     tex: TglrVec2f;
   end;
 
-  TglrVertexP3T2N3 = packed record
+  TglrVertexP3T2N3 = record
     vec: TglrVec3f;
     tex: TglrVec2f;
     nor: TglrVec3f;
   end;
   TglrVertexP3T2N3List = TglrList<TglrVertexP3T2N3>;
 
-  TglrVertexP3T2C4 = packed record
+  TglrVertexP3T2C4 = record
     vec: TglrVec3f;
     tex: TglrVec2f;
     col: TglrVec4f;
@@ -269,66 +274,14 @@ type
 
   TglrVertexAtrib = (vaCoord = 0, vaNormal = 1, vaTexCoord0 = 2, vaTexCoord1 = 3, vaColor = 4{, ...});
 
-  { TglrTexture }
+const
+  VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
+    (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3), SizeOf(TglrVertexP3T2C4));
 
-  TglrTexWrap = (wClamp, wRepeat, wClampToEdge, wClampToBorder, wMirrorRepeat);
+  IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
+    (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
 
-  TglrTextureExt = (extBmp, extTga);
-
-  TglrTexture = class
-  protected
-    Target: TGLConst;
-    WrapS, WrapT, WrapR: TglrTexWrap;
-  public
-    Id: TglrTextureId;
-
-    Width, Height: Integer;
-
-    procedure SetWrapS(aWrap: TglrTexWrap);
-    procedure SetWrapT(aWrap: TglrTexWrap);
-    procedure SetWrapR(aWrap: TglrTexWrap);
-
-    //constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
-    constructor Create(aData: Pointer; aWidth, aHeight: Integer; aFormat: TglrTextureFormat); virtual; overload;
-    constructor Create(aStream: TglrStream; aExt: TglrTextureExt;
-      aFreeStreamOnFinish: Boolean = True); virtual; overload;
-    //constructor CreateEmpty2D(aWidth, aHeight, aFormat: TGLConst);
-    //todo 1d, 3d
-    destructor Destroy(); override;
-
-    procedure Bind(const aSampler: Integer = 0);
-    class procedure Unbind();
-  end;
-
-  PglrTextureRegion = ^TglrTextureRegion;
-  TglrTextureRegion = record
-    Texture: TglrTexture;
-    Name: AnsiString;
-    tx, ty, tw, th: Single;
-    Rotated: Boolean;
-  end;
-
-
-  TglrTextureAtlasExt = (aextCheetah);
-
-  { TglrTextureAtlas }
-
-  TglrTextureAtlas = class (TglrTexture)
-  protected
-    type
-      TglrTextureRegionsList = TglrList<PglrTextureRegion>;
-    var
-      fRegions: TglrTextureRegionsList;
-  public
-    constructor Create(aImageStream, aInfoStream: TglrStream;
-      aImageExt: TglrTextureExt; aInfoExt: TglrTextureAtlasExt;
-      aFreeStreamsOnFinish: Boolean = True); virtual;
-    destructor Destroy(); override;
-
-    function GetRegion(aName: AnsiString): PglrTextureRegion;
-  end;
-
-
+type
   TglrVertexBufferMapAccess = (maRead, maWrite, maReadWrite);
   TglrVertexBufferUsage = (
     uStreamDraw, uStreamRead, uStreamCopy,
@@ -357,11 +310,12 @@ type
   TglrIndexBuffer = class
     Id: TglrIndexBufferId;
     Format: TglrIndexFormat;
+    Count: LongWord;
     procedure Bind();
-    constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrIndexFormat); virtual;
+    constructor Create(aData: Pointer; aCount: LongWord; aFormat: TglrIndexFormat); virtual;
     destructor Destroy(); override;
 
-    procedure Update(aData: Pointer; aStart, aCount: Integer); virtual;
+    procedure Update(aData: Pointer; aStart, aCount: LongWord); virtual;
   end;
 
   { TglrFrameBuffer }
@@ -415,6 +369,65 @@ type
     constructor Create(); virtual;
     destructor Destroy(); override;
   end;
+
+  TglrTexWrap = (wClamp, wRepeat, wClampToEdge, wClampToBorder, wMirrorRepeat);
+
+    TglrTextureExt = (extBmp, extTga);
+
+    { TglrTexture }
+
+    TglrTexture = class
+    protected
+      Target: TGLConst;
+      WrapS, WrapT, WrapR: TglrTexWrap;
+    public
+      Id: TglrTextureId;
+
+      Width, Height: Integer;
+
+      procedure SetWrapS(aWrap: TglrTexWrap);
+      procedure SetWrapT(aWrap: TglrTexWrap);
+      procedure SetWrapR(aWrap: TglrTexWrap);
+
+      //constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
+      constructor Create(aData: Pointer; aWidth, aHeight: Integer; aFormat: TglrTextureFormat); virtual; overload;
+      constructor Create(aStream: TglrStream; aExt: TglrTextureExt;
+        aFreeStreamOnFinish: Boolean = True); virtual; overload;
+      //constructor CreateEmpty2D(aWidth, aHeight, aFormat: TGLConst);
+      //todo 1d, 3d
+      destructor Destroy(); override;
+
+      procedure Bind(const aSampler: Integer = 0);
+      class procedure Unbind();
+    end;
+
+    PglrTextureRegion = ^TglrTextureRegion;
+    TglrTextureRegion = record
+      Texture: TglrTexture;
+      Name: AnsiString;
+      tx, ty, tw, th: Single;
+      Rotated: Boolean;
+    end;
+
+
+    TglrTextureAtlasExt = (aextCheetah);
+
+    { TglrTextureAtlas }
+
+    TglrTextureAtlas = class (TglrTexture)
+    protected
+      type
+        TglrTextureRegionsList = TglrList<PglrTextureRegion>;
+      var
+        fRegions: TglrTextureRegionsList;
+    public
+      constructor Create(aImageStream, aInfoStream: TglrStream;
+        aImageExt: TglrTextureExt; aInfoExt: TglrTextureAtlasExt;
+        aFreeStreamsOnFinish: Boolean = True); virtual;
+      destructor Destroy(); override;
+
+      function GetRegion(aName: AnsiString): PglrTextureRegion;
+    end;
 
 
   TglrBlendingMode = ( bmNone, bmAlpha, bmAdditive, bmMultiply, bmScreen);
@@ -908,38 +921,43 @@ type
 
   {$ENDREGION}
 
+  {$REGION '.OBJ mesh file format specific types'}
 
   TglrObjFace = record
     v, vt, vn: array[0..2] of LongWord;
   end;
-
-  { TglrRawMeshData_Obj }
-
-  TglrVec3fList = TglrList<TglrVec3f>;
-  TglrVec2fList = TglrList<TglrVec2f>;
   TglrObjFaceList = TglrList<TglrObjFace>;
-
-  TglrRawMeshData_Obj = class
-  public
-    Name: AnsiString;
-    v, vn: TglrVec3fList;
-    vt: TglrVec2fList;
-    f: TglrObjFaceList;
-
-    constructor Create(); virtual;
-    destructor Destroy(); override;
-  end;
-
-  TglrRawMeshData_ObjList = TglrObjectList<TglrRawMeshData_Obj>;
-
-  { TglrMeshData }
 
   TglrObjIndex = record
     v, vn, vt: LongWord;
   end;
-
   TglrObjIndexList = TglrList<TglrObjIndex>;
 
+  { TglrObjRawMeshData }
+
+  { TglrObjRawSubMeshData }
+
+  TglrObjRawSubMeshData = class
+    Name: AnsiString;
+    f: TglrObjFaceList;
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+  end;
+
+  TglrObjRawSubMeshDataList = TglrObjectList<TglrObjRawSubMeshData>;
+
+  TglrObjRawMeshData = class
+  public
+    v, vn: TglrVec3fList;
+    vt: TglrVec2fList;
+    subs: TglrObjRawSubMeshDataList;
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+  end;
+
+  { TglrMeshData }
+
+  {$ENDREGION}
 
   TglrSubMeshData = record
     name: AnsiString;
@@ -950,6 +968,7 @@ type
     vBuffer: TglrVertexBuffer;
     iBuffer: TglrIndexBuffer;
     vData, iData: Pointer;
+    vLength, iLength: LongWord;
     subMeshes: array of TglrSubMeshData;
     procedure FreeMemory();
   end;
@@ -959,7 +978,12 @@ type
   TglrMeshFormat = (mfRawGlr, mfObj);
 
   TglrMesh = class (TglrNode)
-
+  public
+    Data: TglrMeshData;
+    constructor Create(aStream: TglrStream; aFormat: TglrMeshFormat;
+      aFreeStreamOnFinish: Boolean = True); virtual; overload;
+    constructor Create(); override; overload;
+    destructor Destroy(); override;
   end;
 
   {$REGION 'Particles'}
@@ -1193,15 +1217,11 @@ uses
 const
   SpriteIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
 
-  VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
-    (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3), SizeOf(TglrVertexP3T2C4));
   VF_USAGE: array[Low(TglrVertexBufferUsage)..High(TglrVertexBufferUsage)] of TGLConst =
     (GL_STREAM_DRAW, GL_STREAM_READ, GL_STREAM_COPY,
      GL_STATIC_DRAW, GL_STATIC_READ, GL_STATIC_COPY,
      GL_DYNAMIC_DRAW, GL_DYNAMIC_READ, GL_DYNAMIC_COPY);
 
-  IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
-    (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
   IF_FORMAT: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of TGLConst =
   (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INT);
 
@@ -1601,33 +1621,79 @@ begin
   end;
 end;
 
-{ TglrRawMeshData_Obj }
-
-constructor TglrRawMeshData_Obj.Create;
-begin
-  inherited;
-  Name := '';
-  v := TglrVec3fList.Create(32);
-  vn := TglrVec3fList.Create(32);
-  vt := TglrVec2fList.Create(32);
-  f := TglrObjFaceList.Create(32);
-end;
-
-destructor TglrRawMeshData_Obj.Destroy;
-begin
-  v.Free();
-  vn.Free();
-  vt.Free();
-  f.Free();
-  inherited Destroy;
-end;
-
 { TglrMeshData }
 
 procedure TglrMeshData.FreeMemory;
 begin
-  FreeMem(vData);
-  FreeMem(iData);
+  if (vData <> nil) then
+    FreeMem(vData);
+  if (iData <> nil) then
+    FreeMem(iData);
+  vData := nil;
+  iData := nil;
+end;
+
+{ TglrMesh }
+
+constructor TglrMesh.Create(aStream: TglrStream; aFormat: TglrMeshFormat;
+  aFreeStreamOnFinish: Boolean);
+begin
+  inherited Create();
+
+  Data := LoadMesh(aStream, aFormat);
+
+  if aFreeStreamOnFinish then
+    aStream.Free();
+end;
+
+constructor TglrMesh.Create;
+begin
+  inherited Create;
+  FillChar(Data, SizeOf(TglrMeshData), 0);
+end;
+
+destructor TglrMesh.Destroy;
+begin
+  Data.FreeMemory();
+  if Assigned(Data.vBuffer) then
+    Data.vBuffer.Free();
+  if Assigned(Data.iBuffer) then
+    Data.iBuffer.Free();
+  inherited Destroy;
+end;
+
+{ TglrObjRawSubMeshData }
+
+constructor TglrObjRawSubMeshData.Create;
+begin
+  inherited;
+  Name := '';
+  f := TglrObjFaceList.Create(32);
+end;
+
+destructor TglrObjRawSubMeshData.Destroy;
+begin
+  f.Free();
+  inherited Destroy;
+end;
+
+{ TglrObjRawMeshData }
+
+constructor TglrObjRawMeshData.Create;
+begin
+  inherited;
+  v := TglrVec3fList.Create(32);
+  vn := TglrVec3fList.Create(32);
+  vt := TglrVec2fList.Create(32);
+  subs := TglrObjRawSubMeshDataList.Create(1);
+end;
+
+destructor TglrObjRawMeshData.Destroy;
+begin
+  v.Free();
+  vn.Free();
+  vt.Free();
+  inherited Destroy;
 end;
 
 { TglrGuiLayout }
@@ -3317,6 +3383,11 @@ begin
   Str(aVal, Result);
 end;
 
+class function Convert.ToString(aVal: LongWord): AnsiString;
+begin
+  Str(aVal, Result);
+end;
+
 class function Convert.ToString(aVal: Single; Digits: Integer = 5): AnsiString;
 begin
   Str(aVal:0:Digits, Result);
@@ -4297,11 +4368,12 @@ begin
   Render.SetIndexBuffer(Self);
 end;
 
-constructor TglrIndexBuffer.Create(aData: Pointer; aCount: Integer;
+constructor TglrIndexBuffer.Create(aData: Pointer; aCount: LongWord;
   aFormat: TglrIndexFormat);
 begin
   gl.GenBuffers(1, @Self.Id);
   Format := aFormat;
+  Count := aCount;
   Bind();
   gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, IF_STRIDE[Format] * aCount, aData, GL_STATIC_DRAW);
 end;
@@ -4312,7 +4384,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TglrIndexBuffer.Update(aData: Pointer; aStart, aCount: Integer);
+procedure TglrIndexBuffer.Update(aData: Pointer; aStart, aCount: LongWord);
 begin
   Bind();
   gl.BufferSubData(GL_ELEMENT_ARRAY_BUFFER, aStart, aCount * IF_STRIDE[Format], aData);
@@ -4706,6 +4778,14 @@ begin
       SortFragment(CompareFunc, L, j);
     L := i;
   until i >= R;
+end;
+
+function TglrList<T>.GetFirstElementAddr: Pointer;
+begin
+  if (Count > 0) then
+    Result := @FItems[0]
+  else
+    Result := nil;
 end;
 
 constructor TglrList<T>.Create(aCapacity: LongInt);
