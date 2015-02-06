@@ -509,7 +509,7 @@ var
     if (vn > 0) then
       nPTN^.nor := Raw.vn[vn - 1]
     else
-      //TODO: auto calculate normal
+      // TODO: auto calculate normal
       nPTN^.nor := Vec3f(0, 0, 0);
     vertices.Add(nPTN^);
     Dispose(nPTN);
@@ -578,16 +578,18 @@ var
   vertexFormat: TglrVertexFormat;
   indexFormat: TglrIndexFormat;
   i: Integer;
+  logString: AnsiString;
 begin
   FillChar(Result, SizeOf(TglrMeshData), 0);
 
   //Check magic number
   Stream.Read(lw, SizeOf(LongWord));
   if (lw <> RAWMESH_MAGIC) then
-    Log.Write(lCritical, 'Mesh load: .raw stream has wrong format');
+    Log.Write(lCritical, 'Mesh load: .raw stream ' + Convert.ToString(Pointer(Stream)) + ' has wrong format');
 
   // Check version
   Stream.Read(b, SizeOf(Byte));
+  Log.Write(lInformation, 'Mesh load: .raw stream ' + Convert.ToString(Pointer(Stream)) + '. Version: ' + Convert.ToString(b));
   // No action required
 
   // Read vertex format
@@ -601,6 +603,10 @@ begin
   // Read vertex and index data length in bytes
   Stream.Read(Result.vLength, SizeOf(LongWord));
   Stream.Read(Result.iLength, SizeOf(LongWord));
+  Log.Write(lInformation, 'Mesh load: .raw stream '
+    + Convert.ToString(Pointer(Stream)) + '. '
+    + 'Vertices data: ' + Convert.ToString(Result.vLength) + ' bytes. '
+    + 'Indices data: ' + Convert.ToString(Result.iLength) + ' bytes.');
 
   // Allocate memory for vertex and index data pointers
   GetMem(Result.vData, Result.vLength);
@@ -613,6 +619,9 @@ begin
   // Read submesh count
   Stream.Read(w, SizeOf(Word));
   SetLength(Result.subMeshes, w);
+  logString := 'Mesh load: .raw stream ' + Convert.ToString(Pointer(Stream))
+    + '. Submeshes count: ' + Convert.ToString(w)
+    + #13#10#9#9'Index'#9#9'Name'#9#9'Start'#9#9'Count';
 
   // Read submeshes data
   for i := 0 to w - 1 do
@@ -623,7 +632,12 @@ begin
     // Read start and count data
     Stream.Read(Result.subMeshes[i].start, SizeOf(LongWord));
     Stream.Read(Result.subMeshes[i].count, SizeOf(LongWord));
+    logString += #13#10#9#9 + Convert.ToString(i) + #9#9 + Result.subMeshes[i].Name
+      + #9#9 + Convert.ToString(Result.subMeshes[i].start)
+      + #9#9 + Convert.ToString(Result.subMeshes[i].count);
   end;
+
+  Log.Write(lInformation, logString);
 
   // Build bufer objects
   with Result do
@@ -654,7 +668,6 @@ begin
     begin
       Log.Write(lInformation, 'Mesh load: start loading .raw stream ' + Convert.ToString(Pointer(Stream)));
       Result := GetMeshDataFromRaw(Stream);
-      Log.Write(lInformation, 'Mesh load: .raw data loaded successfully. Total objects: ' + Convert.ToString(Length(Result.subMeshes)));
       Log.Write(lInformation, 'Mesh load: successfully loaded ' + Convert.ToString(Pointer(Stream)));
     end;
   end;
@@ -694,7 +707,7 @@ begin
     begin
       size := CalculateMemSize();
       Result := TglrStream.Init(GetMem(size), size, True);
-      Log.Write(lInformation, 'Mesh save: start saving mesh data to stream ' + Convert.ToString(@Result));
+      Log.Write(lInformation, 'Mesh save: start saving mesh data to stream ' + Convert.ToString(Pointer(Result)));
       Log.Write(lInformation, 'Mesh save: calculated memory size in bytes: ' + Convert.ToString(size));
 
       // Write magic
@@ -732,7 +745,7 @@ begin
         Result.Write(meshData.subMeshes[i].count, SizeOf(LongWord));
       end;
 
-      Log.Write(lInformation, 'Mesh save: successfully saved to stream ' + Convert.ToString(@Result));
+      Log.Write(lInformation, 'Mesh save: successfully saved to stream ' + Convert.ToString(Pointer(Result)));
     end;
 
     mfObj:
