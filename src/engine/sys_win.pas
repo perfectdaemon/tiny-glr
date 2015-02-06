@@ -97,9 +97,6 @@ const
 
   Invalid_Handle_value = HANDLE(-1);
 
-function FindFirstFileA(lpFileName: LPCSTR; var lpFindFileData: TWIN32FindDataA): THandle; external 'kernel32' name 'FindFirstFileA';
-function GetLastError:DWORD; external 'kernel32' name 'GetLastError';
-
 function FindMatch(var f: TSearchRec): Longint;
 begin
   { Find file with correct attribute }
