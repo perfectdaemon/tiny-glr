@@ -31,27 +31,67 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="4">
+    <Units Count="12">
       <Unit0>
         <Filename Value="demo3simple3D.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="demo3simple3D"/>
       </Unit0>
       <Unit1>
-        <Filename Value="..\..\engine\glrMath.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="glrMath"/>
-      </Unit1>
-      <Unit2>
         <Filename Value="..\..\engine\tinyglr.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="tinyglr"/>
-      </Unit2>
-      <Unit3>
+      </Unit1>
+      <Unit2>
         <Filename Value="ugame.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uGame"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\..\engine\glr_utils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_utils"/>
       </Unit3>
+      <Unit4>
+        <Filename Value="..\..\engine\glr_filesystem.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_filesystem"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\..\engine\glr_render.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_render"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\..\engine\glr_render2d.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_render2d"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\..\engine\glr_scene.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_scene"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\..\engine\glr_core.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_core"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\..\engine\glr_gui.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_gui"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\..\engine\glr_mesh.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_mesh"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="..\..\engine\glr_particles2d.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="glr_particles2d"/>
+      </Unit11>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

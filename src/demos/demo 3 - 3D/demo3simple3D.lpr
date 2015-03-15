@@ -1,8 +1,10 @@
 program demo3simple3D;
 
 uses
-  glrMath, tinyglr,
-  uGame;
+  tinyglr,
+  uGame,
+  glr_utils, glr_filesystem, glr_render, glr_render2d, glr_scene,
+  glr_core, glr_gui, glr_mesh, glr_particles2d;
 
 var
   InitParams: TglrInitParams;
