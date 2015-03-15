@@ -7,7 +7,7 @@ unit glr_resload;
 interface
 
 uses
-  glr_utils, ogl, glr_mesh;
+  glr_utils, glr_ogl, glr_mesh;
 
 function LoadTexture(const Stream: TglrStream; ext: String;
   out iFormat,cFormat,dType: TGLConst;

@@ -6,7 +6,7 @@ interface
 
 uses
   glr_utils,
-  ogl,
+  glr_ogl,
   glr_math;
 
 type

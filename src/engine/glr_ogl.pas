@@ -1,4 +1,4 @@
-unit ogl;
+unit glr_ogl;
 
 interface
 
