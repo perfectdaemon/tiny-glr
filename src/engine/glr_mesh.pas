@@ -75,7 +75,7 @@ type
 implementation
 
 uses
-  resload;
+  glr_resload;
 
 { TglrObjRawSubMeshData }
 

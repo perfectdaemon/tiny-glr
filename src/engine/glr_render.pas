@@ -307,7 +307,7 @@ type
 implementation
 
 uses
-  resload;
+  glr_resload;
 
 const
   // Vertex format usage

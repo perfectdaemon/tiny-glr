@@ -143,7 +143,7 @@ type
 implementation
 
 uses
-  glr_core, glr_filesystem, resload;
+  glr_core, glr_filesystem, glr_resload;
 
 const
   SpriteIndices: array[0..5] of Word = (0, 1, 2, 2, 3, 0);
