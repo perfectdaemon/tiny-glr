@@ -7,7 +7,7 @@ unit resload;
 interface
 
 uses
-  ogl, tinyglr, glrMath;
+  glr_utils, ogl, glr_mesh;
 
 function LoadTexture(const Stream: TglrStream; ext: String;
   out iFormat,cFormat,dType: TGLConst;
@@ -23,6 +23,9 @@ function LoadMesh(const Stream: TglrStream; aFormat: TglrMeshFormat): TglrMeshDa
 function SaveMesh(const meshData: TglrMeshData; aFormat: TglrMeshFormat): TglrStream;
 
 implementation
+
+uses
+  glr_math, glr_render;
 
 type
   BITMAPFILEHEADER = packed record
@@ -177,20 +180,7 @@ var
       Red^ := Tmp;
     end;
   end;
-  (*
-  procedure CopySwapPixel(const Source, Destination: Pointer);
-  asm
-    push ebx
-    mov bl,[eax+0]
-    mov bh,[eax+1]
-    mov [edx+2],bl
-    mov [edx+1],bh
-    mov bl,[eax+2]
-    mov bh,[eax+3]
-    mov [edx+0],bl
-    mov [edx+3],bh
-    pop ebx
-  end;         *)
+
 
   procedure CopySwapPixelPascal(const Source, Destination: Pointer);
   var

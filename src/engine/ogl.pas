@@ -110,7 +110,7 @@ type
 
   { TglrGL }
 
-  TglrGL = object
+  TglrGL = record
   private
     Lib : LongWord;
   public
@@ -232,7 +232,7 @@ uses
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
-  tinyglr;
+  glr_utils;
 
 procedure TglrGL.Init;
 type

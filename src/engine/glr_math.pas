@@ -2,7 +2,7 @@
   Based on eXgine© Math unit (New BSD License)
 }
 
-unit glrMath;
+unit glr_math;
 
 interface
 
@@ -613,7 +613,7 @@ end;
 
 function TglrVec2f.Clamp(const Min, Max: TglrVec2f): TglrVec2f;
 begin
-  Result := Vec2f(glrMath.Clamp(x, Min.x, Max.x), glrMath.Clamp(y, Min.y, Max.y));
+  Result := Vec2f(glr_math.Clamp(x, Min.x, Max.x), glr_math.Clamp(y, Min.y, Max.y));
 end;
 
 function TglrVec2f.Clamp(const Min, Max: Single): TglrVec2f;
@@ -780,7 +780,7 @@ end;
 
 function TglrVec3f.Clamp(const Min, Max: TglrVec3f): TglrVec3f;
 begin
-  Result := Vec3f(glrMath.Clamp(x, Min.x, Max.x), glrMath.Clamp(y, Min.y, Max.y), glrMath.Clamp(z, Min.z, Max.z));
+  Result := Vec3f(glr_math.Clamp(x, Min.x, Max.x), glr_math.Clamp(y, Min.y, Max.y), glr_math.Clamp(z, Min.z, Max.z));
 end;
 
 function TglrVec3f.Rotate(Angle: Single; const Axis: TglrVec3f): TglrVec3f;
