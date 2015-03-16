@@ -3,7 +3,7 @@ unit uGame;
 interface
 
 uses
-  tinyglr;
+  glr_core;
 
 type
 
