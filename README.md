@@ -2,9 +2,9 @@
 function TinyGLR.CanUse(): WideString;
 begin
   Exit(
-    'Development suspended at early 2015.'
-    'Will development be resumed or not — no one knows'
-    'Use it for your own risk'
+    'Development has become a little slow at early 2015.'
+    'Use it for your own risk.'
+    'Contact me if you need support'
     );
 end;
 ```
@@ -35,8 +35,9 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 * Texture atlases ([Cheetah](https://github.com/scriptum/Cheetah-Texture-Packer) texture atlases supported)
 * Programmable 2d particles
 * Box2D support
-* GUI (early alpha)
+* GUI: Manager, button, nine-patch support (early alpha)
 * Meshes (early alpha)
+* 3D formats: obj, engine-based file format
 
 ###Current toolset###
 * Resource packer
@@ -45,6 +46,7 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 ###In progress###
 * 3D base functionality (mesh, skeletal, morph, 3ds, fbx, obj, smd)
 * GUI
+* Box2D helper classes
 * Sound and physics engines support
 * Linux, Mac OS, Android, iOS
 
