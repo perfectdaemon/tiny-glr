@@ -3,7 +3,8 @@ unit uGame;
 interface
 
 uses
-  tinyglr, glrMath, resload;
+  glr_math, glr_core, glr_scene, glr_render, glr_mesh, glr_filesystem,
+  glr_utils, glr_resload;
 
 type
 
@@ -60,7 +61,7 @@ procedure TGame.SaveMeshDataAsGlr;
 var
   f: TglrStream;
 begin
-  f := resload.SaveMesh(mesh.Data, mfRawGlr);
+  f := glr_resload.SaveMesh(mesh.Data, mfRawGlr);
   FileSystem.WriteResource('data/mesh.raw', f);
   f.Free();
 end;

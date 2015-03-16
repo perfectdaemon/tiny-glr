@@ -31,27 +31,17 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="4">
+    <Units Count="2">
       <Unit0>
         <Filename Value="demo2gui.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="demo2gui"/>
       </Unit0>
       <Unit1>
-        <Filename Value="..\..\engine\glrMath.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="glrMath"/>
-      </Unit1>
-      <Unit2>
-        <Filename Value="..\..\engine\tinyglr.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="tinyglr"/>
-      </Unit2>
-      <Unit3>
         <Filename Value="ugame.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uGame"/>
-      </Unit3>
+      </Unit1>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

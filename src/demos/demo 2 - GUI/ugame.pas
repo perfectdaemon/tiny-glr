@@ -3,7 +3,13 @@ unit uGame;
 interface
 
 uses
-  tinyglr, glrMath;
+  glr_core,
+  glr_render,
+  glr_render2d,
+  glr_scene,
+  glr_filesystem,
+  glr_gui,
+  glr_math;
 
 type
 

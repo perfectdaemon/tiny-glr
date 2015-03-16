@@ -31,41 +31,31 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="7">
+    <Units Count="5">
       <Unit0>
         <Filename Value="shooter.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="shooter"/>
       </Unit0>
       <Unit1>
-        <Filename Value="..\..\engine\glrMath.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="glrMath"/>
-      </Unit1>
-      <Unit2>
-        <Filename Value="..\..\engine\tinyglr.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="tinyglr"/>
-      </Unit2>
-      <Unit3>
         <Filename Value="ugame.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uGame"/>
-      </Unit3>
-      <Unit4>
+      </Unit1>
+      <Unit2>
         <Filename Value="uFMOD.pp"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uFMOD"/>
-      </Unit4>
-      <Unit5>
+      </Unit2>
+      <Unit3>
         <Filename Value="libufmod.o"/>
         <IsPartOfProject Value="True"/>
-      </Unit5>
-      <Unit6>
+      </Unit3>
+      <Unit4>
         <Filename Value="music.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="music"/>
-      </Unit6>
+      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

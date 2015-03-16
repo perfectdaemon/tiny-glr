@@ -113,32 +113,12 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="5">
+    <Units Count="1">
       <Unit0>
         <Filename Value="demo1.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="demo1"/>
       </Unit0>
-      <Unit1>
-        <Filename Value="..\..\engine\tinyglr.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="tinyglr"/>
-      </Unit1>
-      <Unit2>
-        <Filename Value="..\..\engine\glrMath.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="glrMath"/>
-      </Unit2>
-      <Unit3>
-        <Filename Value="..\..\engine\ogl.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="ogl"/>
-      </Unit3>
-      <Unit4>
-        <Filename Value="..\..\engine\sys_win.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="sys_win"/>
-      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

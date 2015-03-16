@@ -26,7 +26,14 @@ unit uGame;
 interface
 
 uses
-  tinyglr, glrMath;
+  glr_render,
+  glr_render2d,
+  glr_particles2d,
+  glr_filesystem,
+  glr_scene,
+  glr_utils,
+  glr_core,
+  glr_math;
 
 const
   HEALTH_PLAYER = 75;

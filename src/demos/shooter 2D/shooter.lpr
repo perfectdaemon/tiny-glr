@@ -1,8 +1,7 @@
 program shooter;
 
 uses
-  glrMath, tinyglr,
-  uGame, uFMOD, music;
+  uGame, uFMOD, music, glr_core, glr_utils;
 
 var
   InitParams: TglrInitParams;

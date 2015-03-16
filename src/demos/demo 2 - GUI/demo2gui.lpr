@@ -1,8 +1,7 @@
 program demo2gui;
 
 uses
-  glrMath, tinyglr,
-  uGame;
+  uGame, glr_core, glr_utils;
 
 var
   InitParams: TglrInitParams;
