@@ -10,8 +10,6 @@ uses
   glr_math;
 
 type
-  TMySuperList = TglrList<Integer>;
-
   TglrTextureId = type LongWord;
   TglrShaderProgramId = type LongWord;
   TglrShaderId = type LongWord;
