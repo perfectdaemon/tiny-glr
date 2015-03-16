@@ -7,9 +7,6 @@ interface
 uses
   glr_math, glr_render;
 
-const
-  TINYGLR_VERSION = '0.2 :: unstable';
-
 type
 
   { TglrInput }

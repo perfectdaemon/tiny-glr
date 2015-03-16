@@ -8,6 +8,7 @@ uses
   glr_math;
 
 const
+  TINYGLR_VERSION = '0.2 :: unstable';
   LOG_FILE = 'tinyglr.log';
 
 type
@@ -378,8 +379,8 @@ end;
 
 procedure TglrList<T>.BoundsCheck(Index: LongInt);
 begin
-//  if (Index < 0) or (Index >= FCount) then
-//    Log.Write(lCritical, 'List index out of bounds (' + Convert.ToString(Index) + ')');
+  if (Index < 0) or (Index >= FCount) then
+    Log.Write(lCritical, 'List index out of bounds (' + Convert.ToString(Index) + ')');
 end;
 
 function TglrList<T>.GetItem(Index: LongInt): T;
@@ -645,8 +646,8 @@ end;
 
 procedure TglrDictionary<Key, Value>.BoundsCheck(Index: LongInt);
 begin
-//  if (Index < 0) or (Index >= fCount) then
-//    Log.Write(lCritical, 'Dictionary index out of bounds (' + Convert.ToString(Index) + ')');
+  if (Index < 0) or (Index >= fCount) then
+    Log.Write(lCritical, 'Dictionary index out of bounds (' + Convert.ToString(Index) + ')');
 end;
 
 function TglrDictionary<Key, Value>.GetItem(aKey: Key): Value;
@@ -892,7 +893,6 @@ begin
     if i in [3, 7, 11] then
       Result += #13#10;
   end;
-  //log.Write(lCritical, 'Convert mat to string is not implemented');
 end;
 
 class function Convert.ToString(aVal: TglrVec2f): AnsiString;
@@ -942,14 +942,14 @@ begin
   AssignFile(f, aFileName);
   Rewrite(f);
   CloseFile(f);
-//  Self.Write(lInformation, 'Start. Tiny glr version: ' + TINYGLR_VERSION);
+  Self.Write(lInformation, 'Start. Tiny glr version: ' + TINYGLR_VERSION);
   {$endif}
 end;
 
 class procedure Log.Deinit;
 begin
   {$ifdef log}
-//  Self.Write(lInformation, 'End. Errors: ' + Convert.ToString(fTotalErrors) + ', warnings: ' + Convert.ToString(fTotalWarnings));
+  Self.Write(lInformation, 'End. Errors: ' + Convert.ToString(fTotalErrors) + ', warnings: ' + Convert.ToString(fTotalWarnings));
   {$endif}
 end;
 
