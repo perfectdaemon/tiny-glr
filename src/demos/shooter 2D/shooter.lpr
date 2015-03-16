@@ -1,7 +1,7 @@
 program shooter;
 
 uses
-  uGame, uFMOD, music, glr_core;
+  uGame, uFMOD, music, glr_core, glr_utils;
 
 var
   InitParams: TglrInitParams;
