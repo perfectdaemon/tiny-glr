@@ -1,7 +1,14 @@
 program demo1;
 
 uses
-  tinyglr, glrMath, ogl, sys_win, resload;
+  glr_render,
+  glr_render2d,
+  glr_scene,
+  glr_core,
+  glr_filesystem,
+  glr_math,
+  glr_utils,
+  glr_resload;
 
 type
 
@@ -212,7 +219,7 @@ begin
   if (aType = itWheel) then
     Camera.Translate(0, 0, -Sign(aOtherParam));
   if (aType = itKeyUp) and (aKey = kU) then
-    log.Write(lInformation, 'Camera.Mat: '#13#10 + Convert.ToString(Camera.Matrix, 2));
+    Log.Write(lInformation, 'Camera.Mat: '#13#10 + Convert.ToString(Camera.Matrix, 2));
 end;
 
 procedure TGame.OnPause;
@@ -270,8 +277,6 @@ begin
   CreateSprites();
   CreateFont();
   Material.AddTexture(atlas, 'uDiffuse');
-
-  LoadMesh(FileSystem.ReadResource('data/Lara_Croft_default.obj', False), mfObj);
 end;
 
 procedure TGame.OnUpdate(const dt: Double);
