@@ -47,7 +47,7 @@ type
 
   TglrList<T> = class
     procedure Init(Capacity: LongInt);
-  private
+  protected
     FItems    : array of T;
     FCount    : LongInt;
     FCapacity : LongInt;
@@ -104,7 +104,7 @@ type
   { TglrDictionary }
 
   TglrDictionary<Key, Value> = class
-  private
+  protected
     fSorted  : Boolean;
     fKeys    : array of Key;
     fValues  : array of Value;
