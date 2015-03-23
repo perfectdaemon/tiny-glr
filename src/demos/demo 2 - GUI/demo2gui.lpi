@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="2">
+    <Units Count="3">
       <Unit0>
         <Filename Value="demo2gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -42,6 +42,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uGame"/>
       </Unit1>
+      <Unit2>
+        <Filename Value="gamescreens.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="gamescreens"/>
+      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -1,7 +1,7 @@
 program demo2gui;
 
 uses
-  uGame, glr_core, glr_utils;
+  uGame, glr_core, glr_utils, gamescreens;
 
 var
   InitParams: TglrInitParams;
