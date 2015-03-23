@@ -138,6 +138,17 @@ type
     function GetLerpValue(aKey: Key): Value;
   end;
 
+  { TglrStack }
+
+  TglrStack<T> = class (TglrList<T>)
+  protected
+    fCurrentIndex: Integer;
+  public
+    constructor Create(aCapacity: LongInt = 4); override;
+    procedure Push(aItem: T);
+    function Pop(): T;
+  end;
+
   { Convert }
 
   Convert = class
@@ -852,6 +863,38 @@ begin
     SetLength(fKeys, Length(fKeys) - fCapacity);
     SetLength(fValues, Length(fValues) - fCapacity);
   end;
+end;
+
+
+{ TglrStack<T> }
+
+constructor TglrStack<T>.Create(aCapacity: LongInt);
+begin
+  inherited Create(aCapacity);
+  fCurrentIndex := -1;
+end;
+
+procedure TglrStack<T>.Push(aItem: T);
+begin
+  Inc(fCurrentIndex);
+  if (fCurrentIndex < fCount) then
+    fItems[fCurrentIndex] := aItem
+  else
+    fCurrentIndex := Add(aItem);
+end;
+
+function TglrStack<T>.Pop(): T;
+begin
+  if (fCurrentIndex >= 0) and (fCurrentIndex < fCount) then
+  begin
+    Result := fItems[fCurrentIndex];
+    Dec(fCurrentIndex);
+    Exit();
+  end
+  else
+    Log.Write(lError,
+      'Stack: pop failed, Current Index is ' + Convert.ToString(fCurrentIndex) +
+      ', Count is ' + Convert.ToString(fCount));
 end;
 
 
