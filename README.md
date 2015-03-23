@@ -14,18 +14,16 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 
 *Notice: It's Windows only for now (0.1 version)*
 
-###Current roadmap###
+###Roadmap###
  - [x] Early development
  - [x] Some little game to prove framework' abilities (see src/demos/lunar lander)
- - [x] 0.1 version 
- - [ ] [My Multitetris game](https://github.com/perfectdaemon/glr/tree/master/src/demos/Project%20MutilTetris) port 
- - [ ] 0.2 version 
- - [ ] My [other](https://github.com/perfectdaemon/glr/tree/master/src/demos) games' port 
- - [ ] [Space Sim](https://github.com/perfectdaemon/space-sim) port
- - [ ] ...
+ - [x] 0.1 version (Core, 2D) 
+ - [ ] 0.2 version (Base GUI, base 3D, base sound and physics)
+ - [ ] 0.3 version (Crossplatform - Android, iOS, Mac, Linux)
+ - [ ] 0.4 version (Complex 3D, external tools and editors support)
+ - [ ] 0.5 version (Drop repo and make games on Unity 8) )
 
-
-###Current features###
+###Features done###
 * Lightweight, no dependencies on other libraries, all-in-one
 * OpenGL Programmable Pipeline (works on ogl 1.5+, but no FFP for future OpenGL ES backend)
 * Texture formats: bmp (24/32 bit), tga (24/32 bit)
@@ -39,16 +37,9 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 * Meshes (early alpha)
 * 3D formats: obj, engine-based file format
 
-###Current toolset###
+###Toolset done###
 * Resource packer
 * Font generator
 
-###In progress###
-* 3D base functionality (mesh, skeletal, morph, 3ds, fbx, obj, smd)
-* GUI
-* Box2D helper classes
-* Sound and physics engines support
-* Linux, Mac OS, Android, iOS
-
 ###Tutorials###
-[not soon]
+[not soon, really]
