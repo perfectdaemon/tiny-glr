@@ -125,13 +125,13 @@ end;
 procedure TglrGameScreen.OnLoading(const DeltaTime: Double);
 begin
   // Load ended
-  State := gssReady;
+  fState := gssReady;
 end;
 
 procedure TglrGameScreen.OnUnloading(const DeltaTime: Double);
 begin
   // Unload ended
-  State := gssHidden;
+  fState := gssHidden;
 end;
 
 { TglrGameScreenManager }
@@ -287,7 +287,7 @@ end;
 procedure TglrGameScreenManager.Input(aType: TglrInputType; aKey: TglrKey; X,
   Y, aOtherParam: Integer);
 begin
-  if (ScreenStack.Count > 0) then
+  if (ScreenStack.Count > 0) and (ScreenStack.Head().State in [gssReady, gssPaused]) then
     ScreenStack.Head().OnInput(aType, aKey, X, Y, aOtherParam);
 end;
 
