@@ -49,10 +49,10 @@ type
   TglrVertexAtrib = (vaCoord = 0, vaNormal = 1, vaTexCoord0 = 2, vaTexCoord1 = 3, vaColor = 4{, ...});
 
 const
-  VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of LongWord =
+  VF_STRIDE: array[Low(TglrVertexFormat)..High(TglrVertexFormat)] of Integer =
     (SizeOf(TglrVertexP2T2), SizeOf(TglrVertexP3T2), SizeOf(TglrVertexP3T2N3), SizeOf(TglrVertexP3T2C4));
 
-  IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of LongWord =
+  IF_STRIDE: array[Low(TglrIndexFormat)..High(TglrIndexFormat)] of Integer =
     (SizeOf(Byte), SizeOf(Word), SizeOf(LongWord));
 
 type
@@ -862,8 +862,6 @@ begin
 end;
 
 destructor TglrMaterial.Destroy;
-var
-  i: Integer;
 begin
   SetLength(Textures, 0);
   inherited Destroy;

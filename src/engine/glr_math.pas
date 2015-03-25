@@ -288,17 +288,18 @@ begin
     (aPoint.y >= aMin.y) and (aPoint.y <= aMax.y);
 end;
 
+// ToDo: Useless variables, rewrite it?
 function LineCircleIntersect(aLineStart, aLineVec: TglrVec2f;
   aCircleCenter: TglrVec2f; aRadius: Single): Boolean;
 var
   lineStartToCenter: TglrVec2f;
-  cosine, sine, lineProjLength, dist, angle: Single;
+  cosine, sine{, lineProjLength}, dist{, angle}: Single;
 begin
   lineStartToCenter := (aCircleCenter - aLineStart);
   cosine := lineStartToCenter.Normal.Dot(aLineVec.Normal);
-  angle := arccos(cosine);
+  //angle := arccos(cosine);
   sine := sqrt(1 - sqr(cosine));
-  lineProjLength := Abs(cosine * lineStartToCenter.Length);
+  //lineProjLength := Abs(cosine * lineStartToCenter.Length);
   dist := Abs(sine * lineStartToCenter.Length);
   Result := (dist < aRadius);// and (sqr(lineProjLength) > aLineVec.LengthQ);
 end;

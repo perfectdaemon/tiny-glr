@@ -62,7 +62,7 @@ type
     Color: TglrVec4f;
     Scale: Single;
     PivotPoint: TglrVec2f;
-    constructor Create(const aText: WideString = ''); virtual;
+    constructor Create(const aText: WideString = ''); virtual; reintroduce;
     destructor Destroy(); override;
 
     property TextWidth: Single read fTextWidth write SetTextWidth;

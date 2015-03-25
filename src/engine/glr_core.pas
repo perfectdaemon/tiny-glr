@@ -246,7 +246,7 @@ begin
     #13#10 + aMessage +
     #13#10 + 'file: ' + aFileName +
     #13#10 + 'line: ' + Convert.ToString(aLineNo) +
-    #13#10 + 'addr: ' + Convert.ToString(Integer(aAddr)));
+    #13#10 + 'addr: ' + Convert.ToString(aAddr));
 end;
 
 class function Core.GetFPSText: AnsiString;
