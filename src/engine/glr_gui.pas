@@ -101,14 +101,13 @@ type
 
   { TglrGuiManager }
 
-  TglrGuiManager = class
+  TglrGuiManager = class (TglrGuiElementsList)
   protected
     procedure SetFocused(aElement: TglrGuiElement);
   public
-    Elements: TglrGuiElementsList;
     Focused: TglrGuiElement;
 
-    constructor Create(); virtual;
+    constructor Create(aCapacity: LongInt = 4); override;
     destructor Destroy(); override;
 
     procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
@@ -298,17 +297,14 @@ begin
   Focused := aElement;
 end;
 
-constructor TglrGuiManager.Create();
+constructor TglrGuiManager.Create(aCapacity: LongInt);
 begin
-  inherited Create;
-  Elements := TglrGuiElementsList.Create();
-
+  inherited Create(aCapacity);
   Focused := nil;
 end;
 
 destructor TglrGuiManager.Destroy;
 begin
-  Elements.Free(True);
   inherited Destroy;
 end;
 
@@ -321,12 +317,12 @@ begin
   // WIP, don't kill me
   touchVec := aGuiCamera.AbsoluteMatrix * Vec3f(X, Y, 0);
 
-  for i := 0 to Elements.Count - 1 do
-    if Elements[i].Enabled then
+  for i := 0 to FCount - 1 do
+    if FItems[i].Enabled then
       // Send ProcessInput for keys and wheel to focused only elements
       // Other messages - to all elements
-      if (not (aType in [itKeyDown, itKeyUp, itWheel])) or (Elements[i].Focused) then
-        Elements[i].ProcessInput(aType, aKey, touchVec.X, touchVec.Y, aOtherParam);
+      if (not (aType in [itKeyDown, itKeyUp, itWheel])) or (FItems[i].Focused) then
+        FItems[i].ProcessInput(aType, aKey, touchVec.X, touchVec.Y, aOtherParam);
 end;
 
 procedure TglrGuiManager.Update(const dt: Double);
