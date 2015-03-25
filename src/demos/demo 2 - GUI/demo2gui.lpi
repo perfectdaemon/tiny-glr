@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="3">
+    <Units Count="5">
       <Unit0>
         <Filename Value="demo2gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -43,10 +43,20 @@
         <UnitName Value="uGame"/>
       </Unit1>
       <Unit2>
-        <Filename Value="gamescreens.pas"/>
+        <Filename Value="..\..\engine\glr_gamescreens.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="gamescreens"/>
+        <UnitName Value="glr_gamescreens"/>
       </Unit2>
+      <Unit3>
+        <Filename Value="ugsmainmenu.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uGSMainMenu"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="uassets.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uAssets"/>
+      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
