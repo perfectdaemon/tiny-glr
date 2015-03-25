@@ -98,7 +98,7 @@ type
   public
     constructor Create(const aPoolSize: Integer); virtual;
     function Get(): T;
-    procedure Release(const aItem: T);
+    procedure Release(aItem: T);
   end;
 
   { TglrDictionary }
@@ -147,6 +147,8 @@ type
     constructor Create(aCapacity: LongInt = 4); override;
     procedure Push(aItem: T);
     function Pop(): T;
+    // Get head with no pop
+    function Head(): T;
   end;
 
   { Convert }
@@ -648,7 +650,7 @@ begin
   Exit(new);
 end;
 
-procedure TglrPool<T>.Release(const aItem: T);
+procedure TglrPool<T>.Release(aItem: T);
 begin
   aItem.Enabled := False;
 end;
@@ -895,6 +897,16 @@ begin
     Log.Write(lError,
       'Stack: pop failed, Current Index is ' + Convert.ToString(fCurrentIndex) +
       ', Count is ' + Convert.ToString(fCount));
+end;
+
+function TglrStack<T>.Head: T;
+begin
+  if (fCurrentIndex >= 0) and (fCurrentIndex < fCount) then
+    Exit(fItems[fCurrentIndex])
+  else
+    Log.Write(lError,
+        'Stack: head() failed, Current Index is ' + Convert.ToString(fCurrentIndex) +
+        ', Count is ' + Convert.ToString(fCount));
 end;
 
 
