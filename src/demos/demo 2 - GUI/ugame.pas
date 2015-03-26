@@ -22,8 +22,7 @@ type
     MainMenuScreen, SettingsScreen, GameScreen: TglrGameScreen;
   public
     procedure OnFinish; override;
-    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer); override;
+    procedure OnInput(Event: PglrInputEvent); override;
     procedure OnPause; override;
     procedure OnRender; override;
     procedure OnResize(aNewWidth, aNewHeight: Integer); override;
@@ -57,7 +56,7 @@ begin
   GameScreenManager.SwitchTo(MainMenuScreen);
   (*
 
-  Render.SetClearColor(0.1, 0.25, 0.25);
+
 
   GuiAtlas := TglrTextureAtlas.Create(
     FileSystem.ReadResource('data/gui.tga'),
@@ -101,23 +100,6 @@ begin
   DebugTextPivotPointSprite.SetVerticesColor(Vec4f(1.0, 0.0, 0.0, 1.0));
   DebugTextPivotPointSprite.Parent := Layout1;
 
-  DebugTextWidthSprite := TglrSprite.Create(20, 5, Vec2f(0.5, 0.5));
-  DebugTextWidthSprite.Position := Vec3f(0, 0, -1);
-  DebugTextWidthSprite.SetVerticesColor(Vec4f(1.0, 1.0, 1.0, 0.5));
-  DebugTextWidthSprite.Parent := DebugText;
-
-  Gui := TglrGuiManager.Create();
-  Gui.Elements.Add(Button1);
-  Gui.Elements.Add(Layout1);
-
-  Camera := TglrCamera.Create();
-  Camera.ProjectionMode := pmOrtho;
-  Camera.ProjectionModePivot := pTopLeft;
-  Camera.SetCamera(
-    Vec3f(0, 0, 100),
-    Vec3f(0, 0, 0),
-    Vec3f(0, 1, 0));
-  Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
   *)
 end;
 
@@ -128,11 +110,10 @@ begin
   Assets.UnloadBase();
 end;
 
-procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-  aOtherParam: Integer);
+procedure TGame.OnInput(Event: PglrInputEvent);
 begin
   // Calls when engine receives some input info
-  GameScreenManager.Input(aType, aKey, X, Y, aOtherParam);
+  GameScreenManager.Input(Event);
 end;
 
 procedure TGame.OnUpdate(const dt: Double);

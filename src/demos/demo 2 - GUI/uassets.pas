@@ -58,13 +58,11 @@ begin
   GuiSpriteBatch := TglrSpriteBatch.Create();
 
   GuiCamera := TglrCamera.Create();
-  GuiCamera.ProjectionMode := pmOrtho;
-  GuiCamera.ProjectionModePivot := pTopLeft;
-  GuiCamera.SetCamera(
+  GuiCamera.SetProjParams(0, 0, Render.Width, Render.Height, 45, 0.1, 100, pmOrtho, pTopLeft);
+  GuiCamera.SetViewParams(
     Vec3f(0, 0, 100),
     Vec3f(0, 0, 0),
     Vec3f(0, 1, 0));
-  GuiCamera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
 
   FontMain := TglrFont.Create(FileSystem.ReadResource(R_FONT_MAIN));
   FontMainBatch := TglrFontBatch.Create(FontMain);
