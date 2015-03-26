@@ -13,6 +13,8 @@ type
 
   Assets = class
   public
+    // Base assets
+
     class var GuiAtlas: TglrTextureAtlas;
     class var GuiMaterial: TglrMaterial;
     class var GuiCamera: TglrCamera;
@@ -21,9 +23,11 @@ type
     class var FontMain: TglrFont;
     class var FontMainBatch: TglrFontBatch;
 
-    // Base includes GUI, Fonts
     class procedure LoadBase();
     class procedure UnloadBase();
+
+    // Level specified assets
+    // ...
   end;
 
 const
