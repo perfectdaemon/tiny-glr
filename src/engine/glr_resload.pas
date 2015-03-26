@@ -359,15 +359,12 @@ end;
 function LoadText(const Stream: TglrStream): PAnsiChar;
 var
   bytesRead: Integer;
-  data: PAnsiChar;
 begin
-  GetMem(data, Stream.Size + 1);
-  bytesRead := Stream.Read(data^, Stream.Size);
-  data[Stream.Size] := #0;
+  GetMem(Result, Stream.Size + 1);
+  bytesRead := Stream.Read(Result^, Stream.Size);
+  Result[Stream.Size] := #0;
   if (bytesRead <> Stream.Size) then
     Log.Write(lCritical, 'Text file load: Count of bytes read not equal to stream size');
-
-  Result := data;
 end;
 
 function LoadStringList(const Stream: TglrStream): TglrStringList;
@@ -378,7 +375,7 @@ var
 begin
   p := LoadText(Stream);
   line := p;
-  FreeMem(p);
+
   Result := TglrStringList.Create(32);
   start := 0;
   for i := 1 to Length(line) do
@@ -390,6 +387,7 @@ begin
         Result.Add(Copy(line, start + 1, i - start));
       start := i;
     end;
+  FreeMem(p);
 end;
 
 function LoadRaw_Obj(const Stream: TglrStream): TglrObjRawMeshData;
