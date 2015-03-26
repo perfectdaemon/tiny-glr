@@ -23,8 +23,7 @@ type
     procedure SaveMeshDataAsGlr();
   public
     procedure OnFinish; override;
-    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer); override;
+    procedure OnInput(Event: PglrInputEvent); override;
     procedure OnPause; override;
     procedure OnRender; override;
     procedure OnResize(aNewWidth, aNewHeight: Integer); override;
@@ -72,9 +71,10 @@ begin
   PrepareMaterial();
 
   Camera := TglrCamera.Create();
-  Camera.ProjectionMode := pmPerspective;
-  Camera.SetCamera(Vec3f(5, 7, 5), Vec3f(0, 2, 0), Vec3f(0, 1, 0));
-  Camera.Viewport(0, 0, Render.Width, Render.Height, 45, 0.1, 500);
+  Camera.SetProjParams(0, 0, Render.Width, Render.Height,
+    45, 0.1, 500,
+    pmPerspective, pTopLeft);
+  Camera.SetViewParams(Vec3f(5, 7, 5), Vec3f(0, 2, 0), Vec3f(0, 1, 0));
 end;
 
 procedure TGame.OnFinish;
@@ -85,25 +85,24 @@ begin
   Camera.Free();
 end;
 
-procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-  aOtherParam: Integer);
+procedure TGame.OnInput(Event: PglrInputEvent);
 begin
-  if (aType = itTouchDown) and (aKey = kLeftButton) then
+  if (Event.InputType = itTouchDown) and (Event.Key = kLeftButton) then
   begin
-    dx := X;
-    dy := Y;
+    dx := Event.X;
+    dy := Event.Y;
   end;
 
-  if (aType = itTouchMove) and (aKey = kLeftButton) then
+  if (Event.InputType = itTouchMove) and (Event.Key = kLeftButton) then
   begin
-    Camera.Rotate((x - dx) * deg2rad * 0.2, Vec3f(0, 1, 0));
-    Camera.Rotate((y - dy) * deg2rad * 0.2, Camera.Right);
-    dx := X;
-    dy := Y;
+    Camera.Rotate((Event.X - dx) * deg2rad * 0.2, Vec3f(0, 1, 0));
+    Camera.Rotate((Event.Y - dy) * deg2rad * 0.2, Camera.Right);
+    dx := Event.X;
+    dy := Event.Y;
   end;
 
-  if (aType = itWheel) then
-    Camera.Translate(0, 0, -Sign(2 * aOtherParam));
+  if (Event.InputType = itWheel) then
+    Camera.Translate(0, 0, -Sign(2 * Event.W));
 end;
 
 procedure TGame.OnUpdate(const dt: Double);

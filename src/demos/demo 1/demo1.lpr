@@ -38,8 +38,7 @@ type
     procedure CreateFont();
   public
     procedure OnFinish; override;
-    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer); override;
+    procedure OnInput(Event: PglrInputEvent); override;
     procedure OnPause; override;
     procedure OnRender; override;
     procedure OnResume; override;
@@ -193,32 +192,31 @@ begin
   WriteLn('End');
 end;
 
-procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-  aOtherParam: Integer);
+procedure TGame.OnInput(Event: PglrInputEvent);
 begin
-  if (aType = itTouchDown) and (aKey = kLeftButton) then
+  if (Event.InputType = itTouchDown) and (Event.Key = kLeftButton) then
   begin
-    dx := X;
-    dy := Y;
+    dx := Event.X;
+    dy := Event.Y;
   end;
 
-  if (aType = itTouchMove) and (aKey = kLeftButton) then
+  if (Event.InputType = itTouchMove) and (Event.Key = kLeftButton) then
   begin
-    Camera.Rotate((x - dx) * deg2rad * 0.2, Vec3f(0, 1, 0));
-    Camera.Rotate((y - dy) * deg2rad * 0.2, Camera.Right);
-    dx := X;
-    dy := Y;
+    Camera.Rotate((Event.X - dx) * deg2rad * 0.2, Vec3f(0, 1, 0));
+    Camera.Rotate((Event.Y - dy) * deg2rad * 0.2, Camera.Right);
+    dx := Event.X;
+    dy := Event.Y;
   end;
 
-  if (aType = itTouchMove) and (aKey = kNoInput) then
+  if (Event.InputType = itTouchMove) and (Event.Key = kNoInput) then
   begin
     Sprites[1].Up := (Sprites[1].Position - Vec3f(Core.Input.Touch[0].Pos, 0)).Normal;
     Sprites[1].Direction := Vec3f(0, 0.0, 1.0);
   end;
 
-  if (aType = itWheel) then
-    Camera.Translate(0, 0, -Sign(aOtherParam));
-  if (aType = itKeyUp) and (aKey = kU) then
+  if (Event.InputType = itWheel) then
+    Camera.Translate(0, 0, -Sign(Event.W));
+  if (Event.InputType = itKeyUp) and (Event.Key = kU) then
     Log.Write(lInformation, 'Camera.Mat: '#13#10 + Convert.ToString(Camera.Matrix, 2));
 end;
 
@@ -235,9 +233,9 @@ begin
 
   CameraHud.Update();
   Material.Bind();
-//  Batch.Start();
-//  Batch.Draw(Sprites);
-//  Batch.Finish();
+  Batch.Start();
+  Batch.Draw(Sprites);
+  Batch.Finish();
   FontBatch.Start();
   FontBatch.Draw(Text);
   FontBatch.Finish();
@@ -260,13 +258,13 @@ begin
   Render.SetCullMode(cmBack);
 
   Camera := TglrCamera.Create();
-  Camera.SetCamera(Vec3f(5, 0, 5), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
-  Camera.ProjectionMode := pmPerspective;
-  Camera.Viewport(0, 0, Render.Width, Render.Height, 35, 0.1, 1000);
+  Camera.SetProjParams(0, 0, Render.Width, Render.Height, 35, 0.1, 1000, pmPerspective, pTopLeft);
+  Camera.SetViewParams(Vec3f(5, 0, 5), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
 
   CameraHud := TglrCamera.Create();
-  CameraHud.SetCamera(Vec3f(0, 0, 100), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
-  CameraHud.ProjectionMode := pmOrtho;
+  CameraHud.SetProjParams(0, 0, Render.Width, Render.Height, 45, 0.1, 1000, pmOrtho, pTopLeft);
+  CameraHud.SetViewParams(Vec3f(0, 0, 100), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
+
 
   Material := TglrMaterial.Create(Default.SpriteShader);
 //  Material.AddTexture(TglrTexture.Create(FileSystem.ReadResource('Arial12b.bmp'), 'bmp'), 'uDiffuse');

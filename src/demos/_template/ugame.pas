@@ -13,8 +13,7 @@ type
 
   public
     procedure OnFinish; override;
-    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer); override;
+    procedure OnInput(Event: PglrInputEvent); override;
     procedure OnPause; override;
     procedure OnRender; override;
     procedure OnResize(aNewWidth, aNewHeight: Integer); override;
@@ -40,8 +39,7 @@ begin
   // Write here code for destroying all of your objects
 end;
 
-procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-  aOtherParam: Integer);
+procedure TGame.OnInput(Event: PglrInputEvent);
 begin
   // Calls when engine receives some input info
 end;

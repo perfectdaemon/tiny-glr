@@ -305,8 +305,7 @@ type
     procedure SetAttention(aText: WideString);
   public
     procedure OnFinish; override;
-    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer); override;
+    procedure OnInput(Event: PglrInputEvent); override;
     procedure OnPause; override;
     procedure OnRender; override;
     procedure OnResize(aNewWidth, aNewHeight: Integer); override;
@@ -1123,13 +1122,12 @@ begin
   PauseSprite.Visible := False;
 
   Camera := TglrCamera.Create();
-  Camera.ProjectionMode := pmOrtho;
-  Camera.ProjectionModePivot := pTopLeft;
-  Camera.SetCamera(
+  Camera.SetProjParams(0, 0, Render.Width, Render.Height, 90, -1, 200,
+    pmOrtho, pTopLeft);
+  Camera.SetViewParams(
     Vec3f(0, 0, 100),
     Vec3f(0, 0, 0),
     Vec3f(0, 1, 0));
-  Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
 
   Player := TPlayer.Create();
 
@@ -1320,15 +1318,14 @@ begin
   Font.Free();
 end;
 
-procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-  aOtherParam: Integer);
+procedure TGame.OnInput(Event: PglrInputEvent);
 begin
   // Calls when engine receives some input info
   if (GameOver) then
   begin
-    if (aType = itKeyDown) and (aKey = kEscape) then
+    if (Event.InputType = itKeyDown) and (Event.Key = kEscape) then
       Core.Quit()
-    else if (aType = itKeyDown) and (aKey = kReturn) then
+    else if (Event.InputType = itKeyDown) and (Event.Key = kReturn) then
     begin
       OnFinish();
       OnStart();
@@ -1336,25 +1333,25 @@ begin
   end
   else
   begin
-    if (aType = itKeyDown) and (aKey = kEscape) then
+    if (Event.InputType = itKeyDown) and (Event.Key = kEscape) then
     begin
       Pause := not Pause;
       PauseText.Visible := Pause;
       PauseSprite.Visible := Pause;
     end;
 
-    if (aType = itKeyDown) and (aKey = kSpace) then
+    if (Event.InputType = itKeyDown) and (Event.Key = kSpace) then
       AutoFire := not AutoFire;
 
-    if (aType = itTouchDown) and (aKey = kRightButton) then
+    if (Event.InputType = itTouchDown) and (Event.Key = kRightButton) then
       Player.FireAlternative();
 
-    if (aType = itKeyDown) and (aKey = kPlus) then
+    if (Event.InputType = itKeyDown) and (Event.Key = kPlus) then
     begin
       MusicVolume := Clamp(MusicVolume + 1, 0, uFMOD_MAX_VOL);
       uFMOD_SetVolume(MusicVolume);
     end
-    else if (aType = itKeyDown) and (aKey = kMinus) then
+    else if (Event.InputType = itKeyDown) and (Event.Key = kMinus) then
     begin
       MusicVolume := Clamp(MusicVolume - 1, 0, uFMOD_MAX_VOL);
       uFMOD_SetVolume(MusicVolume);
