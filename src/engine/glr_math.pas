@@ -41,6 +41,9 @@ type
   end;
 
 {$REGION ' Single Vectors '}
+
+  { TglrVec2f }
+
   TglrVec2f = record
     x, y: Single;
     class operator Equal (const v1, v2: TglrVec2f): Boolean;
@@ -49,6 +52,8 @@ type
     class operator Multiply (const v1, v2: TglrVec2f): TglrVec2f;
     class operator Multiply (const v: TglrVec2f; a: Single): TglrVec2f;
     class operator Multiply (const a: Single; const v: TglrVec2f): TglrVec2f;
+    class operator Divide   (const v: TglrVec2f; const a: Single): TglrVec2f;
+    class operator Negative (const v: TglrVec2f): TglrVec2f;
     function Dot(const v: TglrVec2f): Single;
     function Reflect(const n: TglrVec2f): TglrVec2f;
     function Refract(const n: TglrVec2f; Factor: Single): TglrVec2f;
@@ -68,6 +73,8 @@ type
     function GetRotationAngle(): Single;
   end;
 
+  { TglrVec3f }
+
   TglrVec3f = record
     x, y, z: Single;
     class operator Equal(const v1, v2: TglrVec3f): Boolean;
@@ -76,6 +83,8 @@ type
     class operator Multiply(const v1, v2: TglrVec3f): TglrVec3f;
     class operator Multiply(const v: TglrVec3f; a: Single): TglrVec3f;
     class operator Multiply(const a: Single; const v: TglrVec3f): TglrVec3f;
+    class operator Divide   (const v: TglrVec3f; const a: Single): TglrVec3f;
+    class operator Negative (const v: TglrVec3f): TglrVec3f;
     function Lerp(const v: TglrVec3f; t: Single): TglrVec3f;
     function Dot(const v: TglrVec3f): Single;
     function Cross(const v: TglrVec3f): TglrVec3f;
@@ -542,6 +551,12 @@ begin
   Result.y := v1.y - v2.y;
 end;
 
+class operator TglrVec2f.Negative(const v: TglrVec2f): TglrVec2f;
+begin
+  Result.x := - v.x;
+  Result.y := - v.y;
+end;
+
 class operator TglrVec2f.Multiply(const v1, v2: TglrVec2f): TglrVec2f;
 begin
   Result.x := v1.x * v2.x;
@@ -557,6 +572,11 @@ end;
 class operator TglrVec2f.Multiply(const a: Single; const v: TglrVec2f): TglrVec2f;
 begin
   Result := v * a;
+end;
+
+class operator TglrVec2f.Divide(const v: TglrVec2f; const a: Single): TglrVec2f;
+begin
+  Result := v * (1 / a);
 end;
 
 function TglrVec2f.Dot(const v: TglrVec2f): Single;
@@ -712,6 +732,18 @@ end;
 class operator TglrVec3f.Multiply(const a: Single; const v: TglrVec3f): TglrVec3f;
 begin
   Result := v * a;
+end;
+
+class operator TglrVec3f.Divide(const v: TglrVec3f; const a: Single): TglrVec3f;
+begin
+  Result := v * (1 / a);
+end;
+
+class operator TglrVec3f.Negative(const v: TglrVec3f): TglrVec3f;
+begin
+  Result.x := - v.x;
+  Result.y := - v.y;
+  Result.z := - v.z;
 end;
 
 function TglrVec3f.Lerp(const v: TglrVec3f; t: Single): TglrVec3f;
