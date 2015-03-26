@@ -21,6 +21,11 @@ type
 
   TglrGuiElement = class (TglrSprite)
   protected
+    fNormalTextureRegion,
+    fOverTextureRegion,
+    fClickedTextureRegion,
+    fDisabledTextureRegion: PglrTextureRegion;
+
     fIsMouseOver: Boolean;
     fEnabled, fFocused: Boolean;
 
@@ -28,6 +33,7 @@ type
     procedure SetWidth(const aWidth: Single); override;
     procedure SetHeight(const aHeight: Single); override;
     procedure SetPP(const aPP: TglrVec2f); override;
+    procedure SetNormalTextureRegion(const aTextureRegion: PglrTextureRegion);
 
     procedure SetEnabled(const aValue: Boolean);
     procedure SetFocused(const aValue: Boolean);
@@ -46,10 +52,10 @@ type
     HitBox: TglrBB;
 
     // Texture regions for various states of button
-    NormalTextureRegion,
-    OverTextureRegion,
-    ClickedTextureRegion,
-    DisabledTextureRegion: PglrTextureRegion;
+    property NormalTextureRegion: PglrTextureRegion read fNormalTextureRegion write SetNormalTextureRegion;
+    property OverTextureRegion: PglrTextureRegion read fOverTextureRegion write fOverTextureRegion;
+    property ClickedTextureRegion: PglrTextureRegion read fClickedTextureRegion write fClickedTextureRegion;
+    property DisabledTextureRegion: PglrTextureRegion read fDisabledTextureRegion write fDisabledTextureRegion;
 
     property Enabled: Boolean read fEnabled write SetEnabled;
     property Focused: Boolean read fFocused write SetFocused;
@@ -401,6 +407,14 @@ procedure TglrGuiElement.SetPP(const aPP: TglrVec2f);
 begin
   inherited SetPP(aPP);
   UpdateHitBox();
+end;
+
+procedure TglrGuiElement.SetNormalTextureRegion(
+  const aTextureRegion: PglrTextureRegion);
+begin
+  fNormalTextureRegion := aTextureRegion;
+  if (aTextureRegion <> nil) then
+    SetTextureRegion(aTextureRegion);
 end;
 
 procedure TglrGuiElement.SetEnabled(const aValue: Boolean);
