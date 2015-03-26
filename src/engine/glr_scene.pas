@@ -51,57 +51,39 @@ type
   { TglrCamera }
 
   TglrCameraProjectionMode = (pmOrtho, pmPerspective);
-  TglrCameraTargetMode = (mPoint, mTarget, mFree);
 
   TglrCameraPivot = (pTopLeft, pCenter, pBottomRight);
 
-  TglrViewportParams = record
-    X, Y, W, H: Integer;
-    FOV, ZNear, ZFar: Single;
-  end;
-
   TglrCamera = class (TglrNode)
-  private
-    procedure SetProjModePivot(aValue: TglrCameraPivot);
-    procedure SetScale(aValue: Single);
   protected
     fProjMode: TglrCameraProjectionMode;
+    fPivotMode: TglrCameraPivot;
 
-    fMode: TglrCameraTargetMode;
-    fTargetPoint: TglrVec3f;
-    fTarget: TglrNode;
     fScale, fFOV, fZNear, fZFar: Single;
     fX, fY, fW, fH: Integer;
-    fProjectionPivot: TglrCameraPivot;
-    procedure SetProjMode(aMode: TglrCameraProjectionMode);
-    procedure UpdateVectorsFromMatrix(); override;
+    procedure SetScale(aValue: Single);
+    procedure RebuildProjMatrix();
   public
-    fProjMatrix: TglrMat4f;
+    ProjMatrix: TglrMat4f;
 
     constructor Create(); override;
 
-    procedure Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
-    procedure ViewportOnly(x, y, w, h: Integer);
+    procedure SetProjParams(X, Y, W, H: Integer); overload;
+    procedure SetProjParams(X, Y, W, H: Integer;
+      FOV, ZNear, ZFar: Single;
+      ProjMode: TglrCameraProjectionMode;
+      PivotMode: TglrCameraPivot); overload;
+
+    procedure SetViewParams(SelfPos, TargetPos, Up: TglrVec3f);
 
     procedure Translate(alongUpVector, alongRightVector, alongDirVector: Single);
     procedure Rotate(delta: Single; Axis: TglrVec3f);
-
-    function GetViewport(): TglrViewportParams;
-    function WindowPosToCameraPos(aPos: TglrVec2f): TglrVec2f;
-
-    procedure Update;
-
-    procedure SetCamera(aPos, aTargetPos, aUp: TglrVec3f);
-
-    procedure RenderSelf(); override;
-
     property Scale: Single read fScale write SetScale;
 
-  //    procedure SetTarget(aPoint: TglrVec3f); overload;
-  //    procedure SetTarget(aTarget: IglrNode); overload;
+    function ScreenToWorld(screenPosition: TglrVec2f): TglrVec2f;
 
-    property ProjectionMode: TglrCameraProjectionMode read fProjMode write SetProjMode;
-    property ProjectionModePivot: TglrCameraPivot read fProjectionPivot write SetProjModePivot;
+    procedure RenderSelf(); override;
+    procedure Update();
   end;
 
   { TglrScene }
@@ -251,95 +233,81 @@ end;
 
 { TglrCamera }
 
-procedure TglrCamera.SetProjModePivot(aValue: TglrCameraPivot);
-begin
-  if fProjectionPivot = aValue then
-    Exit;
-  fProjectionPivot := aValue;
-  SetProjMode(ProjectionMode); //update projection
-end;
-
 procedure TglrCamera.SetScale(aValue: Single);
 begin
   if fScale = aValue then
     Exit;
   fScale := aValue;
-  SetProjMode(ProjectionMode); //update projection
+  RebuildProjMatrix();
 end;
 
-procedure TglrCamera.SetProjMode(aMode: TglrCameraProjectionMode);
+procedure TglrCamera.RebuildProjMatrix;
 begin
-  fProjMatrix.Identity;
-  case aMode of
-    pmPerspective:
-      fProjMatrix.Perspective(fFOV, fW / fH, fZNear, fZFar);
+  ProjMatrix.Identity();
+  case fProjMode of
+    pmPerspective: ProjMatrix.Perspective(fFOV, fW / fH, fZNear, fZFar);
     pmOrtho:
-      case fProjectionPivot of
-        pTopLeft:
-          fProjMatrix.Ortho(0, fW / fScale, fH / fScale, 0, fZNear, fZFar); //replaced fX, fY with zero
-        pCenter:
-          fProjMatrix.Ortho(-fW / (2 * fScale), fW / (2 * fScale), fH /(2 * fScale), -fH / (2 * fScale), fZNear, fZFar);
-        pBottomRight:
-          fProjMatrix.Ortho(- fW / (2 * fScale), 0, - fH /(2 * fScale), 0, fZNear, fZFar);
+      case fPivotMode of
+        pTopLeft:     ProjMatrix.Ortho(0,                   fW / fScale,       fH / fScale,       0,                   fZNear, fZFar);
+        pCenter:      ProjMatrix.Ortho(- fW / (2 * fScale), fW / (2 * fScale), fH / (2 * fScale), - fH / (2 * fScale), fZNear, fZFar);
+        pBottomRight: ProjMatrix.Ortho(- fW / (2 * fScale), 0,                 0,                 - fH / (2 * fScale), fZNear, fZFar);
       end;
-  end;
-  fProjMode := aMode;
-end;
 
-procedure TglrCamera.UpdateVectorsFromMatrix;
-begin
-  inherited;
-  exit();
-  (*
-  with Matrix do
-  begin
-    fRight.x := e00;  fRight.y := e10;  fRight.z := e20;
-    fUp.x := e01; fUp.y := e11; fUp.z := e21;
-    fDir.x := e02;   fDir.y := e12;   fDir.z := e22;
   end;
-  *)
 end;
 
 constructor TglrCamera.Create;
 begin
   inherited Create;
-  fFOV := 90;
-  fZNear := 0.01;
-  fZFar := 100;
-  fX := 0;
-  fY := 0;
-  fW := Render.Width;
-  fH := Render.Height;
-  fScale := 1.0;
-  fProjectionPivot := pTopLeft;
-  fProjMatrix.Identity;
-  SetCamera(Vec3f(0, 0, 10), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
+	fScale := 1.0;
+  SetProjParams(0, 0, Render.Width, Render.Height, 45, 0.01, 100, pmOrtho, pTopLeft);
+  SetViewParams(Vec3f(0, 0, 100), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
 end;
 
-procedure TglrCamera.Viewport(x, y, w, h: Integer; FOV, ZNear, ZFar: Single);
+procedure TglrCamera.SetProjParams(X, Y, W, H: Integer);
+begin
+  if (W < 0) then
+    W := 1;
+  if (H < 0) then
+    H := 1;
+
+  fX := X;
+  fY := Y;
+  fW := W;
+  fH := H;
+  RebuildProjMatrix();
+end;
+
+procedure TglrCamera.SetProjParams(X, Y, W, H: Integer; FOV, ZNear,
+  ZFar: Single; ProjMode: TglrCameraProjectionMode; PivotMode: TglrCameraPivot);
 begin
   fFOV := FOV;
   fZNear := ZNear;
   fZFar := ZFar;
-  fX := x;
-  fY := y;
-  if w > 0 then
-    fW := w
-  else
-    fW := 1;
-  if h > 0 then
-    fH := h
-  else
-    fH := 1;
-
-  ProjectionMode := fProjMode; //Обновляем матрицу проекции
-
-  Render.SetViewPort(fX, fY, fW, fH);
+  fProjMode := ProjMode;
+  fPivotMode := PivotMode;
+  setProjParams(X, Y, W, H);
 end;
 
-procedure TglrCamera.ViewportOnly(x, y, w, h: Integer);
+procedure TglrCamera.SetViewParams(SelfPos, TargetPos, Up: TglrVec3f);
 begin
-  Viewport(x, y, w, h, fFOV, fZNear, fZFar);
+  Matrix.Identity();
+  fUp := Up.Normal();
+  fDir := (TargetPos - SelfPos).Normal();
+  fRight := fDir.Cross(fUp).Normal();
+  fUp := fRight.Cross(fDir).Normal(); // wtf?
+  Position := SelfPos;
+  fDir := -fDir;
+  with Matrix do
+  begin
+    e00 := fRight.x; e10 := fRight.y; e20 := fRight.z; e30 := -fRight.Dot(Position);
+    e01 := fUp.x;    e11 := fUp.y;    e21 := fUp.z;    e31 := -fUp.Dot(Position);
+    e02 := fDir.x;   e12 := fDir.y;   e22 := fDir.z;   e32 := -fDir.Dot(position);
+    e03 := 0;        e13 := 0;        e23 := 0;        e33 := 1;
+  end;
+
+  Matrix := Matrix.Transpose();
+  UpdateVectorsFromMatrix();
 end;
 
 procedure TglrCamera.Translate(alongUpVector, alongRightVector,
@@ -349,7 +317,6 @@ var
 begin
   v := Up * alongUpVector + Right * alongRightVector + Direction * alongDirVector;
   Position += v;
-  UpdateVectorsFromMatrix();
 end;
 
 procedure TglrCamera.Rotate(delta: Single; Axis: TglrVec3f);
@@ -358,27 +325,20 @@ begin
   UpdateVectorsFromMatrix();
 end;
 
-function TglrCamera.GetViewport: TglrViewportParams;
+function TglrCamera.ScreenToWorld(screenPosition: TglrVec2f): TglrVec2f;
 begin
-  with Result do
-  begin
-    X := fX;
-    Y := fY;
-    W := fW;
-    H := fH;
-    FOV := fFOV;
-    ZNear := fZNear;
-    ZFar := fZFar;
-  end;
-end;
-
-function TglrCamera.WindowPosToCameraPos(aPos: TglrVec2f): TglrVec2f;
-begin
-  Result := Vec2f(Position) + aPos * (1 / fScale);
-  case fProjectionPivot of
-    pTopLeft: ;
-    pCenter:      Result -= Vec2f(fW / 2, fH / 2) * (1 / fScale);
-    pBottomRight: Result -= Vec2f(fW,     fH)     * (1 / fScale);
+  case fProjMode of
+    pmOrtho:
+    begin
+      Result := Vec2f(Position) + screenPosition / fScale;
+      case fPivotMode of
+        pCenter:      Result -= Vec2f(fW / 2, fH / 2) / fScale;
+        pBottomRight: Result -= Vec2f(fW,     fH)     / fScale;
+        pTopLeft: ;
+      end;
+    end;
+    pmPerspective:
+      Log.Write(lCritical, 'Camera.ScreenToWorld() with perpective camera is not implemented');
   end;
 end;
 
@@ -386,38 +346,12 @@ procedure TglrCamera.Update;
 begin
   Matrix.Pos := Vec3f(0, 0, 0);
   Matrix.Pos := Matrix * Position.NegateVector;
-  Render.Params.ViewProj := fProjMatrix * Matrix;
+  Render.Params.ViewProj := ProjMatrix * Matrix;
   Render.Params.ModelViewProj := Render.Params.ViewProj;
   UpdateVectorsFromMatrix();
 
   if (Render.Width <> fW) or (Render.Height <> fH) then
-    ViewportOnly(0, 0, Render.Width, Render.Height);
-end;
-
-procedure TglrCamera.SetCamera(aPos, aTargetPos, aUp: TglrVec3f);
-begin
-  Matrix.Identity;
-  fUp := aUp.Normal();
-  fDir := (aTargetPos - aPos).Normal();
-  fRight := fDir.Cross(fUp).Normal();
-  fUp := fRight.Cross(fDir).Normal();
-  Position := aPos;
-  fDir.Negate;
-
-  with Matrix do
-  begin
-    e00 := fRight.x;  e10 := fRight.y;  e20 := fRight.z;  e30 := -fRight.Dot(Position);
-    e01 := fUp.x;    e11 := fUp.y;    e21 := fUp.z;    e31 := -fUp.Dot(Position);
-    e02 := fDir.x;   e12 := fDir.y;   e22 := fDir.z;   e32 := -fDir.Dot(Position);
-    e03 := 0;        e13 := 0;        e23 := 0;        e33 := 1;
-  end;
-
-  Matrix := Matrix.Transpose();
-
-  fTargetPoint := aTargetPos;
-  fMode := mPoint;
-
-  UpdateVectorsFromMatrix();
+    SetProjParams(0, 0, Render.Width, Render.Height);
 end;
 
 procedure TglrCamera.RenderSelf;
