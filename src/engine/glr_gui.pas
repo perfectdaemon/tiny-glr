@@ -103,17 +103,22 @@ type
 
   TglrGuiManager = class (TglrGuiElementsList)
   protected
+    fFontBatch: TglrFontBatch;
+    fSpriteBatch: TglrSpriteBatch;
+    fMaterial: TglrMaterial;
     procedure SetFocused(aElement: TglrGuiElement);
   public
     Focused: TglrGuiElement;
 
-    constructor Create(aCapacity: LongInt = 4); override;
+    constructor Create(Material: TglrMaterial; Font: TglrFont; aCapacity: LongInt = 4); reintroduce;
     destructor Destroy(); override;
 
     procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
       aOtherParam: Integer; aGuiCamera: TglrCamera);
 
     procedure Update(const dt: Double);
+
+    procedure Render();
   end;
 
 implementation
@@ -297,14 +302,20 @@ begin
   Focused := aElement;
 end;
 
-constructor TglrGuiManager.Create(aCapacity: LongInt);
+constructor TglrGuiManager.Create(Material: TglrMaterial; Font: TglrFont;
+  aCapacity: LongInt);
 begin
   inherited Create(aCapacity);
   Focused := nil;
+  fMaterial := Material;
+  fSpriteBatch := TglrSpriteBatch.Create();
+  fFontBatch := TglrFontBatch.Create(Font);
 end;
 
 destructor TglrGuiManager.Destroy;
 begin
+  fSpriteBatch.Free();
+  fFontBatch.Free();
   inherited Destroy;
 end;
 
@@ -328,6 +339,42 @@ end;
 procedure TglrGuiManager.Update(const dt: Double);
 begin
 
+end;
+
+procedure TglrGuiManager.Render;
+var
+  i, j: Integer;
+  b: TglrGuiButton;
+begin
+  // Render sprites
+  fMaterial.Bind();
+  fSpriteBatch.Start();
+
+  for i := 0 to FCount - 1 do
+    // If it is GuiLayout it has 9 sprites to draw (9-patch)
+    if (FItems[i] is TglrGuiLayout) then
+    begin
+      fSpriteBatch.Draw(FItems[i]);
+      for j := 0 to 7 do
+        fSpriteBatch.Draw(TglrGuiLayout(FItems[i]).Patches[j]);
+    end
+    // In any other cases - just draw element itself
+    else
+      fSpriteBatch.Draw(FItems[i]);
+
+  fSpriteBatch.Finish();
+
+  // Render any text in components
+  fFontBatch.Start();
+  for i := 0 to FCount - 1 do
+    // GuiButton has Text object
+    if (FItems[i] is TglrGuiButton) then
+    begin
+      b := TglrGuiButton(FItems[i]);
+      b.Text.Position.z := b.Position.z + 1;
+      fFontBatch.Draw(b.Text);
+    end;
+  fFontBatch.Finish();
 end;
 
 { TglrGuiElement }
