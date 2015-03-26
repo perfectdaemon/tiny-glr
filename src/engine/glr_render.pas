@@ -460,6 +460,7 @@ begin
   Render.SetShader(0);
 end;
 
+
 procedure TglrShaderProgram.Attach(aStream: TglrStream;
   aShaderType: TglrShaderType; aFreeStreamOnFinish: Boolean);
 var
@@ -716,29 +717,6 @@ begin
   end;
 
   Create(data, Width, Height, aFormat);
-(*
-  gl.GenTextures(1, @Id);
-  Target := GL_TEXTURE_2D;
-
-  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load started');
-
-  gl.BindTexture(Target, Self.Id);
-
-  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Ord(GL_LINEAR));
-  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Ord(GL_LINEAR));
-  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, Ord(GL_REPEAT));
-  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, Ord(GL_REPEAT));
-  gl.GetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, @anisotropy);
-  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
-
-  data := LoadTexture(aStream, aExt, iFormat, cFormat, dType, pSize, Self.Width, Self.Height);
-  gl.TexImage2D(GL_TEXTURE_2D, 0, iFormat, Width, Height, 0, cFormat, dType, data);
-
-  gl.BindTexture(GL_TEXTURE_2D, 0);
-
-  Log.Write(lInformation, 'Texture (ID = ' + Convert.ToString(Integer(Self.Id)) + ') load completed');
-
-*)
   Freemem(data, Width * Height * pSize);
   if (aFreeStreamOnFinish) then
     aStream.Free();
