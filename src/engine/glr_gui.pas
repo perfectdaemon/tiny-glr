@@ -12,10 +12,7 @@ type
 
   TglrGuiBooleanCallback = procedure (Sender: TglrGuiElement; aValue: Boolean) of object;
 
-  TglrGuiInputCallback = procedure(Sender: TglrGuiElement;
-    aType: TglrInputType;
-    aKey: TglrKey;
-    X, Y: Single; aOtherParam: Integer) of object;
+  TglrGuiInputCallback = procedure(Sender: TglrGuiElement; Event: PglrInputEvent) of object;
 
   { TglrGuiElement }
 
@@ -37,8 +34,7 @@ type
 
     procedure SetEnabled(const aValue: Boolean);
     procedure SetFocused(const aValue: Boolean);
-    procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y: Single;
-      aOtherParam: Integer);
+    procedure ProcessInput(Event: PglrInputEvent);
     function IsHit(X, Y: Single): Boolean;
   public
     // Input events
@@ -100,7 +96,7 @@ type
   protected
     procedure SetVisible(const aVisible: Boolean); override;
   public
-    Text: TglrText;
+    TextLabel: TglrText;
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
     destructor Destroy(); override;
   end;
@@ -119,8 +115,7 @@ type
     constructor Create(Material: TglrMaterial; Font: TglrFont; aCapacity: LongInt = 4); reintroduce;
     destructor Destroy(); override;
 
-    procedure ProcessInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer; aGuiCamera: TglrCamera);
+    procedure ProcessInput(Event: PglrInputEvent; GuiCamera: TglrCamera);
 
     procedure Update(const dt: Double);
 
@@ -280,19 +275,19 @@ end;
 procedure TglrGuiButton.SetVisible(const aVisible: Boolean);
 begin
   inherited SetVisible(aVisible);
-  Text.Visible := aVisible;
+  TextLabel.Visible := aVisible;
 end;
 
 constructor TglrGuiButton.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
 begin
   inherited Create(aWidth, aHeight, aPivotPoint);
-  Text := TglrText.Create();
-  Text.Parent := Self;
+  TextLabel := TglrText.Create();
+  TextLabel.Parent := Self;
 end;
 
 destructor TglrGuiButton.Destroy;
 begin
-  Text.Free();
+  TextLabel.Free();
   inherited Destroy;
 end;
 
@@ -325,21 +320,21 @@ begin
   inherited Destroy;
 end;
 
-procedure TglrGuiManager.ProcessInput(aType: TglrInputType; aKey: TglrKey; X,
-  Y, aOtherParam: Integer; aGuiCamera: TglrCamera);
+procedure TglrGuiManager.ProcessInput(Event: PglrInputEvent;
+  GuiCamera: TglrCamera);
 var
   i: Integer;
   touchVec: TglrVec3f;
 begin
   // WIP, don't kill me
-  touchVec := aGuiCamera.AbsoluteMatrix * Vec3f(X, Y, 0);
+  touchVec := GuiCamera.AbsoluteMatrix * Vec3f(Event.X, Event.Y, 0);
 
   for i := 0 to FCount - 1 do
     if FItems[i].Enabled then
       // Send ProcessInput for keys and wheel to focused only elements
       // Other messages - to all elements
-      if (not (aType in [itKeyDown, itKeyUp, itWheel])) or (FItems[i].Focused) then
-        FItems[i].ProcessInput(aType, aKey, touchVec.X, touchVec.Y, aOtherParam);
+      if (not (Event.InputType in [itKeyDown, itKeyUp, itWheel])) or (FItems[i].Focused) then
+        FItems[i].ProcessInput(Event);
 end;
 
 procedure TglrGuiManager.Update(const dt: Double);
@@ -377,8 +372,8 @@ begin
     if (FItems[i] is TglrGuiButton) then
     begin
       b := TglrGuiButton(FItems[i]);
-      b.Text.Position.z := b.Position.z + 1;
-      fFontBatch.Draw(b.Text);
+      b.TextLabel.Position.z := b.Position.z + 1;
+      fFontBatch.Draw(b.TextLabel);
     end;
   fFontBatch.Finish();
 end;
@@ -443,16 +438,15 @@ begin
     OnFocus(Self, aValue);
 end;
 
-procedure TglrGuiElement.ProcessInput(aType: TglrInputType; aKey: TglrKey;
-  X, Y: Single; aOtherParam: Integer);
+procedure TglrGuiElement.ProcessInput(Event: PglrInputEvent);
 begin
   // Warning! Implemented partially!
-  case aType of
+  case Event.InputType of
     itTouchDown:
-      if IsHit(X, Y) then
+      if IsHit(Event.X, Event.Y) then
       begin
         if Assigned(OnTouchDown) then
-          OnTouchDown(Self, aType, aKey, X, Y, aOtherParam);
+          OnTouchDown(Self, Event);
         if Assigned(ClickedTextureRegion) then
           SetTextureRegion(ClickedTextureRegion);
         Focused := True;
@@ -460,29 +454,29 @@ begin
       else
         Focused := False;
     itTouchUp:
-      if IsHit(X, Y) then
+      if IsHit(Event.X, Event.Y) then
       begin
         if Assigned(OnTouchUp) then
-          OnTouchUp(Self, aType, aKey, X, Y, aOtherParam);
+          OnTouchUp(Self, Event);
         if Assigned(OverTextureRegion) then
           SetTextureRegion(OverTextureRegion);
         if Focused then
           if Assigned(OnClick) then
-            OnClick(Self, aType, aKey, X, Y, aOtherParam);
+            OnClick(Self, Event);
       end
       else
         if Assigned(NormalTextureRegion) then
           SetTextureRegion(NormalTextureRegion);
     itTouchMove:
     begin
-      if IsHit(X, Y) then
+      if IsHit(Event.X, Event.Y) then
       begin
         if Assigned(OnTouchMove) then
-          OnTouchMove(Self, aType, aKey, X, Y, aOtherParam);
+          OnTouchMove(Self, Event);
         if not fIsMouseOver then
         begin
           if Assigned(OnMouseOver) then
-            OnMouseOver(Self, aType, aKey, X, Y, aOtherParam);
+            OnMouseOver(Self, Event);
           if Assigned(OverTextureRegion) then
             SetTextureRegion(OverTextureRegion);
         end;
@@ -493,7 +487,7 @@ begin
         if fIsMouseOver then
         begin
           if Assigned(OnMouseOut) then
-            OnMouseOut(Self, aType, aKey, X, Y, aOtherParam);
+            OnMouseOut(Self, Event);
           if Assigned(NormalTextureRegion) then
             SetTextureRegion(NormalTextureRegion);
         end;

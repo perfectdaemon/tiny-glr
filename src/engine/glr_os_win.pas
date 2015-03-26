@@ -19,6 +19,7 @@ type
     fHandle: THandle;
     fDC: HDC;
     fRC: HGLRC;
+    fEvent: TglrInputEvent;
 
     fDeltaTime: Double;
     function GetTime(): Integer;
@@ -210,6 +211,7 @@ function TglrWindow.WndProc(hWnd: HWND; message: UINT; wParam: WPARAM;
   lParam: LPARAM): LRESULT; stdcall;
 begin
   Result := 0;
+  fEvent._inited := False;
   if not Core.IsReady then
     Exit(DefWindowProcA(hWnd, message, wParam, lParam));
   case (message) of
@@ -224,42 +226,44 @@ begin
 
     WM_MOUSEMOVE:
       if (wParam and MK_LBUTTON <> 0) then
-        Core.InputReceived(itTouchMove, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0)
+        fEvent.Init(itTouchMove, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0)
       else if (wParam and MK_RBUTTON <> 0) then
-        Core.InputReceived(itTouchMove, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
+        fEvent.Init(itTouchMove, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
       else if (wParam and MK_MBUTTON <> 0) then
-        Core.InputReceived(itTouchMove, kMiddleButton, LOWORD(lParam), HIWORD(lParam), 0)
+        fEvent.Init(itTouchMove, kMiddleButton, LOWORD(lParam), HIWORD(lParam), 0)
       else
-        Core.InputReceived(itTouchMove, kNoInput, LOWORD(lParam), HIWORD(lParam), 0);
+        fEvent.Init(itTouchMove, kNoInput, LOWORD(lParam), HIWORD(lParam), 0);
 
     WM_LBUTTONDOWN, WM_LBUTTONUP, WM_LBUTTONDBLCLK:
       if (message = WM_LBUTTONUP) then
-        Core.InputReceived(itTouchUp, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0)
+        fEvent.Init(itTouchUp, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0)
       else
-        Core.InputReceived(itTouchDown, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0);
+        fEvent.Init(itTouchDown, kLeftButton, LOWORD(lParam), HIWORD(lParam), 0);
 
 
     WM_RBUTTONDOWN, WM_RBUTTONUP, WM_RBUTTONDBLCLK:
       if (message = WM_RBUTTONUP) then
-        Core.InputReceived(itTouchUp, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
+        fEvent.Init(itTouchUp, kRightButton, LOWORD(lParam), HIWORD(lParam), 0)
       else
-        Core.InputReceived(itTouchDown, kRightButton, LOWORD(lParam), HIWORD(lParam), 0);
+        fEvent.Init(itTouchDown, kRightButton, LOWORD(lParam), HIWORD(lParam), 0);
 
     WM_KEYDOWN, WM_KEYUP:
       if (message = WM_KEYUP) then
-        Core.InputReceived(itKeyUp, TglrKey(wParam), 0, 0, 0)
+        fEvent.Init(itKeyUp, TglrKey(wParam), 0, 0, 0)
       else
-        Core.InputReceived(itKeyDown, TglrKey(wParam), 0, 0, 0);
+        fEvent.Init(itKeyDown, TglrKey(wParam), 0, 0, 0);
 
     WM_MOUSEWHEEL:
       if (wParam > 0) then
-        Core.InputReceived(itWheel, kWheelUp, LOWORD(lParam), HIWORD(lParam), 1 * (HIWORD(wParam) div WHEEL_DELTA))
+        fEvent.Init(itWheel, kWheelUp, LOWORD(lParam), HIWORD(lParam), 1 * (HIWORD(wParam) div WHEEL_DELTA))
       else
-        Core.InputReceived(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), -1 * (HIWORD(-wParam) div WHEEL_DELTA));
+        fEvent.Init(itWheel, kWheelDown, LOWORD(lParam), HIWORD(lParam), -1 * (HIWORD(-wParam) div WHEEL_DELTA));
 
     else
-      Result := DefWindowProcA(hWnd, message, wParam, lParam);
+      Exit(DefWindowProcA(hWnd, message, wParam, lParam));
   end;
+  if fEvent._inited then
+    Core.InputReceived(@fEvent);
 end;
 
 constructor TglrWindow.Create(aData: Pointer);

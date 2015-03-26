@@ -34,8 +34,7 @@ type
     procedure OnUnloading (const DeltaTime: Double); virtual;
     procedure OnRender    ();                        virtual; abstract;
 
-    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer); virtual; abstract;
+    procedure OnInput(Event: PglrInputEvent); virtual; abstract;
   end;
 
   TglrGameScreenList = TglrObjectList<TglrGameScreen>;
@@ -65,8 +64,7 @@ type
     procedure Back();
 
     procedure Update(const DeltaTime: Double);
-    procedure Input(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer);
+    procedure Input(Event: PglrInputEvent);
     procedure Render();
   end;
 
@@ -284,11 +282,10 @@ begin
   fWaitForPreviousScreen := needWait;
 end;
 
-procedure TglrGameScreenManager.Input(aType: TglrInputType; aKey: TglrKey; X,
-  Y, aOtherParam: Integer);
+procedure TglrGameScreenManager.Input(Event: PglrInputEvent);
 begin
   if (ScreenStack.Count > 0) and (ScreenStack.Head().State in [gssReady, gssPaused]) then
-    ScreenStack.Head().OnInput(aType, aKey, X, Y, aOtherParam);
+    ScreenStack.Head().OnInput(Event);
 end;
 
 procedure TglrGameScreenManager.Render;

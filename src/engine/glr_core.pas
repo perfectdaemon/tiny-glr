@@ -55,13 +55,25 @@ type
   {$ENDIF}
   );
 
+  { TglrInputEvent }
+
+  TglrInputEvent = record
+    InputType: TglrInputType;
+    Key: TglrKey;
+    X, Y, W: Integer;
+    _inited: Boolean;     // Internal field
+    procedure Init(aType: TglrInputType; aKey: TglrKey; aX, aY, aW: Integer);
+  end;
+
+  PglrInputEvent = ^TglrInputEvent;
+
   TglrInput = class
     Touch: array[0..9] of TglrTouch;
     MousePos: TglrVec2f;
     KeyDown: array[Low(TglrKey)..High(TglrKey)] of Boolean;
     lastWheelDelta: Integer;
 
-    procedure Process(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
+    procedure Process(Event: PglrInputEvent);
     function GetKeyName(aKey: TglrKey): AnsiString;
     function GetInputTypeName(aType: TglrInputType): AnsiString;
   end;
@@ -91,7 +103,7 @@ type
     procedure OnUpdate(const dt: Double); virtual; abstract;
     procedure OnRender(); virtual; abstract;
 
-    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer); virtual; abstract;
+    procedure OnInput(Event: PglrInputEvent); virtual; abstract;
   end;
 
   { Core }
@@ -121,7 +133,7 @@ type
     class procedure DeInit();
 
     class procedure Resize(aNewWidth, aNewHeight: Integer);
-    class procedure InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y, aOtherParam: Integer);
+    class procedure InputReceived(Event: PglrInputEvent);
 
     class procedure Loop();
     class procedure Pause();
@@ -158,35 +170,47 @@ uses
   {$ENDIF}
   glr_utils, glr_filesystem;
 
+{ TglrInputEvent }
+
+procedure TglrInputEvent.Init(aType: TglrInputType; aKey: TglrKey; aX,
+  aY, aW: Integer);
+begin
+  InputType := aType;
+  Key := aKey;
+  X := aX;
+  Y := aY;
+  W := aW;
+  _inited := True;
+end;
+
 { TglrInput }
 
-procedure TglrInput.Process(aType: TglrInputType; aKey: TglrKey; X, Y,
-  aOtherParam: Integer);
+procedure TglrInput.Process(Event: PglrInputEvent);
 var
   k: ^Boolean;
 begin
-  k := @KeyDown[aKey];
-  case aType of
+  k := @KeyDown[Event.Key];
+  case Event.InputType of
     itTouchDown:
-      with Touch[Ord(aKey)] do
+      with Touch[Ord(Event.Key)] do
       begin
         IsDown := True;
-        Start := Vec2f(X, Y);
+        Start := Vec2f(Event.X, Event.Y);
         Pos := Start;
       end;
     itTouchUp:
-      Touch[Ord(aKey)].IsDown := False;
+      Touch[Ord(Event.Key)].IsDown := False;
     itTouchMove:
     begin
-      Touch[Ord(aKey)].Pos := Vec2f(X, Y);
-      MousePos := Vec2f(X, Y);
+      Touch[Ord(Event.Key)].Pos := Vec2f(Event.X, Event.Y);
+      MousePos := Vec2f(Event.X, Event.Y);
     end;
     itKeyDown:
       k^ := True;
     itKeyUp:
       k^ := False;
     itWheel:
-      lastWheelDelta := aOtherParam;
+      lastWheelDelta := Event.W;
   end;
 end;
 
@@ -219,11 +243,10 @@ begin
   fGame.OnResize(aNewWidth, aNewHeight);
 end;
 
-class procedure Core.InputReceived(aType: TglrInputType; aKey: TglrKey; X, Y,
-  aOtherParam: Integer);
+class procedure Core.InputReceived(Event: PglrInputEvent);
 begin
-  Input.Process(aType, aKey, X, Y, aOtherParam);
-  fGame.OnInput(aType, aKey, X, Y, aOtherParam);
+  Input.Process(Event);
+  fGame.OnInput(Event);
 end;
 
 type
