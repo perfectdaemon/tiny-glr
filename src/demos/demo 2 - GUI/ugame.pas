@@ -5,11 +5,6 @@ interface
 uses
   glr_core,
   glr_render,
-  glr_render2d,
-  glr_scene,
-  glr_filesystem,
-  glr_gui,
-  glr_math,
   glr_gamescreens;
 
 type
@@ -44,7 +39,6 @@ uses
 
 procedure TGame.OnStart;
 begin
-  // Write here initialization code
   Assets.LoadBase();
 
   MainMenuScreen := TglrMainMenu.Create('MainMenu');
@@ -54,65 +48,16 @@ begin
 
 
   GameScreenManager.SwitchTo(MainMenuScreen);
-  (*
-
-
-
-  GuiAtlas := TglrTextureAtlas.Create(
-    FileSystem.ReadResource('data/gui.tga'),
-    FileSystem.ReadResource('data/gui.atlas'),
-    extTga, aextCheetah);
-  Material := TglrMaterial.Create(Default.SpriteShader);
-  Material.AddTexture(GuiAtlas, 'uDiffuse');
-
-  DefaultMaterial := TglrMaterial.Create(Default.SpriteShader);
-  DefaultMaterial.AddTexture(Default.BlankTexture, 'uDiffuse');
-
-  Font := TglrFont.Create(FileSystem.ReadResource('data/Arial14b.bmp'));
-
-  FontBatch := TglrFontBatch.Create(Font);
-  SpriteBatch := TglrSpriteBatch.Create();
-
-  Button1 := TglrGuiButton.Create();
-  Button1.NormalTextureRegion := GuiAtlas.GetRegion('button.png');
-  Button1.OverTextureRegion := GuiAtlas.GetRegion('button_over.png');
-  Button1.SetTextureRegion(GuiAtlas.GetRegion('button.png'));
-  Button1.SetVerticesColor(Vec4f(0.4, 0.75, 0.6, 1.0));
-  Button1.Position := Vec3f(300, 200, 5);
-  Button1.Rotation := -15;
-  Button1.OnMouseOver := ButtonMouseOver;
-  Button1.OnMouseOut := ButtonMouseOut;
-  Button1.OnClick := ButtonClicked;
-  Button1.Text.Text := 'Click me';
-  Button1.Text.Position.z := 1;
-
-  Layout1 := TglrGuiLayout.Create(100, 100, Vec2f(0.5, 0.5));
-  Layout1.SetNinePatchBorders(0.4, 0.6, 0.4, 0.6);
-  Layout1.SetTextureRegion(GuiAtlas.GetRegion('layout_test.png'));
-  Layout1.Position := Vec3f(500, 150, 4);
-
-  DebugText := TglrText.Create(UTF8Decode('Проверка очень длинного и малосвязного текста с оченьдлинныминеразрывными словами и прочим'));
-  DebugText.Position := Vec3f(350, 250, 10);
-  DebugText.TextWidth := 200;
-
-  DebugTextPivotPointSprite := TglrSprite.Create(5, 5, Vec2f(0.5, 0.5));
-  DebugTextPivotPointSprite.Position := Vec3f(0, 0, 10);
-  DebugTextPivotPointSprite.SetVerticesColor(Vec4f(1.0, 0.0, 0.0, 1.0));
-  DebugTextPivotPointSprite.Parent := Layout1;
-
-  *)
 end;
 
 procedure TGame.OnFinish;
 begin
-  // Write here code for destroying all of your objects
   GameScreenManager.Free(True);
   Assets.UnloadBase();
 end;
 
 procedure TGame.OnInput(Event: PglrInputEvent);
 begin
-  // Calls when engine receives some input info
   GameScreenManager.Input(Event);
 end;
 
@@ -138,7 +83,7 @@ end;
 
 procedure TGame.OnResize(aNewWidth, aNewHeight: Integer);
 begin
-  //Calls when windows has chagned size
+  // Calls when windows has changed size
 end;
 
 
