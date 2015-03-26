@@ -5,7 +5,8 @@ interface
 uses
   glr_core,
   glr_gui,
-  glr_gamescreens;
+  glr_gamescreens,
+  glr_tween;
 
 type
 
@@ -13,14 +14,15 @@ type
 
   TglrMainMenu = class (TglrGameScreen)
   protected
+    Tweener: TglrTweener;
     NewGameBtn, SettingsBtn, ExitBtn: TglrGuiButton;
     GuiManager: TglrGuiManager;
 
-    procedure ButtonInit(var button: TglrGuiButton);
+    procedure ButtonInit(var Button: TglrGuiButton);
 
-    //procedure ButtonMouseOver(Sender: TglrGuiElement; aType: TglrInputType; aKey: TglrKey; X, Y: Single; aOtherParam: Integer);
-    //procedure ButtonMouseOut(Sender: TglrGuiElement;  aType: TglrInputType; aKey: TglrKey; X, Y: Single; aOtherParam: Integer);
-    //procedure ButtonClicked(Sender: TglrGuiElement;   aType: TglrInputType; aKey: TglrKey; X, Y: Single; aOtherParam: Integer);
+    procedure ButtonTween(aObject: TglrTweenObject; aValue: Single);
+
+    procedure ButtonClicked(Sender: TglrGuiElement;   Event: PglrInputEvent);
   public
     procedure OnInput(Event: PglrInputEvent); override;
     procedure OnRender; override;
@@ -38,10 +40,10 @@ uses
 
 { TglrMainMenu }
 
-procedure TglrMainMenu.ButtonInit(var button: TglrGuiButton);
+procedure TglrMainMenu.ButtonInit(var Button: TglrGuiButton);
 begin
-  button := TglrGuiButton.Create();
-  with button do
+  Button := TglrGuiButton.Create();
+  with Button do
   begin
     SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON);
@@ -49,7 +51,23 @@ begin
     TextLabel.Text := 'Button';
     TextLabel.Position := Vec3f(-100, -10, 0);
     Position := Vec3f(Render.Width div 2, 200, 1);
+    OnClick := ButtonClicked;
   end;
+end;
+
+procedure TglrMainMenu.ButtonTween(aObject: TglrTweenObject; aValue: Single);
+var
+  v: TglrVec3f;
+begin
+  v := Vec3f(1,1,1);
+  (aObject as TglrGuiButton).SetVerticesColor(Vec4f(v.Lerp(Vec3f(0.5, 0.7, 0.5), aValue), 1.0));
+end;
+
+procedure TglrMainMenu.ButtonClicked(Sender: TglrGuiElement;
+  Event: PglrInputEvent);
+begin
+  Tweener.AddTweenSingle(Sender, ButtonTween, tsExpoEaseIn, 0.0, 1.0, 2.0, 0.3);
+  Sender.SetVerticesColor(Vec4f(1,1,1,1));
 end;
 
 procedure TglrMainMenu.OnInput(Event: PglrInputEvent);
@@ -69,11 +87,14 @@ end;
 procedure TglrMainMenu.OnUpdate(const DeltaTime: Double);
 begin
   GuiManager.Update(DeltaTime);
+  Tweener.Update(DeltaTime);
 end;
 
 procedure TglrMainMenu.OnLoading(const DeltaTime: Double);
 begin
   Render.SetClearColor(0.1, 0.25, 0.25);
+
+  Tweener := TglrTweener.Create();
 
   ButtonInit(NewGameBtn);
   ButtonInit(SettingsBtn);
@@ -96,6 +117,7 @@ end;
 
 procedure TglrMainMenu.OnUnloading(const DeltaTime: Double);
 begin
+  Tweener.Free();
   GuiManager.Free(True);
   inherited OnUnloading(DeltaTime);
 end;
