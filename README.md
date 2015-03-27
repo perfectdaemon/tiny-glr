@@ -16,7 +16,7 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 
 ###Roadmap###
  - [x] Early development
- - [x] Some little game to prove framework' abilities (see src/demos/lunar lander)
+ - [x] Some little game to prove framework' abilities
  - [x] 0.1 version (Core, 2D) 
  - [ ] 0.2 version (Base GUI, base 3D, base sound and physics)
  - [ ] 0.3 version (Crossplatform - Android, iOS, Mac, Linux)
@@ -24,21 +24,27 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
  - [ ] 0.5 version (Drop repo and make games on Unity 8) )
 
 ###Features done###
+**Core**
 * Lightweight, no dependencies on other libraries, all-in-one
-* OpenGL Programmable Pipeline (works on ogl 1.5+, but no FFP for future OpenGL ES backend)
-* Texture formats: bmp (24/32 bit), tga (24/32 bit)
 * Pack files
 * LZO support
-* 2D (Sprites, Bitmap Fonts)
-* Texture atlases ([Cheetah](https://github.com/scriptum/Cheetah-Texture-Packer) texture atlases supported)
+* Tweener
+* Action Manager — perform independent or queued actions with/without period and delays on start
+**Graphics**
+* OpenGL Programmable Pipeline — works on ogl 1.5+, but no FFP for future OpenGL ES backend
+* Texture formats — bmp (24/32 bit), tga (24/32 bit)
+* Texture atlases — [Cheetah Texture Packer](https://github.com/scriptum/Cheetah-Texture-Packer) support
+* Mesh formats — obj, engine-based file format
+* 2D Sprites — per vertex control, custom pivot point support, batching, scaling
+* 2D Fonts — custom pivot point support, max width support, scaling
+* 3D Meshes (early dev)
+* GUI — Manager, button, nine-patch support (in dev)
 * Programmable 2d particles
+**Physics**
 * Box2D support
-* GUI: Manager, button, nine-patch support (early alpha)
-* Meshes (early alpha)
-* 3D formats: obj, engine-based file format
 
-###Toolset done###
-* Resource packer
+###Toolset###
+* Resource packer (folder -> pack file, file -> lzo file)
 * Font generator
 
 ###Tutorials###
