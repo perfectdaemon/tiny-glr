@@ -288,7 +288,7 @@ begin
   end;
   Windows.RegisterClass(wClass);
 
-  wStyle := WS_VISIBLE or WS_OVERLAPPED or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPSIBLINGS or WS_CLIPCHILDREN; //WS_VISIBLE or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPCHILDREN;
+  wStyle := WS_OVERLAPPED or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX or WS_CLIPSIBLINGS or WS_CLIPCHILDREN;
 
   SetRect(r, 0, 0, p.Width, p.Height);
   AdjustWindowRect(r, wStyle, False);
@@ -312,6 +312,8 @@ begin
 
   QueryPerformanceFrequency(@freq);
   QueryPerformanceCounter(@startTime);
+
+  ShowWindow(fHandle, SW_SHOW);
 
   fShouldQuit := False;
 end;
