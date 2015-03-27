@@ -156,7 +156,7 @@ begin
   GuiManager.Add(SettingsBtn);
   GuiManager.Add(ExitBtn);
 
-  inherited OnLoading(DeltaTime); // load completed
+  inherited OnLoading(DeltaTime); // Load completed
 end;
 
 procedure TglrMainMenu.OnUnloading(const DeltaTime: Double);

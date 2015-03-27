@@ -193,7 +193,7 @@ type
     constructor Create();
     destructor Destroy(); override;
 
-    procedure AddIndependent(Action: TglrSimpleAction;                    StartAfter: Single = 0); overload;
+    procedure AddIndependent(Action: TglrSimpleAction;                     StartAfter: Single = 0); overload;
     procedure AddIndependent(Action: TglrContinuousAction; Period: Single; StartAfter: Single = 0); overload;
 
     procedure AddToQueue(Action: TglrSimpleAction;                     StartAfter: Single = 0); overload;
