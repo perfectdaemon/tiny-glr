@@ -6,6 +6,7 @@ uses
   glr_core,
   glr_gui,
   glr_gamescreens,
+  glr_utils,
   glr_tween;
 
 type
@@ -17,12 +18,16 @@ type
     Tweener: TglrTweener;
     NewGameBtn, SettingsBtn, ExitBtn: TglrGuiButton;
     GuiManager: TglrGuiManager;
+    ActionManager: TglrActionManager;
 
     procedure ButtonInit(var Button: TglrGuiButton);
-
     procedure ButtonTween(aObject: TglrTweenObject; aValue: Single);
-
     procedure ButtonClicked(Sender: TglrGuiElement;   Event: PglrInputEvent);
+    procedure DoExit();
+    procedure Up(const DeltaTime: Double);
+    procedure Right(const DeltaTime: Double);
+    procedure Down(const DeltaTime: Double);
+    procedure Left(const DeltaTime: Double);
   public
     procedure OnInput(Event: PglrInputEvent); override;
     procedure OnRender; override;
@@ -49,7 +54,9 @@ begin
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON);
     OverTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON_OVER);
     TextLabel.Text := 'Button';
-    TextLabel.Position := Vec3f(-100, -10, 0);
+    TextLabel.Position := Vec3f(-100, -12, 0);
+    //TextLabel.Color := Vec4f(0.7, 0.9, 0.9, 1.0);
+    TextLabel.Scale := 1.12;
     Position := Vec3f(Render.Width div 2, 200, 1);
     OnClick := ButtonClicked;
   end;
@@ -66,8 +73,43 @@ end;
 procedure TglrMainMenu.ButtonClicked(Sender: TglrGuiElement;
   Event: PglrInputEvent);
 begin
-  Tweener.AddTweenSingle(Sender, ButtonTween, tsExpoEaseIn, 0.0, 1.0, 2.0, 0.3);
-  Sender.SetVerticesColor(Vec4f(1,1,1,1));
+  Tweener.AddTweenSingle(Sender, ButtonTween, tsExpoEaseIn, 0.0, 1.0, 2.0, 0.1);
+
+  if (Sender = ExitBtn) then
+    ActionManager.AddIndependent(DoExit, 0.5);
+
+  if (Sender = NewGameBtn) then
+  begin
+    ActionManager.AddToQueue(Up, 1.0);
+    ActionManager.AddToQueue(Right, 1.0);
+    ActionManager.AddToQueue(Down, 1.0);
+    ActionManager.AddToQueue(Left, 1.0);
+  end;
+end;
+
+procedure TglrMainMenu.DoExit;
+begin
+  Core.Quit();
+end;
+
+procedure TglrMainMenu.Up(const DeltaTime: Double);
+begin
+  NewGameBtn.Position.y -= 30 * DeltaTime;
+end;
+
+procedure TglrMainMenu.Right(const DeltaTime: Double);
+begin
+  NewGameBtn.Position.x += 30 * DeltaTime;
+end;
+
+procedure TglrMainMenu.Down(const DeltaTime: Double);
+begin
+  NewGameBtn.Position.y += 30 * DeltaTime;
+end;
+
+procedure TglrMainMenu.Left(const DeltaTime: Double);
+begin
+  NewGameBtn.Position.x -= 30 * DeltaTime;
 end;
 
 procedure TglrMainMenu.OnInput(Event: PglrInputEvent);
@@ -88,6 +130,7 @@ procedure TglrMainMenu.OnUpdate(const DeltaTime: Double);
 begin
   GuiManager.Update(DeltaTime);
   Tweener.Update(DeltaTime);
+  ActionManager.Update(DeltaTime);
 end;
 
 procedure TglrMainMenu.OnLoading(const DeltaTime: Double);
@@ -95,6 +138,7 @@ begin
   Render.SetClearColor(0.1, 0.25, 0.25);
 
   Tweener := TglrTweener.Create();
+  ActionManager := TglrActionManager.Create();
 
   ButtonInit(NewGameBtn);
   ButtonInit(SettingsBtn);
@@ -117,6 +161,7 @@ end;
 
 procedure TglrMainMenu.OnUnloading(const DeltaTime: Double);
 begin
+  ActionManager.Free();
   Tweener.Free();
   GuiManager.Free(True);
   inherited OnUnloading(DeltaTime);
