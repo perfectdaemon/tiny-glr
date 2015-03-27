@@ -1,5 +1,5 @@
 ```pascal
-function TinyGLR.CanUse(): WideString;
+function Core.GetLatestNews(): UnicodeString;
 begin
   Exit(
     'Development has become a little slow at early 2015.'
@@ -23,13 +23,14 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
  - [ ] 0.4 version (Complex 3D, external tools and editors support)
  - [ ] 0.5 version (Drop repo and make games on Unity 8) )
 
-###Features done###
+###Features###
 **Core**
 * Lightweight, no dependencies on other libraries, all-in-one
 * Pack files
 * LZO support
 * Tweener
 * Action Manager — perform independent or queued actions with/without period and delays on start
+
 **Graphics**
 * OpenGL Programmable Pipeline — works on ogl 1.5+, but no FFP for future OpenGL ES backend
 * Texture formats — bmp (24/32 bit), tga (24/32 bit)
@@ -40,6 +41,7 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 * 3D Meshes (early dev)
 * GUI — Manager, button, nine-patch support (in dev)
 * Programmable 2d particles
+
 **Physics**
 * Box2D support
 
