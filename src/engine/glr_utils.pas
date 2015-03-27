@@ -196,8 +196,8 @@ type
     procedure AddIndependent(Action: TglrSimpleAction;                    StartAfter: Single = 0); overload;
     procedure AddIndependent(Action: TglrContinuousAction; Period: Single; StartAfter: Single = 0); overload;
 
-    procedure AddToSharedQueue(Action: TglrSimpleAction;                    StartAfter: Single = 0); overload;
-    procedure AddToSharedQueue(Action: TglrContinuousAction; Period: Single; StartAfter: Single = 0); overload;
+    procedure AddToQueue(Action: TglrSimpleAction;                     StartAfter: Single = 0); overload;
+    procedure AddToQueue(Action: TglrContinuousAction; Period: Single; StartAfter: Single = 0); overload;
 
     procedure Update(const DeltaTime: Double);
   end;
@@ -1048,13 +1048,13 @@ begin
   fContinuousList.Add(TglrContinuousActionInfo.Create(Action, StartAfter, Period));
 end;
 
-procedure TglrActionManager.AddToSharedQueue(Action: TglrSimpleAction;
+procedure TglrActionManager.AddToQueue(Action: TglrSimpleAction;
   StartAfter: Single);
 begin
   fQueue.Add(TglrSimpleActionInfo.Create(Action, StartAfter));
 end;
 
-procedure TglrActionManager.AddToSharedQueue(Action: TglrContinuousAction;
+procedure TglrActionManager.AddToQueue(Action: TglrContinuousAction;
   Period: Single; StartAfter: Single);
 begin
   fQueue.Add(TglrContinuousActionInfo.Create(Action, StartAfter, Period));
