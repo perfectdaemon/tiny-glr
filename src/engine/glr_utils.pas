@@ -149,6 +149,57 @@ type
     function Pop(): T;
     // Get head with no pop
     function Head(): T;
+    function IsEmpty(): Boolean;
+  end;
+
+  TglrSimpleAction = procedure of object;
+  TglrContinuousAction = procedure(const DeltaTime: Double) of object;
+
+  { TglrActionManager }
+
+  TglrActionManager = class
+  protected
+    type
+      TglrVirtualActionInfo = class
+        Done: Boolean;
+      end;
+
+      TglrSimpleActionInfo = class (TglrVirtualActionInfo)
+        Action: TglrSimpleAction;
+        StartAfter: Single;
+        constructor Create(aAction: TglrSimpleAction; aStartAfter: Single);
+      end;
+
+      TglrContinuousActionInfo = class (TglrVirtualActionInfo)
+        Action: TglrContinuousAction;
+        StartAfter, Period: Single;
+        constructor Create(aAction: TglrContinuousAction; aStartAfter, aPeriod: Single);
+      end;
+
+    TglrSimpleActionList     = TglrObjectList<TglrSimpleActionInfo>;
+    TglrContinousActionList  = TglrObjectList<TglrContinuousActionInfo>;
+    TglrSharedActionsList   = TglrObjectList<TglrVirtualActionInfo>;
+
+    var
+      fSimpleList: TglrSimpleActionList;
+      fContinuousList: TglrContinousActionList;
+      fQueue: TglrSharedActionsList;
+
+    procedure PerformSimpleAction(Action: TglrSimpleActionInfo;
+      const DeltaTime: Double);
+    procedure PerformContinuousAction(Action: TglrContinuousActionInfo;
+      const DeltaTime: Double);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+
+    procedure AddIndependent(Action: TglrSimpleAction;                    StartAfter: Single = 0); overload;
+    procedure AddIndependent(Action: TglrContinuousAction; Period: Single; StartAfter: Single = 0); overload;
+
+    procedure AddToSharedQueue(Action: TglrSimpleAction;                    StartAfter: Single = 0); overload;
+    procedure AddToSharedQueue(Action: TglrContinuousAction; Period: Single; StartAfter: Single = 0); overload;
+
+    procedure Update(const DeltaTime: Double);
   end;
 
   { Convert }
@@ -181,6 +232,7 @@ type
     class procedure Deinit();
     class procedure Write(aType: TglrLogMessageType; aMessage: AnsiString);
   end;
+
 
 
 function StrTrim(const s: AnsiString): AnsiString;
@@ -867,7 +919,6 @@ begin
   end;
 end;
 
-
 { TglrStack<T> }
 
 constructor TglrStack<T>.Create(aCapacity: LongInt);
@@ -909,6 +960,148 @@ begin
         ', Count is ' + Convert.ToString(fCount));
 end;
 
+function TglrStack<T>.IsEmpty(): Boolean;
+begin
+  Result := fCurrentIndex < 0;
+end;
+
+{ TglrActionManager.TglrContinuousActionInfo }
+
+constructor TglrActionManager.TglrContinuousActionInfo.Create(
+  aAction: TglrContinuousAction; aStartAfter, aPeriod: Single);
+begin
+  Action := aAction;
+  StartAfter := aStartAfter;
+  Period := aPeriod;
+  Done := False;
+end;
+
+{ TglrActionManager.TglrSimpleActionInfo }
+
+constructor TglrActionManager.TglrSimpleActionInfo.Create(
+  aAction: TglrSimpleAction; aStartAfter: Single);
+begin
+  Action := aAction;
+  StartAfter := aStartAfter;
+  Done := False;
+end;
+
+{ TglrActionManager }
+
+procedure TglrActionManager.PerformSimpleAction(Action: TglrSimpleActionInfo;
+  const DeltaTime: Double);
+begin
+  with Action do
+  begin
+    if (StartAfter > 0) then
+      StartAfter -= DeltaTime
+    else
+    begin
+      Action();
+      Done := True;
+    end;
+  end;
+end;
+
+procedure TglrActionManager.PerformContinuousAction(
+  Action: TglrContinuousActionInfo; const DeltaTime: Double);
+begin
+  with Action do
+  begin
+    if (StartAfter > 0) then
+      StartAfter -= DeltaTime
+    else if (Period >= 0) then
+    begin
+      Action(DeltaTime);
+      Period -= DeltaTime;
+    end
+    else
+      Done := True;
+  end;
+end;
+
+constructor TglrActionManager.Create;
+begin
+  inherited;
+  fSimpleList     := TglrSimpleActionList.Create();
+  fContinuousList := TglrContinousActionList.Create();
+  fQueue          := TglrSharedActionsList.Create();
+end;
+
+destructor TglrActionManager.Destroy;
+begin
+  fSimpleList.Free(True);
+  fContinuousList.Free(True);
+  fQueue.Free(True);
+  inherited Destroy;
+end;
+
+procedure TglrActionManager.AddIndependent(Action: TglrSimpleAction;
+  StartAfter: Single);
+begin
+  fSimpleList.Add(TglrSimpleActionInfo.Create(Action, StartAfter));
+end;
+
+procedure TglrActionManager.AddIndependent(Action: TglrContinuousAction;
+  Period: Single; StartAfter: Single);
+begin
+  fContinuousList.Add(TglrContinuousActionInfo.Create(Action, StartAfter, Period));
+end;
+
+procedure TglrActionManager.AddToSharedQueue(Action: TglrSimpleAction;
+  StartAfter: Single);
+begin
+  fQueue.Add(TglrSimpleActionInfo.Create(Action, StartAfter));
+end;
+
+procedure TglrActionManager.AddToSharedQueue(Action: TglrContinuousAction;
+  Period: Single; StartAfter: Single);
+begin
+  fQueue.Add(TglrContinuousActionInfo.Create(Action, StartAfter, Period));
+end;
+
+procedure TglrActionManager.Update(const DeltaTime: Double);
+var
+  i: Integer;
+  isAnyActionInQueue: Boolean;
+begin
+  // Perform simple independent actions
+  for i := 0 to fSimpleList.Count - 1 do
+    PerformSimpleAction(fSimpleList[i], DeltaTime);
+
+  // Perform continuoues independent actions
+  for i := 0 to fContinuousList.Count - 1 do
+    PerformContinuousAction(fContinuousList[i], DeltaTime);
+
+  // Perform queue actions
+  isAnyActionInQueue := False;
+  for i := 0 to fQueue.Count - 1 do
+    if fQueue[i].Done then
+      continue
+    else
+    begin
+      isAnyActionInQueue := True;
+      if (fQueue[i] is TglrSimpleActionInfo) then
+        PerformSimpleAction(fQueue[i] as TglrSimpleActionInfo, DeltaTime)
+      else if (fQueue[i] is TglrContinuousActionInfo) then
+        PerformContinuousAction(fQueue[i] as TglrContinuousActionInfo, DeltaTime);
+      break;
+    end;
+
+  // Clear list if there is only done actions
+  if not isAnyActionInQueue then
+    fQueue.Clear();
+
+  // Clean done actions
+  for i := 0 to fSimpleList.Count - 1 do
+    if (fSimpleList[i].Done) then
+      fSimpleList.DeleteByIndex(i, True);
+
+  for i := 0 to fContinuousList.Count - 1 do
+    if (fContinuousList[i].Done) then
+      fContinuousList.DeleteByIndex(i, True);
+
+end;
 
 { Convert }
 
