@@ -33,6 +33,9 @@ type
 const
   R_GUI_ATLAS_BUTTON      = 'button.png';
   R_GUI_ATLAS_BUTTON_OVER = 'button_over.png';
+  R_GUI_ATLAS_SLIDER_BACK = 'slider_back.png';
+  R_GUI_ATLAS_SLIDER_FILL = 'slider_fill.png';
+  R_GUI_ATLAS_SLIDER_BTN  = 'slider_btn.png';
 
 implementation
 

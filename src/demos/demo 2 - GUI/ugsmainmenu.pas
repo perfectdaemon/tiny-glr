@@ -15,7 +15,6 @@ type
 
   TglrMainMenu = class (TglrGameScreen)
   protected
-    Tweener: TglrTweener;
     NewGameBtn, SettingsBtn, ExitBtn: TglrGuiButton;
     GuiManager: TglrGuiManager;
     ActionManager: TglrActionManager;
@@ -23,23 +22,31 @@ type
     procedure ButtonInit(var Button: TglrGuiButton);
     procedure ButtonTween(aObject: TglrTweenObject; aValue: Single);
     procedure ButtonClicked(Sender: TglrGuiElement;   Event: PglrInputEvent);
+
+    procedure MenuTween(aObject: TglrTweenObject; aValue: Single);
+
     procedure DoExit();
+    procedure ToSettings();
     procedure Up(const DeltaTime: Double);
     procedure Right(const DeltaTime: Double);
     procedure Down(const DeltaTime: Double);
     procedure Left(const DeltaTime: Double);
   public
+    constructor Create(ScreenName: UnicodeString); override;
+    destructor Destroy; override;
+
     procedure OnInput(Event: PglrInputEvent); override;
     procedure OnRender; override;
     procedure OnUpdate    (const DeltaTime: Double); override;
-    procedure OnLoading   (const DeltaTime: Double); override;
-    procedure OnUnloading (const DeltaTime: Double); override;
+    procedure OnLoadStarted(); override;
+    procedure OnUnloadStarted(); override;
   end;
 
 implementation
 
 uses
   uAssets,
+  uGame,
   glr_render,
   glr_math;
 
@@ -73,12 +80,13 @@ end;
 procedure TglrMainMenu.ButtonClicked(Sender: TglrGuiElement;
   Event: PglrInputEvent);
 begin
-  Tweener.AddTweenSingle(Sender, ButtonTween, tsExpoEaseIn, 0.0, 1.0, 2.0, 0.1);
+  Game.Tweener.AddTweenSingle(Sender, ButtonTween, tsExpoEaseIn, 0.0, 1.0, 2.0, 0.1);
 
-  if (Sender = ExitBtn) then
-    ActionManager.AddIndependent(DoExit, 0.5);
-
-  if (Sender = NewGameBtn) then
+  if (Sender = SettingsBtn) then
+    ActionManager.AddIndependent(ToSettings, 0.2)
+  else if (Sender = ExitBtn) then
+    ActionManager.AddIndependent(DoExit, 0.2)
+  else if (Sender = NewGameBtn) then
   begin
     ActionManager.AddToQueue(Up, 1.0);
     ActionManager.AddToQueue(Right, 1.0);
@@ -87,29 +95,45 @@ begin
   end;
 end;
 
+procedure TglrMainMenu.MenuTween(aObject: TglrTweenObject; aValue: Single);
+begin
+  NewGameBtn.SetVerticesAlpha(aValue);
+  SettingsBtn.SetVerticesAlpha(aValue);
+  ExitBtn.SetVerticesAlpha(aValue);
+
+  NewGameBtn.TextLabel.Color.w := aValue;
+  SettingsBtn.TextLabel.Color.w := aValue;
+  ExitBtn.TextLabel.Color.w := aValue;
+end;
+
 procedure TglrMainMenu.DoExit;
 begin
   Core.Quit();
 end;
 
+procedure TglrMainMenu.ToSettings;
+begin
+  Game.GameScreenManager.SwitchTo('SettingsMenu');
+end;
+
 procedure TglrMainMenu.Up(const DeltaTime: Double);
 begin
-  NewGameBtn.Position.y -= 30 * DeltaTime;
+  NewGameBtn.Position.y -= 60 * DeltaTime;
 end;
 
 procedure TglrMainMenu.Right(const DeltaTime: Double);
 begin
-  NewGameBtn.Position.x += 30 * DeltaTime;
+  NewGameBtn.Position.x += 60 * DeltaTime;
 end;
 
 procedure TglrMainMenu.Down(const DeltaTime: Double);
 begin
-  NewGameBtn.Position.y += 30 * DeltaTime;
+  NewGameBtn.Position.y += 60 * DeltaTime;
 end;
 
 procedure TglrMainMenu.Left(const DeltaTime: Double);
 begin
-  NewGameBtn.Position.x -= 30 * DeltaTime;
+  NewGameBtn.Position.x -= 60 * DeltaTime;
 end;
 
 procedure TglrMainMenu.OnInput(Event: PglrInputEvent);
@@ -119,9 +143,6 @@ end;
 
 procedure TglrMainMenu.OnRender;
 begin
-  if not (State in [gssReady, gssPaused]) then
-    Exit();
-
   Assets.GuiCamera.Update();
   GuiManager.Render();
 end;
@@ -129,15 +150,25 @@ end;
 procedure TglrMainMenu.OnUpdate(const DeltaTime: Double);
 begin
   GuiManager.Update(DeltaTime);
-  Tweener.Update(DeltaTime);
   ActionManager.Update(DeltaTime);
 end;
 
-procedure TglrMainMenu.OnLoading(const DeltaTime: Double);
+procedure TglrMainMenu.OnLoadStarted;
 begin
   Render.SetClearColor(0.1, 0.25, 0.25);
+  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 0.0, 1.0, 1.5, 0.0);
+  inherited OnLoadStarted;
+end;
 
-  Tweener := TglrTweener.Create();
+procedure TglrMainMenu.OnUnloadStarted;
+begin
+  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 1.0, 0.0, 1.5, 0.0);
+  inherited OnUnloadStarted;
+end;
+
+constructor TglrMainMenu.Create(ScreenName: UnicodeString);
+begin
+  inherited Create(ScreenName);
   ActionManager := TglrActionManager.Create();
 
   ButtonInit(NewGameBtn);
@@ -155,16 +186,13 @@ begin
   GuiManager.Add(NewGameBtn);
   GuiManager.Add(SettingsBtn);
   GuiManager.Add(ExitBtn);
-
-  inherited OnLoading(DeltaTime); // Load completed
 end;
 
-procedure TglrMainMenu.OnUnloading(const DeltaTime: Double);
+destructor TglrMainMenu.Destroy();
 begin
   ActionManager.Free();
-  Tweener.Free();
   GuiManager.Free(True);
-  inherited OnUnloading(DeltaTime);
+  inherited;
 end;
 
 end.

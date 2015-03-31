@@ -5,6 +5,7 @@ interface
 uses
   glr_core,
   glr_render,
+  glr_tween,
   glr_gamescreens;
 
 type
@@ -13,9 +14,10 @@ type
 
   TGame = class (TglrGame)
   private
+  public
     GameScreenManager: TglrGameScreenManager;
     MainMenuScreen, SettingsScreen, GameScreen: TglrGameScreen;
-  public
+    Tweener: TglrTweener;
     procedure OnFinish; override;
     procedure OnInput(Event: PglrInputEvent); override;
     procedure OnPause; override;
@@ -33,6 +35,7 @@ implementation
 
 uses
   uGSMainMenu,
+  uGSSettingsMenu,
   uAssets;
 
 { TGame }
@@ -41,17 +44,21 @@ procedure TGame.OnStart;
 begin
   Assets.LoadBase();
 
+  Tweener := TglrTweener.Create();
+
   MainMenuScreen := TglrMainMenu.Create('MainMenu');
+  SettingsScreen := TglrSettingsMenu.Create('SettingsMenu');
 
   GameScreenManager := TglrGameScreenManager.Create(3);
   GameScreenManager.Add(MainMenuScreen);
-
+  GameScreenManager.Add(SettingsScreen);
 
   GameScreenManager.SwitchTo(MainMenuScreen);
 end;
 
 procedure TGame.OnFinish;
 begin
+  Tweener.Free();
   GameScreenManager.Free(True);
   Assets.UnloadBase();
 end;
@@ -64,6 +71,7 @@ end;
 procedure TGame.OnUpdate(const dt: Double);
 begin
   GameScreenManager.Update(dt);
+  Tweener.Update(dt);
 end;
 
 procedure TGame.OnRender;

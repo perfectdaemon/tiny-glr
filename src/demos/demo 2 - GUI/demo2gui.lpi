@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="5">
+    <Units Count="6">
       <Unit0>
         <Filename Value="demo2gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -57,6 +57,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uAssets"/>
       </Unit4>
+      <Unit5>
+        <Filename Value="ugssettingsmenu.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uGSSettingsMenu"/>
+      </Unit5>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
