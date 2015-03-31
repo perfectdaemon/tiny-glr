@@ -11,8 +11,9 @@ type
   TglrGuiElement = class;
 
   TglrGuiBooleanCallback = procedure (Sender: TglrGuiElement; aValue: Boolean) of object;
+  TglrGuiIntegerCallback = procedure (Sender: TglrGuiElement; aValue: Integer) of object;
 
-  TglrGuiInputCallback = procedure(Sender: TglrGuiElement; Event: PglrInputEvent) of object;
+  TglrGuiInputCallback = procedure (Sender: TglrGuiElement; Event: PglrInputEvent) of object;
 
   { TglrGuiElement }
 
@@ -34,8 +35,8 @@ type
 
     procedure SetEnabled(const aValue: Boolean);
     procedure SetFocused(const aValue: Boolean);
-    procedure ProcessInput(Event: PglrInputEvent);
-    function IsHit(X, Y: Single): Boolean;
+    procedure ProcessInput(Event: PglrInputEvent); virtual;
+    function IsHit(X, Y: Single): Boolean; virtual;
   public
     // Input events
     OnClick, OnTouchDown, OnTouchUp, OnTouchMove, OnMouseOver, OnMouseOut: TglrGuiInputCallback;
@@ -101,6 +102,41 @@ type
     destructor Destroy(); override;
   end;
 
+  { TglrGuiSlider }
+
+  TglrGuiSlider = class (TglrGuiElement)
+  protected
+    fTouchedMe: Boolean;
+    fMinValue, fMaxValue, fValue: Integer;
+
+    procedure SetVisible(const aVisible: Boolean); override;
+    procedure SetWidth(const aWidth: Single); override;
+    procedure SetHeight(const aHeight: Single); override;
+
+    procedure ProcessInput(Event: PglrInputEvent); override;
+
+    function IsHit(X, Y: Single): Boolean; override;
+
+    procedure SetValue(NewValue: Integer);
+    procedure SetValueFromTouch(TouchX: Integer);
+    procedure SetMinValue(const NewMinValue: Integer);
+    procedure SetMaxValue(const NewMaxValue: Integer);
+
+    procedure UpdateChildObjects();
+  public
+    Fill: TglrSprite;
+    Button: TglrGuiElement;
+
+    OnValueChanged: TglrGuiIntegerCallback;
+
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
+    destructor Destroy(); override;
+
+    property Value: Integer read fValue write SetValue;
+    property MinValue: Integer read fValue write SetMinValue;
+    property MaxValue: Integer read fValue write SetMaxValue;
+  end;
+
   { TglrGuiManager }
 
   TglrGuiManager = class (TglrGuiElementsList)
@@ -123,6 +159,146 @@ type
   end;
 
 implementation
+
+{ TglrGuiSlider }
+
+procedure TglrGuiSlider.UpdateChildObjects;
+var
+  percentage: Single;
+  FillTextureRegion: PglrTextureRegion;
+begin
+  percentage := fValue / (fMaxValue - fMinValue);
+
+  // Set slider button position
+  Button.Position.x := Width * (percentage - PivotPoint.x);
+  Button.Position.y := - PivotPoint.y;
+
+  //Set slider fill params
+  Fill.Width := percentage * Width;
+  Fill.Position.x := -Width * PivotPoint.x;
+
+  FillTextureRegion := Fill.GetTextureRegion();
+  if Assigned(FillTextureRegion) then
+    with FillTextureRegion^ do
+    begin
+      //Fill.Vertices[0].tex.x := (tx + tw * percentage) / Width;
+      //Fill.Vertices[1].tex.x := Fill.Vertices[0].tex.x;
+    end;
+end;
+
+procedure TglrGuiSlider.SetVisible(const aVisible: Boolean);
+begin
+  inherited SetVisible(aVisible);
+  Button.Visible := aVisible;
+  Fill.Visible := aVisible;
+end;
+
+procedure TglrGuiSlider.SetWidth(const aWidth: Single);
+begin
+  inherited SetWidth(aWidth);
+  UpdateChildObjects();
+end;
+
+procedure TglrGuiSlider.SetHeight(const aHeight: Single);
+begin
+  inherited SetHeight(aHeight);
+  UpdateChildObjects();
+end;
+
+procedure TglrGuiSlider.ProcessInput(Event: PglrInputEvent);
+begin
+  inherited ProcessInput(Event);
+  Button.ProcessInput(Event);
+
+  case Event.InputType of
+    itTouchDown:
+      begin
+        fTouchedMe := IsHit(Event.X, Event.Y);
+         if (fTouchedMe) then
+           SetValueFromTouch(Event.X);
+      end;
+    itTouchUp:   fTouchedMe := False;
+    itTouchMove:
+      if (fTouchedMe) then
+        SetValueFromTouch(Event.X);
+  end;
+end;
+
+procedure TglrGuiSlider.SetValue(NewValue: Integer);
+begin
+  NewValue := Clamp(NewValue, fMinValue, fMaxValue);
+
+  if NewValue <> fValue then
+  begin
+    if Assigned(OnValueChanged) then
+      OnValueChanged(Self, NewValue);
+    fValue := NewValue;
+  end;
+
+  UpdateChildObjects();
+end;
+
+procedure TglrGuiSlider.SetValueFromTouch(TouchX: Integer);
+var
+  percentage, posX: Single;
+begin
+  posX := Self.AbsoluteMatrix.Pos.x;
+  percentage := (TouchX - posX) / Width + PivotPoint.x;
+  Value := Round((fMaxValue - fMinValue) * percentage);
+end;
+
+procedure TglrGuiSlider.SetMinValue(const NewMinValue: Integer);
+begin
+  if (NewMinValue > fMaxValue) then
+    Log.Write(lError, 'GuiSlider: min value can not be greater than max value')
+  else
+  begin
+    fMinValue := NewMinValue;
+    Value := Value;
+  end;
+end;
+
+procedure TglrGuiSlider.SetMaxValue(const NewMaxValue: Integer);
+begin
+  if (NewMaxValue < fMinValue) then
+    Log.Write(lError, 'GuiSlider: max value can not be less than min value')
+  else
+  begin
+    fMaxValue := NewMaxValue;
+    Value := Value;
+  end;
+end;
+
+function TglrGuiSlider.IsHit(X, Y: Single): Boolean;
+begin
+  Result := inherited IsHit(X, Y) or Button.IsHit(X, Y);
+end;
+
+constructor TglrGuiSlider.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+begin
+  inherited Create(aWidth, aHeight, aPivotPoint);
+
+  Button := TglrGuiElement.Create();
+  Button.Parent := Self;
+
+  Fill := TglrSprite.Create(aWidth, aHeight, Vec2f(0.0, 0.5));
+  Fill.Parent := Self;
+
+  fMinValue := 0;
+  fMaxValue := 100;
+  fValue := 50;
+
+  UpdateChildObjects();
+
+  OnValueChanged := nil;
+end;
+
+destructor TglrGuiSlider.Destroy;
+begin
+  Button.Free();
+  Fill.Free();
+  inherited Destroy;
+end;
 
 { TglrGuiLayout }
 
@@ -346,6 +522,7 @@ procedure TglrGuiManager.Render;
 var
   i, j: Integer;
   b: TglrGuiButton;
+  s: TglrGuiSlider;
 begin
   // Render sprites
   fMaterial.Bind();
@@ -359,6 +536,18 @@ begin
       for j := 0 to 7 do
         fSpriteBatch.Draw(TglrGuiLayout(FItems[i]).Patches[j]);
     end
+
+    // If it is GuiSlider draw 3 objects: slider back, fill sprite and slider button
+    else if (FItems[i] is TglrGuiSlider) then
+    begin
+      s := TglrGuiSlider(FItems[i]);
+      s.Fill.Position.z := s.Position.z + 1;
+      s.Button.Position.z := s.Fill.Position.z + 1;
+      fSpriteBatch.Draw(s);
+      fSpriteBatch.Draw(s.Fill);
+      fSpriteBatch.Draw(s.Button);
+    end
+
     // In any other cases - just draw element itself
     else
       fSpriteBatch.Draw(FItems[i]);
