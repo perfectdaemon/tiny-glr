@@ -1,6 +1,9 @@
-textures: gui.tga
-layout_test.png	1	1	82	82	0	0	82	82	
-button_over.png	85	1	70	317	0	17	352	70	r
-button.png	157	1	58	293	0	0	293	58	r
-checkbox_on.png	217	1	37	37	0	0	37	37	
-checkbox_off.png	217	40	37	37	0	0	37	37	
+textures: gui.png
+layout_test.png	0	0	82	82	0	0	82	82	
+button_over.png	83	0	70	317	0	17	352	70	r
+button.png	154	0	58	293	0	0	293	58	r
+checkbox_on.png	213	0	37	37	0	0	37	37	
+checkbox_off.png	213	38	37	37	0	0	37	37	
+slider_btn.png	213	76	11	37	0	0	11	37	
+slider_back.png	225	76	18	297	0	0	297	18	r
+slider_fill.png	67	83	15	294	0	0	294	15	r
