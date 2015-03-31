@@ -31,6 +31,7 @@ type
     procedure ButtonClicked(Sender: TglrGuiElement; Event: PglrInputEvent);
 
     procedure SliderInit(var Slider: TglrGuiSlider);
+    procedure SliderOver(Sender: TglrGuiElement; Event: PglrInputEvent);
     procedure SliderValueChanged(Sender: TglrGuiElement; NewValue: Integer);
 
     procedure MenuTween(aObject: TglrTweenObject; aValue: Single);
@@ -109,7 +110,26 @@ begin
     Fill.SetTextureRegion(Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_SLIDER_FILL));
     Fill.SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
     Button.NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_SLIDER_BTN);
+    Button.SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
     Parent := Container;
+    OnValueChanged := SliderValueChanged;
+    OnMouseOver := SliderOver;
+    OnMouseOut := SliderOver;
+  end;
+end;
+
+procedure TglrSettingsMenu.SliderOver(Sender: TglrGuiElement;
+  Event: PglrInputEvent);
+begin
+  if (Sender.IsMouseOver) then
+  begin
+    TglrGuiSlider(Sender).Button.SetVerticesColor(Vec4f(0.7, 0.5, 0.5, 1.0));
+    TglrGuiSlider(Sender).Fill.SetVerticesColor(Vec4f(0.7, 0.5, 0.5, 1.0));
+  end
+  else
+  begin
+    TglrGuiSlider(Sender).Button.SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
+    TglrGuiSlider(Sender).Fill.SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
   end;
 end;
 
