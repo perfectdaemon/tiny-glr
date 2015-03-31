@@ -15,6 +15,7 @@ type
   protected
     fRot, fWidth, fHeight: Single;
     fPP: TglrVec2f;
+    fTextureRegion: PglrTextureRegion;
 
     procedure SetRot(const aRot: Single); virtual;
     procedure SetWidth(const aWidth: Single); virtual;
@@ -35,11 +36,12 @@ type
     procedure SetDefaultVertices(); virtual;//Sets vertices due to width, height, pivot point and rotation
     procedure SetDefaultTexCoords(); //Sets default texture coords
     procedure SetVerticesColor(aColor: TglrVec4f);
+    procedure SetVerticesAlpha(aAlpha: Single);
     procedure SetSize(aWidth, aHeight: Single); overload;
     procedure SetSize(aSize: TglrVec2f); overload;
 
     procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean = True); virtual;
-
+    function GetTextureRegion(): PglrTextureRegion;
     procedure RenderSelf(); override;
   end;
 
@@ -205,6 +207,7 @@ begin
   SetDefaultVertices();
   SetDefaultTexCoords();
   SetVerticesColor(Vec4f(1, 1, 1, 1));
+  fTextureRegion := nil;
 end;
 
 destructor TglrSprite.Destroy;
@@ -229,11 +232,19 @@ begin
 end;
 
 procedure TglrSprite.SetVerticesColor(aColor: TglrVec4f);
+var
+  i: Integer;
 begin
-  Vertices[0].col := aColor;
-  Vertices[1].col := aColor;
-  Vertices[2].col := aColor;
-  Vertices[3].col := aColor;
+  for i := 0 to 3 do
+    Vertices[i].col := aColor;
+end;
+
+procedure TglrSprite.SetVerticesAlpha(aAlpha: Single);
+var
+  i: Integer;
+begin
+  for i := 0 to 3 do
+    Vertices[i].col.w := aAlpha;
 end;
 
 procedure TglrSprite.SetSize(aWidth, aHeight: Single);
@@ -276,6 +287,12 @@ begin
         Height := tw * Texture.Width;
       end;
     end;
+  fTextureRegion := aRegion;
+end;
+
+function TglrSprite.GetTextureRegion: PglrTextureRegion;
+begin
+  Result := fTextureRegion;
 end;
 
 procedure TglrSprite.RenderSelf;
