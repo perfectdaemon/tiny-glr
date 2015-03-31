@@ -54,6 +54,8 @@ type
     property ClickedTextureRegion: PglrTextureRegion read fClickedTextureRegion write fClickedTextureRegion;
     property DisabledTextureRegion: PglrTextureRegion read fDisabledTextureRegion write fDisabledTextureRegion;
 
+    property IsMouseOver: Boolean read fIsMouseOver;
+
     property Enabled: Boolean read fEnabled write SetEnabled;
     property Focused: Boolean read fFocused write SetFocused;
 
@@ -664,23 +666,23 @@ begin
           OnTouchMove(Self, Event);
         if not fIsMouseOver then
         begin
+          fIsMouseOver := True;
           if Assigned(OnMouseOver) then
             OnMouseOver(Self, Event);
           if Assigned(OverTextureRegion) then
             SetTextureRegion(OverTextureRegion);
         end;
-        fIsMouseOver := True;
       end
       else
       begin
         if fIsMouseOver then
         begin
+          fIsMouseOver := False;
           if Assigned(OnMouseOut) then
             OnMouseOut(Self, Event);
           if Assigned(NormalTextureRegion) then
             SetTextureRegion(NormalTextureRegion);
         end;
-        fIsMouseOver := False;
       end;
     end;
   end;
