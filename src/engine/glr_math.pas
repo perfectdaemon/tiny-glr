@@ -241,6 +241,9 @@ function Vec4f(v: TglrVec3f; w: Single = 0): TglrVec4f; overload; inline;
 function Quat(x, y, z, w: Single): TglrQuat; overload; inline;
 function Quat(const v: TglrVec3f; Angle: Single): TglrQuat; overload; inline;
 
+function Color4f(r, g, b: Single; a: Single = 1.0): TglrVec4f; inline;
+function Color4ub(r, g, b: Byte; a: Single = 1.0): TglrVec4f; inline;
+
 implementation
 
 function Max(x, y: Single): Single;
@@ -530,6 +533,22 @@ end;
 function Quat(const v: TglrVec3f; Angle: Single): TglrQuat;
 begin
   Result := Result.FromVectorAngle(v, Angle);
+end;
+
+function Color4f(r, g, b: Single; a: Single): TglrVec4f;
+begin
+  Result.x := r;
+  Result.y := g;
+  Result.z := b;
+  Result.w := a;
+end;
+
+function Color4ub(r, g, b: Byte; a: Single): TglrVec4f;
+begin
+  Result.x := r / 255;
+  Result.y := g / 255;
+  Result.z := b / 255;
+  Result.w := a;
 end;
 
 {$REGION ' Single Vectors '}
