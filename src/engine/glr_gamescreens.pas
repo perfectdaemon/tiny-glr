@@ -23,16 +23,18 @@ type
   protected
     fState: TglrGameScreenState;
     procedure SetState(NewState: TglrGameScreenState); virtual;
+    procedure LoadCompleted(); virtual;
+    procedure UnloadCompleted(); virtual;
   public
     Name: UnicodeString;
     constructor Create(ScreenName: UnicodeString); virtual;
 
     property State: TglrGameScreenState read fState write SetState;
 
-    procedure OnUpdate    (const DeltaTime: Double); virtual; abstract;
-    procedure OnLoading   (const DeltaTime: Double); virtual;
-    procedure OnUnloading (const DeltaTime: Double); virtual;
-    procedure OnRender    ();                        virtual; abstract;
+    procedure OnUpdate        (const DeltaTime: Double); virtual; abstract;
+    procedure OnLoadStarted   (); virtual;
+    procedure OnUnloadStarted (); virtual;
+    procedure OnRender        (); virtual; abstract;
 
     procedure OnInput(Event: PglrInputEvent); virtual; abstract;
   end;
@@ -100,17 +102,34 @@ begin
       end;
   end;
 
-  fState := NewState;
+
+  if (fState <> NewState) then
+  begin
+    fState := NewState;
+    case fState of
+      gssLoading:   OnLoadStarted();
+      gssUnloading: OnUnloadStarted();
+    end;
+  end;
+end;
+
+procedure TglrGameScreen.LoadCompleted;
+begin
+  // Load ended
+  fState := gssReady;
+end;
+
+procedure TglrGameScreen.UnloadCompleted;
+begin
+  // Unload ended
+  fState := gssHidden;
 end;
 
 procedure TglrGameScreen.InternalUpdate(const DeltaTime: Double);
 begin
   case fState of
-    gssHidden:    ;
-    gssLoading:   OnLoading(DeltaTime);
-    gssReady:     OnUpdate(DeltaTime);
-    gssPaused:    ;
-    gssUnloading: OnUnloading(DeltaTime);
+    gssHidden, gssPaused: ;
+    gssLoading, gssReady, gssUnloading: OnUpdate(DeltaTime);
   end;
 end;
 
@@ -120,16 +139,14 @@ begin
   Name := ScreenName;
 end;
 
-procedure TglrGameScreen.OnLoading(const DeltaTime: Double);
+procedure TglrGameScreen.OnLoadStarted;
 begin
-  // Load ended
-  fState := gssReady;
+  LoadCompleted();
 end;
 
-procedure TglrGameScreen.OnUnloading(const DeltaTime: Double);
+procedure TglrGameScreen.OnUnloadStarted;
 begin
-  // Unload ended
-  fState := gssHidden;
+  UnloadCompleted();
 end;
 
 { TglrGameScreenManager }
