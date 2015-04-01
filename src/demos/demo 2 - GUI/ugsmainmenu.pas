@@ -61,9 +61,8 @@ begin
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON);
     OverTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON_OVER);
     TextLabel.Text := 'Button';
-    TextLabel.Position := Vec3f(-100, -12, 0);
-    //TextLabel.Color := Vec4f(0.7, 0.9, 0.9, 1.0);
-    TextLabel.Scale := 1.12;
+    TextLabel.Position := Vec3f(-115, -12, 0);
+    TextLabel.Color := Color4f(1,1,1);
     Position := Vec3f(Render.Width div 2, 200, 1);
     OnClick := ButtonClicked;
   end;

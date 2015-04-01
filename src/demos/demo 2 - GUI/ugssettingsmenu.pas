@@ -68,9 +68,8 @@ begin
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON);
     OverTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON_OVER);
     TextLabel.Text := 'Button';
-    TextLabel.Position := Vec3f(-100, -12, 0);
-    //TextLabel.Color := Vec4f(0.7, 0.9, 0.9, 1.0);
-    TextLabel.Scale := 1.12;
+    TextLabel.Position := Vec3f(-115, -12, 0);
+    TextLabel.Color := Color4f(1,1,1);
     Position := Vec3f(Render.Width - Width / 2 - 50, Render.Height - Height - 80, 1);
     OnClick := ButtonClicked;
     Parent := Container;
@@ -104,7 +103,7 @@ begin
   Slider := TglrGuiSlider.Create();
   with Slider do
   begin
-    Position := Vec3f(Render.Width div 2 + 150, 150, 1);
+    Position := Vec3f(Render.Width div 2, 150, 5);
     SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_SLIDER_BACK);
     Fill.SetTextureRegion(Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_SLIDER_FILL));
@@ -115,6 +114,7 @@ begin
     OnValueChanged := SliderValueChanged;
     OnMouseOver := SliderOver;
     OnMouseOut := SliderOver;
+    ChangeTexCoords := True;
   end;
 end;
 
@@ -143,14 +143,12 @@ procedure TglrSettingsMenu.MenuTween(aObject: TglrTweenObject; aValue: Single);
 begin
   ApplyBtn.SetVerticesAlpha(aValue);
   BackBtn.SetVerticesAlpha(aValue);
-
-  ApplyBtn.TextLabel.Color.w := aValue;
-  BackBtn.TextLabel.Color.w := aValue;
+  MusicSlider.SetVerticesAlpha(aValue);
 end;
 
 procedure TglrSettingsMenu.BackToMainMenu;
 begin
-  Game.GameScreenManager.SwitchTo(Game.MainMenuScreen);
+  Game.GameScreenManager.Back();
 end;
 
 procedure TglrSettingsMenu.Apply;
@@ -174,7 +172,8 @@ begin
 
   MusicSliderValue := TglrText.Create();
   MusicSliderValue.Parent := MusicSlider;
-  MusicSliderValue.Position := Vec3f(0, -50, 3);
+  MusicSliderValue.Position := Vec3f(0, -30, 3);
+  MusicSliderValue.PivotPoint := Vec2f(0.5, 0.5);
 
   ApplyBtn.TextLabel.Text := 'Apply';
   BackBtn.TextLabel.Text := 'Back';
@@ -227,13 +226,14 @@ end;
 procedure TglrSettingsMenu.OnLoadStarted;
 begin
   Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 0.0, 1.0, 1.5, 0.4);
+  Game.Tweener.AddTweenPSingle(@Container.Position.x, tsExpoEaseIn, -800, 0, 2.5);
   inherited OnLoadStarted;
 end;
 
 procedure TglrSettingsMenu.OnUnloadStarted;
 begin
   Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 1.0, 0.0, 1.5, 0.4);
-  inherited OnUnloadStarted;
+  Game.Tweener.AddTweenPSingle(@Container.Position.x, tsExpoEaseIn, 0, -800, 1.0, 0, Self.UnloadCompleted);
 end;
 
 end.
