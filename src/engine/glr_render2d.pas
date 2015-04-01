@@ -323,7 +323,7 @@ begin
   inherited Create();
   Text := aText;
   LineSpacing := 2.0;
-  LetterSpacing := 1.0;
+  LetterSpacing := 0.0;
   Color := Vec4f(1, 1, 1, 1);
   Scale := 1.0;
 
