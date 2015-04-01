@@ -370,7 +370,7 @@ begin
   BlankTexture := TglrTexture.Create(blankData, 1, 1, tfRGB8);
   FreeMem(blankData);
 
-  Font := TglrFont.Create(FileSystem.ReadResource('default assets/AmazingGrotesk14.fnt'), True);
+  Font := TglrFont.Create(FileSystem.ReadResource('default assets/AmazingGrotesk13.fnt'), True);
 end;
 
 class procedure Default.Deinit;
