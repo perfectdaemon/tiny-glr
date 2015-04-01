@@ -46,7 +46,7 @@ type
 
   TglrGameScreenManager = class (TglrGameScreenList)
   protected
-    fWaitForPreviousScreen: Boolean;
+    fUnloadingScreen: TglrGameScreen;
     function GetScreenIndex(ScreenName: UnicodeString): Integer; overload;
     function GetScreenIndex(Screen: TglrGameScreen):    Integer; overload;
   public
@@ -176,7 +176,7 @@ constructor TglrGameScreenManager.Create(aCapacity: LongInt);
 begin
   inherited Create(aCapacity);
   ScreenStack := TglrGameScreenStack.Create(aCapacity);
-  fWaitForPreviousScreen := False;
+  fUnloadingScreen := nil;
 end;
 
 destructor TglrGameScreenManager.Destroy;
@@ -191,7 +191,7 @@ begin
     Log.Write(lCritical, 'GameScreenManager.ShowModal(index): index is out of range');
 
   // Pause current game screen
-  if (ScreenStack.Count > 0) then
+  if (not ScreenStack.IsEmpty()) then
     ScreenStack.Head().State := gssPaused;
 
   // Push new screen as current
@@ -199,8 +199,6 @@ begin
 
   // Start loading
   FItems[index].State := gssLoading;
-
-  fWaitForPreviousScreen := False;
 end;
 
 procedure TglrGameScreenManager.ShowModal(const Name: UnicodeString);
@@ -229,16 +227,17 @@ begin
     Log.Write(lCritical, 'GameScreenManager.ShowModal(index): index is out of range');
 
   // Unload current game screen
-  if (ScreenStack.Count > 0) then
-    ScreenStack.Head().State := gssUnloading;
+  if (not ScreenStack.IsEmpty()) then
+  begin
+    fUnloadingScreen := ScreenStack.Head();
+    fUnloadingScreen.State := gssUnloading;
+  end
+  // If there is no current screen - start loading
+  else
+    FItems[index].State := gssLoading;
 
   // Push new screen as current
   ScreenStack.Push(FItems[index]);
-
-  // Start loading
-  FItems[index].State := gssLoading;
-
-  fWaitForPreviousScreen := True;
 end;
 
 procedure TglrGameScreenManager.SwitchTo(const Name: UnicodeString);
@@ -264,44 +263,36 @@ end;
 procedure TglrGameScreenManager.Back();
 begin
   // Pop current and unload it
-  if (ScreenStack.Count > 0) then
+  if (not ScreenStack.IsEmpty()) then
   begin
-    ScreenStack.Pop().State := gssUnloading;
-    fWaitForPreviousScreen := True;
+    fUnloadingScreen := ScreenStack.Pop();
+    fUnloadingScreen.State := gssUnloading;
   end;
-
-  // Set new current state to loading
-  // If it is already loaded and paused, state will be automatically set to Ready
-  // ( check GameScreen.SetState() )
-  if (ScreenStack.Count > 0) then
-    ScreenStack.Head().State := gssLoading;
 end;
 
 procedure TglrGameScreenManager.Update(const DeltaTime: Double);
 var
   i: Integer;
-  needWait: Boolean;
 begin
-  needWait := False;
   for i := 0 to FCount - 1 do
+    FItems[i].InternalUpdate(DeltaTime);
+
+  // if previous screen is unloaded (state = hidden)
+  if (fUnloadingScreen <> nil) and (fUnloadingScreen.State = gssHidden) then
   begin
-    // Check is there any screens we should wait for
-    if (FItems[i].State = gssUnloading) then
-      needWait := True;
-
-    // Prevent new screen to be loaded while other unloading
-    if (fWaitForPreviousScreen) and (FItems[i].State = gssLoading) then
-      continue
-    else
-      FItems[i].InternalUpdate(DeltaTime);
+    fUnloadingScreen := nil;
+    // Make current screen loading
+    // If it is already loaded and paused, state will be automatically set to Ready
+    // ( check GameScreen.SetState() )
+    if (not ScreenStack.IsEmpty()) then
+      ScreenStack.Head().State := gssLoading;
   end;
-
-  fWaitForPreviousScreen := needWait;
 end;
 
 procedure TglrGameScreenManager.Input(Event: PglrInputEvent);
 begin
-  if (ScreenStack.Count > 0) and (ScreenStack.Head().State in [gssReady, gssPaused]) then
+  // Process input only for current screen if it is ready or paused
+  if (not ScreenStack.IsEmpty()) and (ScreenStack.Head().State in [gssReady, gssPaused]) then
     ScreenStack.Head().OnInput(Event);
 end;
 
@@ -309,6 +300,7 @@ procedure TglrGameScreenManager.Render;
 var
   i: Integer;
 begin
+  // Render all screens except of hidden
   for i := 0 to FCount - 1 do
     if (FItems[i].State <> gssHidden) then
       FItems[i].OnRender();
