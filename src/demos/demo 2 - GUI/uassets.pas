@@ -48,7 +48,7 @@ const
   R_GUI_ATLAS_IMG = R_BASE + 'gui.tga';
   R_GUI_ATLAS_TXT = R_BASE + 'gui.atlas';
 
-  R_FONT_MAIN = R_BASE + 'AmazingGrotesk20b.bmp';
+  R_FONT_MAIN = R_BASE + 'AmazingGrotesk19.fnt';
 
 { Assets }
 

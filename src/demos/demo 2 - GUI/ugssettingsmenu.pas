@@ -24,7 +24,6 @@ type
     ApplyBtn, BackBtn: TglrGuiButton;
 
     MusicSlider, SoundSlider: TglrGuiSlider;
-    MusicSliderValue: TglrText;
 
     procedure ButtonInit(var Button: TglrGuiButton);
     procedure ButtonTween(aObject: TglrTweenObject; aValue: Single);
@@ -170,11 +169,6 @@ begin
   SliderInit(MusicSlider);
   MusicSlider.Value := 50;
 
-  MusicSliderValue := TglrText.Create();
-  MusicSliderValue.Parent := MusicSlider;
-  MusicSliderValue.Position := Vec3f(0, -30, 3);
-  MusicSliderValue.PivotPoint := Vec2f(0.5, 0.5);
-
   ApplyBtn.TextLabel.Text := 'Apply';
   BackBtn.TextLabel.Text := 'Back';
 
@@ -210,17 +204,12 @@ procedure TglrSettingsMenu.OnRender;
 begin
   Assets.GuiCamera.Update();
   GuiManager.Render();
-
-  Assets.FontMainBatch.Start();
-    Assets.FontMainBatch.Draw(MusicSliderValue);
-  Assets.FontMainBatch.Finish();
 end;
 
 procedure TglrSettingsMenu.OnUpdate(const DeltaTime: Double);
 begin
   GuiManager.Update(DeltaTime);
   ActionManager.Update(DeltaTime);
-  MusicSliderValue.Text := Convert.ToString(MusicSlider.Value);
 end;
 
 procedure TglrSettingsMenu.OnLoadStarted;
