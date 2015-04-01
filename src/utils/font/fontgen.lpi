@@ -33,7 +33,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="4">
+    <Units Count="3">
       <Unit0>
         <Filename Value="fontgen.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -52,11 +52,6 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uFont"/>
       </Unit2>
-      <Unit3>
-        <Filename Value="..\..\engine\tinyglr.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="tinyglr"/>
-      </Unit3>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -67,7 +62,6 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..\..\engine"/>
       <UnitOutputDirectory Value="..\..\..\dcu"/>
     </SearchPaths>
     <Parsing>

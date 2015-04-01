@@ -63,8 +63,8 @@ type
 
 implementation
 
-uses
-  tinyglr in '..\..\engine\tinyglr.pas';
+//uses
+//  tinyglr in '..\..\engine\tinyglr.pas';
 
 function Recti(Left, Top, Right, Bottom: LongInt): TRect;
 begin
@@ -518,7 +518,7 @@ end;
 *)
 procedure TFontGenerator.SaveBmpToFile(const FileName: AnsiString);
 var
-  Stream: TglrStream;
+  Stream: TFileStream;
   fh: BITMAPFILEHEADER;
   ih: BITMAPINFOHEADER;
   texdata2: PByteArray;
@@ -531,7 +531,7 @@ var
     tx, ty, tw, th : Single;
   end;
 begin
-  Stream := TglrStream.Init(FileName + '.bmp', True);
+  Stream := TFileStream.Create(FileName + '.bmp', fmCreate);
   FillChar(fh, SizeOf(BITMAPFILEHEADER), 0);
   FillChar(ih, SizeOf(BITMAPINFOHEADER), 0);
 

@@ -7,7 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, uMain, uFont, tinyglr
+  Forms, uMain, uFont
   { you can add units after this };
 
 {$R *.res}
