@@ -341,16 +341,7 @@ begin
 end;
 
 function LoadFontData(const Stream: TglrStream; out CharCount: LongWord): Pointer;
-var
-  fh: BITMAPFILEHEADER;
-  ih: BITMAPINFOHEADER;
 begin
-  Stream.Pos := 0;
-  Stream.Read(fh, SizeOf(BITMAPFILEHEADER));
-  Stream.Read(ih, SizeOf(BITMAPINFOHEADER));
-  if (fh.bfReserved1 <> $0F86) then
-    Log.Write(lCritical, 'Font load failed, invalid bmpf file');
-  Stream.Pos := SizeOf(BITMAPFILEHEADER) + SizeOf(BITMAPINFOHEADER) + ih.biSizeImage;
   Stream.Read(CharCount, SizeOf(LongWord));
   GetMem(Result, Stream.Size - Stream.Pos);
   Stream.Read(Result^, Stream.Size - Stream.Pos);
