@@ -35,8 +35,8 @@ type
 
     procedure SetDefaultVertices(); virtual;//Sets vertices due to width, height, pivot point and rotation
     procedure SetDefaultTexCoords(); //Sets default texture coords
-    procedure SetVerticesColor(aColor: TglrVec4f);
-    procedure SetVerticesAlpha(aAlpha: Single);
+    procedure SetVerticesColor(aColor: TglrVec4f); virtual;
+    procedure SetVerticesAlpha(aAlpha: Single); virtual;
     procedure SetSize(aWidth, aHeight: Single); overload;
     procedure SetSize(aSize: TglrVec2f); overload;
 
