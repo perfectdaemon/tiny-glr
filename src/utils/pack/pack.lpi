@@ -32,17 +32,12 @@
         <CommandLineParams Value="-pack &quot;default.glrpack&quot; &quot;default assets/&quot;"/>
       </local>
     </RunParams>
-    <Units Count="2">
+    <Units Count="1">
       <Unit0>
         <Filename Value="pack.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="pack"/>
       </Unit0>
-      <Unit1>
-        <Filename Value="..\..\engine\sys_win.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="sys_win"/>
-      </Unit1>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

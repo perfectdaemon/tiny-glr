@@ -1,8 +1,9 @@
 program pack;
 
 uses
-  sys_win,
-  tinyglr;
+  glr_utils,
+  glr_filesystem,
+  glr_os_win;
 
   procedure PackData(const aOutputFileName, aPackDir: AnsiString);
   var
