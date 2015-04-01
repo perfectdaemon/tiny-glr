@@ -993,6 +993,8 @@ procedure TglrActionManager.PerformSimpleAction(Action: TglrSimpleActionInfo;
 begin
   with Action do
   begin
+    if Done then
+      Exit();
     if (StartAfter > 0) then
       StartAfter -= DeltaTime
     else
@@ -1008,6 +1010,8 @@ procedure TglrActionManager.PerformContinuousAction(
 begin
   with Action do
   begin
+    if Done then
+      Exit();
     if (StartAfter > 0) then
       StartAfter -= DeltaTime
     else if (Period >= 0) then
@@ -1088,19 +1092,30 @@ begin
       break;
     end;
 
-  // Clear list if there is only done actions
+  // Clear queue if there are only done actions
   if not isAnyActionInQueue then
-    fQueue.Clear();
+    fQueue.Clear(True);
 
-  // Clean done actions
+  // Clear actions in lists, reuse isAnyActionInQueue variable
+  isAnyActionInQueue := False;
   for i := 0 to fSimpleList.Count - 1 do
-    if (fSimpleList[i].Done) then
-      fSimpleList.DeleteByIndex(i, True);
+    if not (fSimpleList[i].Done) then
+    begin
+      isAnyActionInQueue := True;
+      break;
+    end;
+  if not isAnyActionInQueue then
+    fSimpleList.Clear(True);
 
+  isAnyActionInQueue := False;
   for i := 0 to fContinuousList.Count - 1 do
-    if (fContinuousList[i].Done) then
-      fContinuousList.DeleteByIndex(i, True);
-
+    if not (fContinuousList[i].Done) then
+    begin
+      isAnyActionInQueue := True;
+      break;
+    end;
+  if not isAnyActionInQueue then
+    fContinuousList.Clear(True);
 end;
 
 { Convert }
