@@ -5,7 +5,7 @@ unit glr_core;
 interface
 
 uses
-  glr_math, glr_render;
+  glr_math, glr_render, glr_render2d;
 
 type
 
@@ -160,6 +160,7 @@ type
   public
     class var SpriteShader: TglrShaderProgram;
     class var BlankTexture: TglrTexture;
+    class var Font: TglrFont;
   end;
 
 implementation
@@ -368,6 +369,8 @@ begin
   BlankTexture := TglrTexture.Create(blankData, 1, 1, tfRGB8);
   FreeMem(blankData);
 
+  Font := TglrFont.Create(FileSystem.ReadResource('default assets/AmazingGrotesk14.fnt'));
+
   fInited := True;
 end;
 
@@ -378,6 +381,7 @@ begin
 
   SpriteShader.Free();
   BlankTexture.Free();
+  Font.Free();
 end;
 
 end.
