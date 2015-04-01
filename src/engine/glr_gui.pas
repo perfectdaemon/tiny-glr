@@ -130,6 +130,8 @@ type
   public
     Fill: TglrSprite;
     Button: TglrGuiElement;
+    ValueLabel: TglrText;
+    ValueLabelOffset: TglrVec2f;
     ChangeTexCoords: Boolean;
 
     OnValueChanged: TglrGuiIntegerCallback;
@@ -185,6 +187,9 @@ begin
   Fill.Width := percentage * Width;
   Fill.Position.x := -Width * PivotPoint.x;
   Fill.Position.y := Height * (0.5 - PivotPoint.y);
+
+  ValueLabel.Position.x += ValueLabelOffset.x;
+  ValueLabel.Position.y := - Height * PivotPoint.y + ValueLabelOffset.y;
 
   if ChangeTexCoords then
   begin
@@ -251,6 +256,7 @@ begin
     if Assigned(OnValueChanged) then
       OnValueChanged(Self, NewValue);
     fValue := NewValue;
+    ValueLabel.Text := Convert.ToString(fValue);
   end;
 
   UpdateChildObjects();
@@ -306,6 +312,11 @@ begin
   fMaxValue := 100;
   fValue := 50;
 
+  ValueLabel := TglrText.Create(Convert.ToString(fValue));
+  ValueLabel.PivotPoint := Vec2f(0.5, 1.0);
+  ValueLabel.Parent := Self;
+  ValueLabelOffset := Vec2f(0, -15);
+
   UpdateChildObjects();
 
   OnValueChanged := nil;
@@ -316,6 +327,7 @@ destructor TglrGuiSlider.Destroy;
 begin
   Button.Free();
   Fill.Free();
+  ValueLabel.Free();
   inherited Destroy;
 end;
 
@@ -338,6 +350,8 @@ begin
     Fill.SetVerticesAlpha(aAlpha);
   if (Button <> nil) then
     Button.SetVerticesAlpha(aAlpha);
+  if (ValueLabel <> nil) then
+    ValueLabel.Color.w := aAlpha;
 end;
 
 { TglrGuiLayout }
@@ -619,6 +633,12 @@ begin
       b := TglrGuiButton(FItems[i]);
       b.TextLabel.Position.z := b.Position.z + 1;
       fFontBatch.Draw(b.TextLabel);
+    end
+    else if (FItems[i] is TglrGuiSlider) then
+    begin
+      s := TglrGuiSlider(FItems[i]);
+      s.ValueLabel.Position.z := s.Button.Position.z + 1;
+      fFontBatch.Draw(s.ValueLabel);
     end;
   fFontBatch.Finish();
 end;
