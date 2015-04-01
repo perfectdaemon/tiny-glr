@@ -373,6 +373,32 @@ begin
 end;
 
 constructor TglrFont.Create(aStream: TglrStream; aFreeStreamOnFinish: Boolean);
+
+  function CreateTexture(Stream: TglrStream): TglrTexture;
+  var
+    Header : record
+      Width  : Word;
+      Height : Word;
+      Size   : LongWord;
+    end;
+
+    packedData, unpackedData: PByte;
+    i: Integer;
+  begin
+    Stream.Read(Header, SizeOf(Header));
+    unpackedData := GetMem(Header.Width * Header.Height * 4);
+    FillChar(unpackedData^, Header.Width * Header.Height * 4, 255);
+    packedData := GetMem(Header.Size);
+    Stream.Read(packedData^, Header.Size);
+
+    for i := 0 to Header.Width * Header.Height - 1 do
+        (unpackedData + (i * 4 + 3))^ := (packedData + i)^;
+
+    Result := TglrTexture.Create(unpackedData, Header.Width, Header.Height, tfRGBA8);
+    FreeMem(packedData);
+    FreeMem(unpackedData);
+  end;
+
 var
   data: Pointer;
   charCount, i: LongWord;
@@ -383,7 +409,7 @@ begin
   else
     Material := TglrMaterial.Create(TglrShaderProgram(nil));
 
-  Texture := TglrTexture.Create(aStream, extBmp, False);
+  Texture := CreateTexture(aStream);
   Material.AddTexture(Texture, 'uDiffuse');
 
   data := LoadFontData(aStream, charCount);
