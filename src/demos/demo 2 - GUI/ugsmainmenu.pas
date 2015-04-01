@@ -4,6 +4,7 @@ interface
 
 uses
   glr_core,
+  glr_scene,
   glr_gui,
   glr_gamescreens,
   glr_utils,
@@ -15,6 +16,8 @@ type
 
   TglrMainMenu = class (TglrGameScreen)
   protected
+    Container: TglrNode;
+
     NewGameBtn, SettingsBtn, ExitBtn: TglrGuiButton;
     GuiManager: TglrGuiManager;
     ActionManager: TglrActionManager;
@@ -65,6 +68,7 @@ begin
     TextLabel.Color := Color4f(1,1,1);
     Position := Vec3f(Render.Width div 2, 200, 1);
     OnClick := ButtonClicked;
+    Parent := Container;
   end;
 end;
 
@@ -99,10 +103,6 @@ begin
   NewGameBtn.SetVerticesAlpha(aValue);
   SettingsBtn.SetVerticesAlpha(aValue);
   ExitBtn.SetVerticesAlpha(aValue);
-
-  NewGameBtn.TextLabel.Color.w := aValue;
-  SettingsBtn.TextLabel.Color.w := aValue;
-  ExitBtn.TextLabel.Color.w := aValue;
 end;
 
 procedure TglrMainMenu.DoExit;
@@ -155,20 +155,24 @@ end;
 procedure TglrMainMenu.OnLoadStarted;
 begin
   Render.SetClearColor(0.1, 0.25, 0.25);
-  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 0.0, 1.0, 1.5, 0.0);
+//  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 0.0, 1.0, 1.5, 0.0);
+  Game.Tweener.AddTweenPSingle(@Container.Position.y, tsExpoEaseIn, -Render.Height, 0, 1.5);
   inherited OnLoadStarted;
 end;
 
 procedure TglrMainMenu.OnUnloadStarted;
 begin
-  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 1.0, 0.0, 1.5, 0.0);
-  inherited OnUnloadStarted;
+//  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 1.0, 0.0, 1.5, 0.0);
+  Game.Tweener.AddTweenPSingle(@Container.Position.y, tsExpoEaseIn, 0, -Render.Height, 1.5);
+  ActionManager.AddIndependent(UnloadCompleted, 0.5);
 end;
 
 constructor TglrMainMenu.Create(ScreenName: UnicodeString);
 begin
   inherited Create(ScreenName);
   ActionManager := TglrActionManager.Create();
+
+  Container := TglrNode.Create();
 
   ButtonInit(NewGameBtn);
   ButtonInit(SettingsBtn);
@@ -189,6 +193,7 @@ end;
 
 destructor TglrMainMenu.Destroy();
 begin
+  Container.Free();
   ActionManager.Free();
   GuiManager.Free(True);
   inherited;

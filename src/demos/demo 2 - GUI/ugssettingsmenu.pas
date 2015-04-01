@@ -214,15 +214,16 @@ end;
 
 procedure TglrSettingsMenu.OnLoadStarted;
 begin
-  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 0.0, 1.0, 1.5, 0.4);
-  Game.Tweener.AddTweenPSingle(@Container.Position.x, tsExpoEaseIn, -800, 0, 2.5);
+//  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 0.0, 1.0, 1.5, 0.4);
+  Game.Tweener.AddTweenPSingle(@Container.Position.x, tsExpoEaseIn, -Render.Width, 0, 2.5);
   inherited OnLoadStarted;
 end;
 
 procedure TglrSettingsMenu.OnUnloadStarted;
 begin
-  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 1.0, 0.0, 1.5, 0.4);
-  Game.Tweener.AddTweenPSingle(@Container.Position.x, tsExpoEaseIn, 0, -800, 1.0, 0, Self.UnloadCompleted);
+//  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 1.0, 0.0, 1.5, 0.4);
+  Game.Tweener.AddTweenPSingle(@Container.Position.x, tsExpoEaseIn, 0, -Render.Width, 1.0);
+  ActionManager.AddIndependent(UnloadCompleted, 0.5);
 end;
 
 end.
