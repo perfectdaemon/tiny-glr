@@ -1,21 +1,21 @@
 object Form1: TForm1
-  Left = 521
-  Height = 474
-  Top = 128
-  Width = 488
+  Left = 451
+  Height = 360
+  Top = 229
+  Width = 768
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'tiny-glr bitmap font generator'
-  ClientHeight = 474
-  ClientWidth = 488
+  ClientHeight = 360
+  ClientWidth = 768
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  LCLVersion = '1.2.2.0'
+  LCLVersion = '1.2.6.0'
   object mSymbols: TMemo
-    Left = 192
-    Height = 186
-    Top = 8
-    Width = 287
+    Left = 8
+    Height = 152
+    Top = 200
+    Width = 272
     Font.CharSet = RUSSIAN_CHARSET
     Font.Height = -13
     Font.Name = 'Calibri'
@@ -36,9 +36,9 @@ object Form1: TForm1
     Left = 8
     Height = 80
     Top = 8
-    Width = 177
+    Width = 273
     ClientHeight = 62
-    ClientWidth = 173
+    ClientWidth = 269
     TabOrder = 1
     object bChooseFont: TButton
       Left = 8
@@ -63,10 +63,10 @@ object Form1: TForm1
     Left = 8
     Height = 105
     Top = 89
-    Width = 176
+    Width = 272
     Caption = 'FONT'
     ClientHeight = 87
-    ClientWidth = 172
+    ClientWidth = 268
     TabOrder = 2
     object cbBold: TCheckBox
       Left = 8
@@ -87,7 +87,7 @@ object Form1: TForm1
       TabOrder = 1
     end
     object editSize: TSpinEdit
-      Left = 80
+      Left = 176
       Height = 23
       Top = 52
       Width = 82
@@ -98,7 +98,7 @@ object Form1: TForm1
       Value = 12
     end
     object Label2: TLabel
-      Left = 80
+      Left = 176
       Height = 15
       Top = 32
       Width = 20
@@ -109,13 +109,13 @@ object Form1: TForm1
       Left = 8
       Height = 23
       Top = 8
-      Width = 154
+      Width = 250
       OnChange = editFontNameChange
       TabOrder = 3
     end
   end
   object bChooseFilePath: TButton
-    Left = 439
+    Left = 391
     Height = 25
     Top = 206
     Width = 40
@@ -123,41 +123,41 @@ object Form1: TForm1
     TabOrder = 3
   end
   object editFilePath: TEdit
-    Left = 192
+    Left = 465
     Height = 23
-    Top = 208
-    Width = 240
+    Top = 323
+    Width = 294
     TabOrder = 4
   end
   object bGenerate: TButton
-    Left = 8
+    Left = 288
     Height = 32
-    Top = 200
+    Top = 320
     Width = 80
     Caption = 'Generate'
     OnClick = bGenerateClick
     TabOrder = 5
   end
   object Panel1: TPanel
-    Left = 8
-    Height = 210
-    Top = 256
+    Left = 288
+    Height = 280
+    Top = 32
     Width = 471
     BevelInner = bvLowered
     TabOrder = 6
   end
   object Label1: TLabel
-    Left = 8
+    Left = 288
     Height = 15
-    Top = 238
+    Top = 8
     Width = 41
     Caption = 'Preview'
     ParentColor = False
   end
   object labelSize: TLabel
-    Left = 128
+    Left = 616
     Height = 16
-    Top = 238
+    Top = 8
     Width = 36
     Caption = 'Size: '
     Font.CharSet = RUSSIAN_CHARSET
@@ -170,9 +170,9 @@ object Form1: TForm1
     ParentFont = False
   end
   object bSave: TButton
-    Left = 104
+    Left = 376
     Height = 32
-    Top = 200
+    Top = 320
     Width = 80
     Caption = 'Save'
     OnClick = bSaveClick
@@ -181,12 +181,12 @@ object Form1: TForm1
   object FontDialog: TFontDialog
     MinFontSize = 0
     MaxFontSize = 0
-    left = 312
-    top = 168
+    left = 368
+    top = 104
   end
   object OpenDialog: TOpenDialog
     Filter = 'Font files|*.ttf;*.otf|All files|*.*'
-    left = 344
-    top = 168
+    left = 400
+    top = 104
   end
 end

@@ -269,7 +269,7 @@ begin
   for y := 0 to MaxHeight - 1 do
     if ScanLine(MaxHeight - y - 1, False) then
     begin
-      CharRect.Top := y;
+      CharRect.Top := y - 1;
       break;
     end;
 // Bottom
@@ -283,7 +283,7 @@ begin
   for x := 0 to MaxWidth - 1 do
     if ScanLine(x, True) then
     begin
-      CharRect.Left := x;
+      CharRect.Left := x - 1;
       break;
     end;
 // Right
@@ -402,7 +402,7 @@ begin
     end;
 
     Result := Length(FontChar);
-    Node := TFontNode.Create(Recti(0, 0, TexWidth, TexHeight));
+    Node := TFontNode.Create(Recti(1, 1, TexWidth, TexHeight));
     for i := 0 to Length(FontChar) - 1 do
       if Pack(i) then
         Dec(Result)
