@@ -277,7 +277,7 @@ begin
   for y := MaxHeight - 1 downto 0 do
     if ScanLine(MaxHeight - y - 1, False) then
     begin
-      CharRect.Bottom := y;
+      CharRect.Bottom := y + 1;
       break;
     end;
 // Left
@@ -291,7 +291,7 @@ begin
   for x := MaxWidth - 1 downto 0 do
     if ScanLine(x, True) then
     begin
-      CharRect.Right := x;
+      CharRect.Right := x + 1;
       break;
     end;
 
