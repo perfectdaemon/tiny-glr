@@ -58,6 +58,7 @@ type
     function PackChars: LongInt;
 //    procedure Save(const FileName: string);
     procedure SaveBmpToFile(const FileName: AnsiString);
+    procedure SaveFntToFile(const FileName: AnsiString);
     function SaveBmpToStream(): TStream;
   end;
 
@@ -572,6 +573,62 @@ begin
     Stream.Write(FileChar, SizeOf(FileChar));
   end;
 
+  Stream.Free();
+end;
+
+procedure TFontGenerator.SaveFntToFile(const FileName: AnsiString);
+var
+  Stream: TFileStream;
+  texdata2: PByteArray;
+  i: LongWord;
+
+  FileChar : record
+    ID   : WideChar;
+    py   : Word;
+    w, h : Word;
+    tx, ty, tw, th : Single;
+  end;
+
+  Header : record
+    Width  : Word;
+    Height : Word;
+    Size   : LongWord;
+  end;
+
+begin
+  Stream := TFileStream.Create(FileName + '.fnt', fmCreate);
+
+  Header.Width  := TexWidth;
+  Header.Height := TexHeight;
+  Header.Size   := TexWidth * TexHeight;
+
+  texdata2 := GetMemory(Header.Size);
+  FillChar(texdata2^, Header.Size, 0);
+  for i := 0 to (TexWidth * TexHeight - 1) do
+    texdata2^[i] := TexData^[i * 2 + 1];
+
+  Stream.Write(Header, SizeOf(Header));
+  Stream.Write(texdata2^, Header.Size);
+
+  i := Length(FontChar);
+  Stream.Write(i, SizeOf(i));
+  for i := 0 to Length(FontChar) - 1 do
+  begin
+    with FontChar[i], FileChar do
+    begin
+      py := OffsetY;
+      tx := PosX / TexWidth;
+      ty := PosY / TexHeight;
+      tw := Width / TexWidth;
+      th := Height / TexHeight;
+      w  := Width;
+      h  := Height;
+    end;
+    FileChar.ID := FontChar[i].ID;
+    Stream.Write(FileChar, SizeOf(FileChar));
+  end;
+
+  FreeMemory(texdata2);
   Stream.Free();
 end;
 

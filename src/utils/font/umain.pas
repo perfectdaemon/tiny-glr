@@ -144,7 +144,7 @@ var
   p_in, p_out: Pointer;
   size: LongInt;  *)
 begin
-  FontGen.SaveBmpToFile(editFilePath.Text);
+  FontGen.SaveFntToFile(editFilePath.Text);
 
 (*
   //decompress and save
