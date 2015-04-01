@@ -100,6 +100,8 @@ type
     procedure SetVisible(const aVisible: Boolean); override;
   public
     TextLabel: TglrText;
+    procedure SetVerticesColor(aColor: TglrVec4f); override;
+    procedure SetVerticesAlpha(aAlpha: Single); override;
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
     destructor Destroy(); override;
   end;
@@ -128,11 +130,15 @@ type
   public
     Fill: TglrSprite;
     Button: TglrGuiElement;
+    ChangeTexCoords: Boolean;
 
     OnValueChanged: TglrGuiIntegerCallback;
 
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
     destructor Destroy(); override;
+
+    procedure SetVerticesColor(aColor: TglrVec4f); override;
+    procedure SetVerticesAlpha(aAlpha: Single); override;
 
     property Value: Integer read fValue write SetValue;
     property MinValue: Integer read fValue write SetMinValue;
@@ -173,19 +179,29 @@ begin
 
   // Set slider button position
   Button.Position.x := Width * (percentage - PivotPoint.x);
-  Button.Position.y := - PivotPoint.y;
+  Button.Position.y := Height * (0.5 - PivotPoint.y);
 
   //Set slider fill params
   Fill.Width := percentage * Width;
   Fill.Position.x := -Width * PivotPoint.x;
+  Fill.Position.y := Height * (0.5 - PivotPoint.y);
 
-  FillTextureRegion := Fill.GetTextureRegion();
-  if Assigned(FillTextureRegion) then
-    with FillTextureRegion^ do
-    begin
-      //Fill.Vertices[0].tex.x := (tx + tw * percentage) / Width;
-      //Fill.Vertices[1].tex.x := Fill.Vertices[0].tex.x;
-    end;
+  if ChangeTexCoords then
+  begin
+    FillTextureRegion := Fill.GetTextureRegion();
+    if Assigned(FillTextureRegion) then
+      with FillTextureRegion^ do
+      if not Rotated then
+      begin
+        Fill.Vertices[0].tex.x := tx + (tw * percentage);
+        Fill.Vertices[1].tex.x := Fill.Vertices[0].tex.x;
+      end
+      else
+      begin
+        Fill.Vertices[0].tex.y := ty + (th * percentage);
+        Fill.Vertices[1].tex.y := Fill.Vertices[0].tex.y;
+      end;
+  end;
 end;
 
 procedure TglrGuiSlider.SetVisible(const aVisible: Boolean);
@@ -280,7 +296,7 @@ constructor TglrGuiSlider.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f
 begin
   inherited Create(aWidth, aHeight, aPivotPoint);
 
-  Button := TglrGuiElement.Create();
+  Button := TglrGuiElement.Create(1, 1, Vec2f(0.5, 0.5));
   Button.Parent := Self;
 
   Fill := TglrSprite.Create(aWidth, aHeight, Vec2f(0.0, 0.5));
@@ -293,6 +309,7 @@ begin
   UpdateChildObjects();
 
   OnValueChanged := nil;
+  ChangeTexCoords := True;
 end;
 
 destructor TglrGuiSlider.Destroy;
@@ -300,6 +317,27 @@ begin
   Button.Free();
   Fill.Free();
   inherited Destroy;
+end;
+
+procedure TglrGuiSlider.SetVerticesColor(aColor: TglrVec4f);
+begin
+  inherited SetVerticesColor(aColor);
+
+  // Color sets up independently
+
+  //if (Fill <> nil) then
+  //  Fill.SetVerticesColor(aColor);
+  //if (Button <> nil) then
+  //  Button.SetVerticesColor(aColor);
+end;
+
+procedure TglrGuiSlider.SetVerticesAlpha(aAlpha: Single);
+begin
+  inherited SetVerticesAlpha(aAlpha);
+  if (Fill <> nil) then
+    Fill.SetVerticesAlpha(aAlpha);
+  if (Button <> nil) then
+    Button.SetVerticesAlpha(aAlpha);
 end;
 
 { TglrGuiLayout }
@@ -456,6 +494,22 @@ begin
   TextLabel.Visible := aVisible;
 end;
 
+procedure TglrGuiButton.SetVerticesColor(aColor: TglrVec4f);
+begin
+  inherited SetVerticesColor(aColor);
+
+  // Color sets up independently
+  //if (TextLabel <> nil) then
+  //  TextLabel.Color := aColor;
+end;
+
+procedure TglrGuiButton.SetVerticesAlpha(aAlpha: Single);
+begin
+  inherited SetVerticesAlpha(aAlpha);
+  if (TextLabel <> nil) then
+    TextLabel.Color.w := aAlpha;
+end;
+
 constructor TglrGuiButton.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
 begin
   inherited Create(aWidth, aHeight, aPivotPoint);
@@ -543,8 +597,8 @@ begin
     else if (FItems[i] is TglrGuiSlider) then
     begin
       s := TglrGuiSlider(FItems[i]);
-      s.Fill.Position.z := s.Position.z + 1;
-      s.Button.Position.z := s.Fill.Position.z + 1;
+      s.Fill.Position.z := s.Position.z - 1;
+      s.Button.Position.z := s.Position.z + 1;
       fSpriteBatch.Draw(s);
       fSpriteBatch.Draw(s.Fill);
       fSpriteBatch.Draw(s.Button);
