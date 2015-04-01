@@ -359,6 +359,7 @@ class procedure Default.Init;
 var
   blankData: Pointer;
 begin
+  fInited := True;
   SpriteShader := TglrShaderProgram.Create();
   SpriteShader.Attach(FileSystem.ReadResource('default assets/SpriteShaderV.txt'), stVertex);
   SpriteShader.Attach(FileSystem.ReadResource('default assets/SpriteShaderF.txt'), stFragment);
@@ -369,9 +370,7 @@ begin
   BlankTexture := TglrTexture.Create(blankData, 1, 1, tfRGB8);
   FreeMem(blankData);
 
-  Font := TglrFont.Create(FileSystem.ReadResource('default assets/AmazingGrotesk14.fnt'));
-
-  fInited := True;
+  Font := TglrFont.Create(FileSystem.ReadResource('default assets/AmazingGrotesk14.fnt'), True);
 end;
 
 class procedure Default.Deinit;
@@ -382,6 +381,8 @@ begin
   SpriteShader.Free();
   BlankTexture.Free();
   Font.Free();
+
+  fInited := False;
 end;
 
 end.
