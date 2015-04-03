@@ -15,10 +15,15 @@ type
 
   TglrGuiInputCallback = procedure (Sender: TglrGuiElement; Event: PglrInputEvent) of object;
 
+  // Internal usage only
+  TglrGuiElementType = (guiUnknown, guiLabel, guiLayout, guiButton,
+                        guiCheckBox, guiSlider);
+
   { TglrGuiElement }
 
   TglrGuiElement = class (TglrSprite)
   protected
+    fType: TglrGuiElementType;
     fNormalTextureRegion,
     fOverTextureRegion,
     fClickedTextureRegion,
@@ -65,6 +70,24 @@ type
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
   end;
 
+  TglrGuiLabelPlacement = ( lpLeft, lpRight, lpTop, lpBottom, lpTopLeft, lpBottomLeft, lpTopRight, lpBottomRight );
+
+  { TglrGuiLabel }
+
+  TglrGuiLabel = class (TglrGuiElement)
+  protected
+    fPlacement: TglrGuiLabelPlacement;
+    fElement: TglrGuiElement;
+    procedure SetVisible(const aVisible: Boolean); override;
+  public
+    TextLabel: TglrText;
+    TextLabelOffset: TglrVec2f;
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override;
+    destructor Destroy(); override;
+
+    procedure SetFor(Element: TglrGuiElement; Placement: TglrGuiLabelPlacement);
+  end;
+
   TglrGuiElementsList = TglrObjectList<TglrGuiElement>;
 
   { TglrGuiLayout }
@@ -77,7 +100,6 @@ type
     procedure SetWidth(const aWidth: Single); override;
     procedure SetHeight(const aHeight: Single); override;
     procedure SetVisible(const aVisible: Boolean); override;
-
     procedure UpdatePatchesPosition();
   public
     Patches: array[0..7] of TglrSprite; //9th patch is element itself (center one)
@@ -91,6 +113,9 @@ type
 
     procedure SetTextureRegion(aRegion: PglrTextureRegion; aAdjustSpriteSize: Boolean =
       True); override;
+
+    procedure SetVerticesColor(aColor: TglrVec4f); override;
+    procedure SetVerticesAlpha(aAlpha: Single); override;
   end;
 
   { TglrGuiButton }
@@ -169,479 +194,6 @@ type
   end;
 
 implementation
-
-{ TglrGuiSlider }
-
-procedure TglrGuiSlider.UpdateChildObjects;
-var
-  percentage: Single;
-  FillTextureRegion: PglrTextureRegion;
-begin
-  percentage := fValue / (fMaxValue - fMinValue);
-
-  // Set slider button position
-  Button.Position.x := Width * (percentage - PivotPoint.x);
-  Button.Position.y := Height * (0.5 - PivotPoint.y);
-
-  //Set slider fill params
-  Fill.Width := percentage * Width;
-  Fill.Position.x := -Width * PivotPoint.x;
-  Fill.Position.y := Height * (0.5 - PivotPoint.y);
-
-  ValueLabel.Position.x += ValueLabelOffset.x;
-  ValueLabel.Position.y := - Height * PivotPoint.y + ValueLabelOffset.y;
-
-  if ChangeTexCoords then
-  begin
-    FillTextureRegion := Fill.GetTextureRegion();
-    if Assigned(FillTextureRegion) then
-      with FillTextureRegion^ do
-      if not Rotated then
-      begin
-        Fill.Vertices[0].tex.x := tx + (tw * percentage);
-        Fill.Vertices[1].tex.x := Fill.Vertices[0].tex.x;
-      end
-      else
-      begin
-        Fill.Vertices[0].tex.y := ty + (th * percentage);
-        Fill.Vertices[1].tex.y := Fill.Vertices[0].tex.y;
-      end;
-  end;
-end;
-
-procedure TglrGuiSlider.SetVisible(const aVisible: Boolean);
-begin
-  inherited SetVisible(aVisible);
-  Button.Visible := aVisible;
-  Fill.Visible := aVisible;
-end;
-
-procedure TglrGuiSlider.SetWidth(const aWidth: Single);
-begin
-  inherited SetWidth(aWidth);
-  UpdateChildObjects();
-end;
-
-procedure TglrGuiSlider.SetHeight(const aHeight: Single);
-begin
-  inherited SetHeight(aHeight);
-  UpdateChildObjects();
-end;
-
-procedure TglrGuiSlider.ProcessInput(Event: PglrInputEvent);
-begin
-  inherited ProcessInput(Event);
-  Button.ProcessInput(Event);
-
-  case Event.InputType of
-    itTouchDown:
-      begin
-        fTouchedMe := IsHit(Event.X, Event.Y);
-         if (fTouchedMe) then
-           SetValueFromTouch(Event.X);
-      end;
-    itTouchUp:   fTouchedMe := False;
-    itTouchMove:
-      if (fTouchedMe) then
-        SetValueFromTouch(Event.X);
-  end;
-end;
-
-procedure TglrGuiSlider.SetValue(NewValue: Integer);
-begin
-  NewValue := Clamp(NewValue, fMinValue, fMaxValue);
-
-  if NewValue <> fValue then
-  begin
-    if Assigned(OnValueChanged) then
-      OnValueChanged(Self, NewValue);
-    fValue := NewValue;
-    ValueLabel.Text := Convert.ToString(fValue);
-  end;
-
-  UpdateChildObjects();
-end;
-
-procedure TglrGuiSlider.SetValueFromTouch(TouchX: Integer);
-var
-  percentage, posX: Single;
-begin
-  posX := Self.AbsoluteMatrix.Pos.x;
-  percentage := (TouchX - posX) / Width + PivotPoint.x;
-  Value := Round((fMaxValue - fMinValue) * percentage);
-end;
-
-procedure TglrGuiSlider.SetMinValue(const NewMinValue: Integer);
-begin
-  if (NewMinValue > fMaxValue) then
-    Log.Write(lError, 'GuiSlider: min value can not be greater than max value')
-  else
-  begin
-    fMinValue := NewMinValue;
-    Value := Value;
-  end;
-end;
-
-procedure TglrGuiSlider.SetMaxValue(const NewMaxValue: Integer);
-begin
-  if (NewMaxValue < fMinValue) then
-    Log.Write(lError, 'GuiSlider: max value can not be less than min value')
-  else
-  begin
-    fMaxValue := NewMaxValue;
-    Value := Value;
-  end;
-end;
-
-function TglrGuiSlider.IsHit(X, Y: Single): Boolean;
-begin
-  Result := inherited IsHit(X, Y) or Button.IsHit(X, Y);
-end;
-
-constructor TglrGuiSlider.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
-begin
-  inherited Create(aWidth, aHeight, aPivotPoint);
-
-  Button := TglrGuiElement.Create(1, 1, Vec2f(0.5, 0.5));
-  Button.Parent := Self;
-
-  Fill := TglrSprite.Create(aWidth, aHeight, Vec2f(0.0, 0.5));
-  Fill.Parent := Self;
-
-  fMinValue := 0;
-  fMaxValue := 100;
-  fValue := 50;
-
-  ValueLabel := TglrText.Create(Convert.ToString(fValue));
-  ValueLabel.PivotPoint := Vec2f(0.5, 1.0);
-  ValueLabel.Parent := Self;
-  ValueLabelOffset := Vec2f(0, -15);
-
-  UpdateChildObjects();
-
-  OnValueChanged := nil;
-  ChangeTexCoords := True;
-end;
-
-destructor TglrGuiSlider.Destroy;
-begin
-  Button.Free();
-  Fill.Free();
-  ValueLabel.Free();
-  inherited Destroy;
-end;
-
-procedure TglrGuiSlider.SetVerticesColor(aColor: TglrVec4f);
-begin
-  inherited SetVerticesColor(aColor);
-
-  // Color sets up independently
-
-  //if (Fill <> nil) then
-  //  Fill.SetVerticesColor(aColor);
-  //if (Button <> nil) then
-  //  Button.SetVerticesColor(aColor);
-end;
-
-procedure TglrGuiSlider.SetVerticesAlpha(aAlpha: Single);
-begin
-  inherited SetVerticesAlpha(aAlpha);
-  if (Fill <> nil) then
-    Fill.SetVerticesAlpha(aAlpha);
-  if (Button <> nil) then
-    Button.SetVerticesAlpha(aAlpha);
-  if (ValueLabel <> nil) then
-    ValueLabel.Color.w := aAlpha;
-end;
-
-{ TglrGuiLayout }
-
-procedure TglrGuiLayout.SetWidth(const aWidth: Single);
-begin
-  inherited SetWidth(aWidth);
-  Patches[1].Width := Width;
-  Patches[6].Width := Width;
-  UpdatePatchesPosition();
-end;
-
-procedure TglrGuiLayout.SetHeight(const aHeight: Single);
-begin
-  inherited SetHeight(aHeight);
-  Patches[3].Height := Height;
-  Patches[4].Height := Height;
-  UpdatePatchesPosition();
-end;
-
-procedure TglrGuiLayout.SetVisible(const aVisible: Boolean);
-var
-  i: Integer;
-begin
-  inherited SetVisible(aVisible);
-  for i := 0 to Length(Patches) - 1 do
-    Patches[i].Visible := aVisible;
-
-  for i := 0 to fElements.Count - 1 do
-    fElements[i].Visible := aVisible;
-end;
-
-procedure TglrGuiLayout.UpdatePatchesPosition;
-var
-  pp: TglrVec2f;
-begin
-  pp := Vec2f(0.5, 0.5);
-  Patches[0].Position := Vec3f(-Width * pp.x, -Height * pp.y, 1);
-  Patches[1].Position := Vec3f( 0,            -Height * pp.y, 1);
-  Patches[2].Position := Vec3f( Width * pp.x, -Height * pp.y, 1);
-
-  Patches[3].Position := Vec3f(-Width * pp.x,              0, 1);
-  Patches[4].Position := Vec3f( Width * pp.x,              0, 1);
-
-  Patches[5].Position := Vec3f(-Width * pp.x,  Height * pp.y, 1);
-  Patches[6].Position := Vec3f( 0,             Height * pp.y, 1);
-  Patches[7].Position := Vec3f( Width * pp.x,  Height * pp.y, 1);
-end;
-
-constructor TglrGuiLayout.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
-var
-  i: Integer;
-begin
-  inherited Create(aWidth, aHeight, aPivotPoint * 3 - vec2f(1, 1));
-  for i := 0 to Length(Patches) - 1 do
-  begin
-    Patches[i] := TglrSprite.Create(Width, Height, aPivotPoint{ * 3 - vec2f(1, 1)});
-    Patches[i].Visible := False;
-    Patches[i].Parent := Self;
-  end;
-
-  UpdatePatchesPosition();
-
-  fElements := TglrGuiElementsList.Create();
-end;
-
-destructor TglrGuiLayout.Destroy;
-var
-  i: Integer;
-begin
-  for i := 0 to Length(Patches) - 1 do
-    Patches[i].Free();
-
-  fElements.Free(False);
-  inherited Destroy;
-end;
-
-procedure TglrGuiLayout.SetNinePatchBorders(x1, x2, y1, y2: Single);
-var
-  i: Integer;
-begin
-  fX1 := x1;
-  fX2 := x2;
-  fY1 := y1;
-  fY2 := y2;
-  for i := 0 to Length(Patches) - 1 do
-    Patches[i].Visible := True;
-  if (NormalTextureRegion) <> nil then
-    SetTextureRegion(NormalTextureRegion, False);
-end;
-
-procedure TglrGuiLayout.AddElement(aElement: TglrGuiElement);
-begin
-  fElements.Add(aElement);
-  aElement.Parent := Self;
-end;
-
-procedure TglrGuiLayout.RemoveElement(aElement: TglrGuiElement);
-begin
-  fElements.Delete(aElement);
-  aElement.Parent := nil;
-end;
-
-procedure TglrGuiLayout.SetTextureRegion(aRegion: PglrTextureRegion;
-  aAdjustSpriteSize: Boolean);
-
-  function ChangeTextureRegion(aFrom: PglrTextureRegion; x, y, w, h: Single): PglrTextureRegion;
-  begin
-    Result := aFrom;
-    with Result^ do
-    begin
-      tx := x;
-      ty := y;
-      tw := w;
-      th := h;
-    end;
-  end;
-
-var
-  cx1, cx2, cy1, cy2: Single;
-  patchRegion: TglrTextureRegion;
-
-begin
-  if (fX2 <= 0) or (fY2 <= 0) then
-    inherited SetTextureRegion(aRegion, aAdjustSpriteSize)
-  else
-  begin
-    patchRegion := aRegion^;
-    cx1 := aRegion.tw * fX1;
-    cx2 := aRegion.tw * fX2;
-    cy1 := aRegion.th * fY1;
-    cy2 := aRegion.th * fY2;
-
-    with aRegion^ do
-    begin
-      Patches[0].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty,       cx1,       cy1), aAdjustSpriteSize);
-      Patches[1].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx1, ty,       cx2 - cx1, cy1), aAdjustSpriteSize);
-      Patches[2].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty,       tw - cx2,  cy1), aAdjustSpriteSize);
-      Patches[3].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty + cy1, cx1,       cy2 - cy1), aAdjustSpriteSize);
-      inherited SetTextureRegion(ChangeTextureRegion( @patchRegion, tx + cx1, ty + cy1, cx2 - cx1, cy2 - cy1), aAdjustSpriteSize);
-      Patches[4].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty + cy1, tw - cx2,  cy2 - cy1), aAdjustSpriteSize);
-      Patches[5].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty + cy2, cx1,       th - cy2), aAdjustSpriteSize);
-      Patches[6].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx1, ty + cy2, cx2 - cx1, th - cy2), aAdjustSpriteSize);
-      Patches[7].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty + cy2, tw - cx2,  th - cy2), aAdjustSpriteSize);
-    end;
-  end;
-end;
-
-{ TglrGuiButton }
-
-procedure TglrGuiButton.SetVisible(const aVisible: Boolean);
-begin
-  inherited SetVisible(aVisible);
-  TextLabel.Visible := aVisible;
-end;
-
-procedure TglrGuiButton.SetVerticesColor(aColor: TglrVec4f);
-begin
-  inherited SetVerticesColor(aColor);
-
-  // Color sets up independently
-  //if (TextLabel <> nil) then
-  //  TextLabel.Color := aColor;
-end;
-
-procedure TglrGuiButton.SetVerticesAlpha(aAlpha: Single);
-begin
-  inherited SetVerticesAlpha(aAlpha);
-  if (TextLabel <> nil) then
-    TextLabel.Color.w := aAlpha;
-end;
-
-constructor TglrGuiButton.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
-begin
-  inherited Create(aWidth, aHeight, aPivotPoint);
-  TextLabel := TglrText.Create();
-  TextLabel.Parent := Self;
-end;
-
-destructor TglrGuiButton.Destroy;
-begin
-  TextLabel.Free();
-  inherited Destroy;
-end;
-
-{ TglrGuiManager }
-
-procedure TglrGuiManager.SetFocused(aElement: TglrGuiElement);
-begin
-  if (Focused <> nil) then
-    Focused.Focused := False;
-  if (aElement <> nil) then
-    aElement.Focused := True;
-
-  Focused := aElement;
-end;
-
-constructor TglrGuiManager.Create(Material: TglrMaterial; Font: TglrFont;
-  aCapacity: LongInt);
-begin
-  inherited Create(aCapacity);
-  Focused := nil;
-  fMaterial := Material;
-  fSpriteBatch := TglrSpriteBatch.Create();
-  fFontBatch := TglrFontBatch.Create(Font);
-end;
-
-destructor TglrGuiManager.Destroy;
-begin
-  fSpriteBatch.Free();
-  fFontBatch.Free();
-  inherited Destroy;
-end;
-
-procedure TglrGuiManager.ProcessInput(Event: PglrInputEvent;
-  GuiCamera: TglrCamera);
-var
-  i: Integer;
-  touchVec: TglrVec3f;
-begin
-  // WIP, don't kill me
-  touchVec := GuiCamera.AbsoluteMatrix * Vec3f(Event.X, Event.Y, 0);
-
-  for i := 0 to FCount - 1 do
-    if FItems[i].Enabled then
-      // Send ProcessInput for keys and wheel to focused only elements
-      // Other messages - to all elements
-      if (not (Event.InputType in [itKeyDown, itKeyUp, itWheel])) or (FItems[i].Focused) then
-        FItems[i].ProcessInput(Event);
-end;
-
-procedure TglrGuiManager.Update(const dt: Double);
-begin
-
-end;
-
-procedure TglrGuiManager.Render;
-var
-  i, j: Integer;
-  b: TglrGuiButton;
-  s: TglrGuiSlider;
-begin
-  // Render sprites
-  fMaterial.Bind();
-  fSpriteBatch.Start();
-
-  for i := 0 to FCount - 1 do
-    // If it is GuiLayout it has 9 sprites to draw (9-patch)
-    if (FItems[i] is TglrGuiLayout) then
-    begin
-      fSpriteBatch.Draw(FItems[i]);
-      for j := 0 to 7 do
-        fSpriteBatch.Draw(TglrGuiLayout(FItems[i]).Patches[j]);
-    end
-
-    // If it is GuiSlider draw 3 objects: slider back, fill sprite and slider button
-    else if (FItems[i] is TglrGuiSlider) then
-    begin
-      s := TglrGuiSlider(FItems[i]);
-      s.Fill.Position.z := s.Position.z - 1;
-      s.Button.Position.z := s.Position.z + 1;
-      fSpriteBatch.Draw(s);
-      fSpriteBatch.Draw(s.Fill);
-      fSpriteBatch.Draw(s.Button);
-    end
-
-    // In any other cases - just draw element itself
-    else
-      fSpriteBatch.Draw(FItems[i]);
-
-  fSpriteBatch.Finish();
-
-  // Render any text in components
-  fFontBatch.Start();
-  for i := 0 to FCount - 1 do
-    // GuiButton has Text object
-    if (FItems[i] is TglrGuiButton) then
-    begin
-      b := TglrGuiButton(FItems[i]);
-      b.TextLabel.Position.z := b.Position.z + 1;
-      fFontBatch.Draw(b.TextLabel);
-    end
-    else if (FItems[i] is TglrGuiSlider) then
-    begin
-      s := TglrGuiSlider(FItems[i]);
-      s.ValueLabel.Position.z := s.Button.Position.z + 1;
-      fFontBatch.Draw(s.ValueLabel);
-    end;
-  fFontBatch.Finish();
-end;
 
 { TglrGuiElement }
 
@@ -815,6 +367,7 @@ begin
   fFocused := False;
   fEnabled := True;
   fIsMouseOver := False;
+  fType := guiUnknown;
 
   ZIndex := 0;
 
@@ -822,6 +375,599 @@ begin
   OverTextureRegion := nil;
   ClickedTextureRegion := nil;
   DisabledTextureRegion := nil;
+end;
+
+{ TglrGuiLabel }
+
+procedure TglrGuiLabel.SetVisible(const aVisible: Boolean);
+begin
+//  inherited SetVisible(aVisible);
+  TextLabel.Visible := aVisible;
+end;
+
+constructor TglrGuiLabel.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+begin
+  inherited Create(aWidth, aHeight, aPivotPoint);
+  fType := guiLabel;
+  fVisible := False;
+  fPlacement := lpLeft;
+  fElement := nil;
+  TextLabel := TglrText.Create('Label');
+  TextLabelOffset := Vec2f(0, 0);
+end;
+
+destructor TglrGuiLabel.Destroy;
+begin
+  TextLabel.Free();
+  inherited Destroy;
+end;
+
+procedure TglrGuiLabel.SetFor(Element: TglrGuiElement;
+  Placement: TglrGuiLabelPlacement);
+begin
+  fPlacement := Placement;
+  fElement := Element;
+
+  TextLabel.Parent := fElement;
+  TextLabel.Position.Reset();
+  with TextLabel do
+    case fPlacement of
+      lpLeft:
+      begin
+        PivotPoint := Vec2f(1.0, 0.5);
+        Position.x := fElement.Width * (0.0 - fElement.PivotPoint.x);
+      end;
+
+      lpRight:
+      begin
+        PivotPoint := Vec2f(0.0, 0.5);
+        Position.x := fElement.Width * (1.0 - fElement.PivotPoint.x);
+      end;
+
+      lpTop:
+      begin
+        PivotPoint := Vec2f(0.5, 1.0);
+        Position.y := fElement.Height * (0.0 - fElement.PivotPoint.y);
+      end;
+
+      lpBottom:
+      begin
+        PivotPoint := Vec2f(0.5, 0.0);;
+        Position.y := fElement.Height * (1.0 - fElement.PivotPoint.y);
+      end;
+
+      lpTopLeft:
+      begin
+        PivotPoint := Vec2f(0.0, 1.0);
+        Position.x := fElement.Width  * (0.0 - fElement.PivotPoint.x);
+        Position.y := fElement.Height * (0.0 - fElement.PivotPoint.y);
+      end;
+
+      lpTopRight:
+      begin
+        PivotPoint := Vec2f(1.0, 1.0);
+        Position.x := fElement.Width  * (1.0 - fElement.PivotPoint.x);
+        Position.y := fElement.Height * (0.0 - fElement.PivotPoint.y);
+      end;
+
+      lpBottomLeft:
+      begin
+        PivotPoint := Vec2f(0.0, 0.0);
+        Position.x := fElement.Width  * (0.0 - fElement.PivotPoint.x);
+        Position.y := fElement.Height * (1.0 - fElement.PivotPoint.y);
+      end;
+
+      lpBottomRight:
+      begin
+        PivotPoint := Vec2f(1.0, 0.0);
+        Position.x := fElement.Width  * (1.0 - fElement.PivotPoint.x);
+        Position.y := fElement.Height * (1.0 - fElement.PivotPoint.y);
+      end;
+    end;
+
+  TextLabel.Position += Vec3f(TextLabelOffset, 0);
+end;
+
+{ TglrGuiLayout }
+
+procedure TglrGuiLayout.SetWidth(const aWidth: Single);
+begin
+  inherited SetWidth(aWidth);
+  Patches[1].Width := Width;
+  Patches[6].Width := Width;
+  UpdatePatchesPosition();
+end;
+
+procedure TglrGuiLayout.SetHeight(const aHeight: Single);
+begin
+  inherited SetHeight(aHeight);
+  Patches[3].Height := Height;
+  Patches[4].Height := Height;
+  UpdatePatchesPosition();
+end;
+
+procedure TglrGuiLayout.SetVisible(const aVisible: Boolean);
+var
+  i: Integer;
+begin
+  inherited SetVisible(aVisible);
+  for i := 0 to Length(Patches) - 1 do
+    Patches[i].Visible := aVisible;
+
+  for i := 0 to fElements.Count - 1 do
+    fElements[i].Visible := aVisible;
+end;
+
+procedure TglrGuiLayout.SetVerticesColor(aColor: TglrVec4f);
+var
+  i: Integer;
+begin
+  inherited SetVerticesColor(aColor);
+  for i := 0 to Length(Patches) - 1 do
+    Patches[i].SetVerticesColor(aColor);
+end;
+
+procedure TglrGuiLayout.SetVerticesAlpha(aAlpha: Single);
+var
+  i: Integer;
+begin
+  inherited SetVerticesAlpha(aAlpha);
+  for i := 0 to Length(Patches) - 1 do
+    Patches[i].SetVerticesAlpha(aAlpha);
+end;
+
+procedure TglrGuiLayout.UpdatePatchesPosition;
+var
+  pp: TglrVec2f;
+begin
+  pp := Vec2f(0.5, 0.5);
+  Patches[0].Position := Vec3f(-Width * pp.x, -Height * pp.y, 1);
+  Patches[1].Position := Vec3f( 0,            -Height * pp.y, 1);
+  Patches[2].Position := Vec3f( Width * pp.x, -Height * pp.y, 1);
+
+  Patches[3].Position := Vec3f(-Width * pp.x,              0, 1);
+  Patches[4].Position := Vec3f( Width * pp.x,              0, 1);
+
+  Patches[5].Position := Vec3f(-Width * pp.x,  Height * pp.y, 1);
+  Patches[6].Position := Vec3f( 0,             Height * pp.y, 1);
+  Patches[7].Position := Vec3f( Width * pp.x,  Height * pp.y, 1);
+end;
+
+constructor TglrGuiLayout.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+var
+  i: Integer;
+begin
+  inherited Create(aWidth, aHeight, aPivotPoint * 3 - vec2f(1, 1));
+  fType := guiLayout;
+  for i := 0 to Length(Patches) - 1 do
+  begin
+    Patches[i] := TglrSprite.Create(Width, Height, aPivotPoint{ * 3 - vec2f(1, 1)});
+    Patches[i].Visible := False;
+    Patches[i].Parent := Self;
+  end;
+
+  UpdatePatchesPosition();
+
+  fElements := TglrGuiElementsList.Create();
+end;
+
+destructor TglrGuiLayout.Destroy;
+var
+  i: Integer;
+begin
+  for i := 0 to Length(Patches) - 1 do
+    Patches[i].Free();
+
+  fElements.Free(False);
+  inherited Destroy;
+end;
+
+procedure TglrGuiLayout.SetNinePatchBorders(x1, x2, y1, y2: Single);
+var
+  i: Integer;
+begin
+  fX1 := x1;
+  fX2 := x2;
+  fY1 := y1;
+  fY2 := y2;
+  for i := 0 to Length(Patches) - 1 do
+    Patches[i].Visible := True;
+  if (NormalTextureRegion) <> nil then
+    SetTextureRegion(NormalTextureRegion, False);
+end;
+
+procedure TglrGuiLayout.AddElement(aElement: TglrGuiElement);
+begin
+  fElements.Add(aElement);
+  aElement.Parent := Self;
+end;
+
+procedure TglrGuiLayout.RemoveElement(aElement: TglrGuiElement);
+begin
+  fElements.Delete(aElement);
+  aElement.Parent := nil;
+end;
+
+procedure TglrGuiLayout.SetTextureRegion(aRegion: PglrTextureRegion;
+  aAdjustSpriteSize: Boolean);
+
+  function ChangeTextureRegion(aFrom: PglrTextureRegion; x, y, w, h: Single): PglrTextureRegion;
+  begin
+    Result := aFrom;
+    with Result^ do
+    begin
+      tx := x;
+      ty := y;
+      tw := w;
+      th := h;
+    end;
+  end;
+
+var
+  cx1, cx2, cy1, cy2: Single;
+  patchRegion: TglrTextureRegion;
+
+begin
+  if (fX2 <= 0) or (fY2 <= 0) then
+    inherited SetTextureRegion(aRegion, aAdjustSpriteSize)
+  else
+  begin
+    patchRegion := aRegion^;
+    cx1 := aRegion.tw * fX1;
+    cx2 := aRegion.tw * fX2;
+    cy1 := aRegion.th * fY1;
+    cy2 := aRegion.th * fY2;
+
+    with aRegion^ do
+    begin
+      Patches[0].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty,       cx1,       cy1), aAdjustSpriteSize);
+      Patches[1].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx1, ty,       cx2 - cx1, cy1), aAdjustSpriteSize);
+      Patches[2].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty,       tw - cx2,  cy1), aAdjustSpriteSize);
+      Patches[3].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty + cy1, cx1,       cy2 - cy1), aAdjustSpriteSize);
+      inherited SetTextureRegion(ChangeTextureRegion( @patchRegion, tx + cx1, ty + cy1, cx2 - cx1, cy2 - cy1), aAdjustSpriteSize);
+      Patches[4].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty + cy1, tw - cx2,  cy2 - cy1), aAdjustSpriteSize);
+      Patches[5].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx,       ty + cy2, cx1,       th - cy2), aAdjustSpriteSize);
+      Patches[6].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx1, ty + cy2, cx2 - cx1, th - cy2), aAdjustSpriteSize);
+      Patches[7].SetTextureRegion(ChangeTextureRegion(@patchRegion, tx + cx2, ty + cy2, tw - cx2,  th - cy2), aAdjustSpriteSize);
+    end;
+  end;
+end;
+
+{ TglrGuiButton }
+
+procedure TglrGuiButton.SetVisible(const aVisible: Boolean);
+begin
+  inherited SetVisible(aVisible);
+  TextLabel.Visible := aVisible;
+end;
+
+procedure TglrGuiButton.SetVerticesColor(aColor: TglrVec4f);
+begin
+  inherited SetVerticesColor(aColor);
+
+  // Color sets up independently
+  //if (TextLabel <> nil) then
+  //  TextLabel.Color := aColor;
+end;
+
+procedure TglrGuiButton.SetVerticesAlpha(aAlpha: Single);
+begin
+  inherited SetVerticesAlpha(aAlpha);
+  if (TextLabel <> nil) then
+    TextLabel.Color.w := aAlpha;
+end;
+
+constructor TglrGuiButton.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+begin
+  inherited Create(aWidth, aHeight, aPivotPoint);
+  fType := guiButton;
+  TextLabel := TglrText.Create();
+  TextLabel.Parent := Self;
+end;
+
+destructor TglrGuiButton.Destroy;
+begin
+  TextLabel.Free();
+  inherited Destroy;
+end;
+
+{ TglrGuiSlider }
+
+procedure TglrGuiSlider.UpdateChildObjects;
+var
+  percentage: Single;
+  FillTextureRegion: PglrTextureRegion;
+begin
+  percentage := fValue / (fMaxValue - fMinValue);
+
+  // Set slider button position
+  Button.Position.x := Width * (percentage - PivotPoint.x);
+  Button.Position.y := Height * (0.5 - PivotPoint.y);
+
+  //Set slider fill params
+  Fill.Width := percentage * Width;
+  Fill.Position.x := -Width * PivotPoint.x;
+  Fill.Position.y := Height * (0.5 - PivotPoint.y);
+
+  ValueLabel.Position.x += ValueLabelOffset.x;
+  ValueLabel.Position.y := - Height * PivotPoint.y + ValueLabelOffset.y;
+
+  if ChangeTexCoords then
+  begin
+    FillTextureRegion := Fill.GetTextureRegion();
+    if Assigned(FillTextureRegion) then
+      with FillTextureRegion^ do
+      if not Rotated then
+      begin
+        Fill.Vertices[0].tex.x := tx + (tw * percentage);
+        Fill.Vertices[1].tex.x := Fill.Vertices[0].tex.x;
+      end
+      else
+      begin
+        Fill.Vertices[0].tex.y := ty + (th * percentage);
+        Fill.Vertices[1].tex.y := Fill.Vertices[0].tex.y;
+      end;
+  end;
+end;
+
+procedure TglrGuiSlider.SetVisible(const aVisible: Boolean);
+begin
+  inherited SetVisible(aVisible);
+  Button.Visible := aVisible;
+  Fill.Visible := aVisible;
+end;
+
+procedure TglrGuiSlider.SetWidth(const aWidth: Single);
+begin
+  inherited SetWidth(aWidth);
+  UpdateChildObjects();
+end;
+
+procedure TglrGuiSlider.SetHeight(const aHeight: Single);
+begin
+  inherited SetHeight(aHeight);
+  UpdateChildObjects();
+end;
+
+procedure TglrGuiSlider.ProcessInput(Event: PglrInputEvent);
+begin
+  inherited ProcessInput(Event);
+  Button.ProcessInput(Event);
+
+  case Event.InputType of
+    itTouchDown:
+      begin
+        fTouchedMe := IsHit(Event.X, Event.Y);
+         if (fTouchedMe) then
+           SetValueFromTouch(Event.X);
+      end;
+    itTouchUp:   fTouchedMe := False;
+    itTouchMove:
+      if (fTouchedMe) then
+        SetValueFromTouch(Event.X);
+  end;
+end;
+
+procedure TglrGuiSlider.SetValue(NewValue: Integer);
+begin
+  NewValue := Clamp(NewValue, fMinValue, fMaxValue);
+
+  if NewValue <> fValue then
+  begin
+    if Assigned(OnValueChanged) then
+      OnValueChanged(Self, NewValue);
+    fValue := NewValue;
+    ValueLabel.Text := Convert.ToString(fValue);
+  end;
+
+  UpdateChildObjects();
+end;
+
+procedure TglrGuiSlider.SetValueFromTouch(TouchX: Integer);
+var
+  percentage, posX: Single;
+begin
+  posX := Self.AbsoluteMatrix.Pos.x;
+  percentage := (TouchX - posX) / Width + PivotPoint.x;
+  Value := Round((fMaxValue - fMinValue) * percentage);
+end;
+
+procedure TglrGuiSlider.SetMinValue(const NewMinValue: Integer);
+begin
+  if (NewMinValue > fMaxValue) then
+    Log.Write(lError, 'GuiSlider: min value can not be greater than max value')
+  else
+  begin
+    fMinValue := NewMinValue;
+    Value := Value;
+  end;
+end;
+
+procedure TglrGuiSlider.SetMaxValue(const NewMaxValue: Integer);
+begin
+  if (NewMaxValue < fMinValue) then
+    Log.Write(lError, 'GuiSlider: max value can not be less than min value')
+  else
+  begin
+    fMaxValue := NewMaxValue;
+    Value := Value;
+  end;
+end;
+
+function TglrGuiSlider.IsHit(X, Y: Single): Boolean;
+begin
+  Result := inherited IsHit(X, Y) or Button.IsHit(X, Y);
+end;
+
+constructor TglrGuiSlider.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+begin
+  inherited Create(aWidth, aHeight, aPivotPoint);
+
+  fType := guiSlider;
+
+  Button := TglrGuiElement.Create(1, 1, Vec2f(0.5, 0.5));
+  Button.Parent := Self;
+
+  Fill := TglrSprite.Create(aWidth, aHeight, Vec2f(0.0, 0.5));
+  Fill.Parent := Self;
+
+  fMinValue := 0;
+  fMaxValue := 100;
+  fValue := 50;
+
+  ValueLabel := TglrText.Create(Convert.ToString(fValue));
+  ValueLabel.PivotPoint := Vec2f(0.5, 1.0);
+  ValueLabel.Parent := Self;
+  ValueLabelOffset := Vec2f(0, -15);
+
+  UpdateChildObjects();
+
+  OnValueChanged := nil;
+  ChangeTexCoords := True;
+end;
+
+destructor TglrGuiSlider.Destroy;
+begin
+  Button.Free();
+  Fill.Free();
+  ValueLabel.Free();
+  inherited Destroy;
+end;
+
+procedure TglrGuiSlider.SetVerticesColor(aColor: TglrVec4f);
+begin
+  inherited SetVerticesColor(aColor);
+
+  // Color sets up independently
+
+  //if (Fill <> nil) then
+  //  Fill.SetVerticesColor(aColor);
+  //if (Button <> nil) then
+  //  Button.SetVerticesColor(aColor);
+end;
+
+procedure TglrGuiSlider.SetVerticesAlpha(aAlpha: Single);
+begin
+  inherited SetVerticesAlpha(aAlpha);
+  if (Fill <> nil) then
+    Fill.SetVerticesAlpha(aAlpha);
+  if (Button <> nil) then
+    Button.SetVerticesAlpha(aAlpha);
+  if (ValueLabel <> nil) then
+    ValueLabel.Color.w := aAlpha;
+end;
+
+{ TglrGuiManager }
+
+procedure TglrGuiManager.SetFocused(aElement: TglrGuiElement);
+begin
+  if (Focused <> nil) then
+    Focused.Focused := False;
+  if (aElement <> nil) then
+    aElement.Focused := True;
+
+  Focused := aElement;
+end;
+
+constructor TglrGuiManager.Create(Material: TglrMaterial; Font: TglrFont;
+  aCapacity: LongInt);
+begin
+  inherited Create(aCapacity);
+  Focused := nil;
+  fMaterial := Material;
+  fSpriteBatch := TglrSpriteBatch.Create();
+  fFontBatch := TglrFontBatch.Create(Font);
+end;
+
+destructor TglrGuiManager.Destroy;
+begin
+  fSpriteBatch.Free();
+  fFontBatch.Free();
+  inherited Destroy;
+end;
+
+procedure TglrGuiManager.ProcessInput(Event: PglrInputEvent;
+  GuiCamera: TglrCamera);
+var
+  i: Integer;
+  touchVec: TglrVec3f;
+begin
+  // WIP, don't kill me
+  touchVec := GuiCamera.AbsoluteMatrix * Vec3f(Event.X, Event.Y, 0);
+
+  for i := 0 to FCount - 1 do
+    if FItems[i].Enabled then
+      // Send ProcessInput for keys and wheel to focused only elements
+      // Other messages - to all elements
+      if (not (Event.InputType in [itKeyDown, itKeyUp, itWheel])) or (FItems[i].Focused) then
+        FItems[i].ProcessInput(Event);
+end;
+
+procedure TglrGuiManager.Update(const dt: Double);
+begin
+
+end;
+
+procedure TglrGuiManager.Render;
+var
+  i, j: Integer;
+  b: TglrGuiButton;
+  s: TglrGuiSlider;
+begin
+  // Render sprites
+  fMaterial.Bind();
+  fSpriteBatch.Start();
+
+  for i := 0 to FCount - 1 do
+    // If it is GuiLayout it has 9 sprites to draw (9-patch)
+    if (FItems[i].fType = guiLayout) then
+    begin
+      fSpriteBatch.Draw(FItems[i]);
+      for j := 0 to 7 do
+        fSpriteBatch.Draw(TglrGuiLayout(FItems[i]).Patches[j]);
+    end
+    // If it is GuiSlider draw 3 objects: slider back, fill sprite and slider button
+    else if (FItems[i].fType =  guiSlider) then
+    begin
+      s := TglrGuiSlider(FItems[i]);
+      s.Fill.Position.z := s.Position.z - 1;
+      s.Button.Position.z := s.Position.z + 1;
+      fSpriteBatch.Draw(s);
+      fSpriteBatch.Draw(s.Fill);
+      fSpriteBatch.Draw(s.Button);
+    end
+    // If it is GuiLabel
+    else if (FItems[i].fType = GuiLabel) then
+    begin
+      // Render nothing
+    end
+    // In any other cases - just draw element itself
+    else
+      fSpriteBatch.Draw(FItems[i]);
+
+  fSpriteBatch.Finish();
+
+  // Render any text in components
+  fFontBatch.Start();
+  for i := 0 to FCount - 1 do
+    // GuiButton has Text object
+    if (FItems[i].fType = guiButton) then
+    begin
+      b := TglrGuiButton(FItems[i]);
+      b.TextLabel.Position.z := b.Position.z + 1;
+      fFontBatch.Draw(b.TextLabel);
+    end
+    // For slider we render it's value text
+    else if (FItems[i].fType = guiSlider) then
+    begin
+      s := TglrGuiSlider(FItems[i]);
+      s.ValueLabel.Position.z := s.Button.Position.z + 1;
+      fFontBatch.Draw(s.ValueLabel);
+    end
+    // GuiLabel has Text object
+    else if (FItems[i].fType = guiLabel) then
+      fFontBatch.Draw(TglrGuiLabel(FItems[i]).TextLabel);
+  fFontBatch.Finish();
 end;
 
 end.
