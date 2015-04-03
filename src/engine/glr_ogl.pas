@@ -148,6 +148,7 @@ type
     Enable         : procedure (cap: TGLConst); stdcall;
     Disable        : procedure (cap: TGLConst); stdcall;
     CullFace       : procedure (mode: TGLConst); stdcall;
+    PolygonMode    : procedure (face, mode: TGLConst); stdcall;
     AlphaFunc      : procedure (func: TGLConst; factor: Single); stdcall;
     BlendFunc      : procedure (sfactor, dfactor: TGLConst); stdcall;
     StencilFunc    : procedure (func: TGLConst; ref: LongInt; mask: LongWord); stdcall;
@@ -272,6 +273,7 @@ const
     'glEnable',
     'glDisable',
     'glCullFace',
+    'glPolygonMode',
     'glAlphaFunc',
     'glBlendFunc',
     'glStencilFunc',
