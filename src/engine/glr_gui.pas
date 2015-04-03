@@ -78,14 +78,24 @@ type
   protected
     fPlacement: TglrGuiLabelPlacement;
     fElement: TglrGuiElement;
+    fTextLabelOffset: TglrVec2f;
     procedure SetVisible(const aVisible: Boolean); override;
+    procedure SetElementFor(aElement: TglrGuiElement);
+    procedure SetPlacement(aPlacement: TglrGuiLabelPlacement);
+    procedure SetTextLabelOffset(aOffset: TglrVec2f);
+    procedure UpdatePlacement();
   public
     TextLabel: TglrText;
-    TextLabelOffset: TglrVec2f;
+
     constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override;
     destructor Destroy(); override;
 
-    procedure SetFor(Element: TglrGuiElement; Placement: TglrGuiLabelPlacement);
+    procedure SetFor(Element: TglrGuiElement; Placement: TglrGuiLabelPlacement;
+      Offset: TglrVec2f);
+
+    property TextLabelOffset: TglrVec2f read fTextLabelOffset write SetTextLabelOffset;
+    property ElementFor: TglrGuiElement read fElement write SetElementFor;
+    property Placement: TglrGuiLabelPlacement read fPlacement write SetPlacement;
   end;
 
   TglrGuiElementsList = TglrObjectList<TglrGuiElement>;
@@ -155,8 +165,8 @@ type
   public
     Fill: TglrSprite;
     Button: TglrGuiElement;
-    ValueLabel: TglrText;
-    ValueLabelOffset: TglrVec2f;
+    ValueLabel: TglrGuiLabel;
+//    ValueLabelOffset: TglrVec2f;
     ChangeTexCoords: Boolean;
 
     OnValueChanged: TglrGuiIntegerCallback;
@@ -170,6 +180,27 @@ type
     property Value: Integer read fValue write SetValue;
     property MinValue: Integer read fValue write SetMinValue;
     property MaxValue: Integer read fValue write SetMaxValue;
+  end;
+
+  { TglrGuiCheckBox }
+
+  TglrGuiCheckBox = class (TglrGuiElement)
+  protected
+    fChecked: Boolean;
+    procedure SetChecked(const aChecked: Boolean);
+    procedure SetVisible(const aVisible: Boolean); override;
+    procedure ProcessInput(Event: PglrInputEvent); override;
+  public
+    Check: TglrSprite;
+    OnCheck: TglrGuiBooleanCallback;
+
+    constructor Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f); override; overload;
+    destructor Destroy(); override;
+
+    property Checked: Boolean read fChecked write SetChecked;
+
+    procedure SetVerticesAlpha(aAlpha: Single); override;
+    procedure SetVerticesColor(aColor: TglrVec4f); override;
   end;
 
   { TglrGuiManager }
@@ -379,36 +410,31 @@ end;
 
 { TglrGuiLabel }
 
-procedure TglrGuiLabel.SetVisible(const aVisible: Boolean);
+procedure TglrGuiLabel.SetElementFor(aElement: TglrGuiElement);
 begin
-//  inherited SetVisible(aVisible);
-  TextLabel.Visible := aVisible;
+  if fElement = aElement then
+    Exit;
+  fElement := aElement;
+  UpdatePlacement();
 end;
 
-constructor TglrGuiLabel.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+procedure TglrGuiLabel.SetPlacement(aPlacement: TglrGuiLabelPlacement);
 begin
-  inherited Create(aWidth, aHeight, aPivotPoint);
-  fType := guiLabel;
-  fVisible := False;
-  fPlacement := lpLeft;
-  fElement := nil;
-  TextLabel := TglrText.Create('Label');
-  TextLabelOffset := Vec2f(0, 0);
+  if fPlacement = aPlacement then
+    Exit;
+  fPlacement := aPlacement;
+  UpdatePlacement();
 end;
 
-destructor TglrGuiLabel.Destroy;
+procedure TglrGuiLabel.SetTextLabelOffset(aOffset: TglrVec2f);
 begin
-  TextLabel.Free();
-  inherited Destroy;
+  fTextLabelOffset := aOffset;
+  UpdatePlacement();
 end;
 
-procedure TglrGuiLabel.SetFor(Element: TglrGuiElement;
-  Placement: TglrGuiLabelPlacement);
+procedure TglrGuiLabel.UpdatePlacement;
 begin
-  fPlacement := Placement;
-  fElement := Element;
-
-  TextLabel.Parent := fElement;
+  Parent := fElement;
   TextLabel.Position.Reset();
   with TextLabel do
     case fPlacement of
@@ -466,6 +492,40 @@ begin
     end;
 
   TextLabel.Position += Vec3f(TextLabelOffset, 0);
+end;
+
+procedure TglrGuiLabel.SetVisible(const aVisible: Boolean);
+begin
+//  inherited SetVisible(aVisible);
+  TextLabel.Visible := aVisible;
+end;
+
+constructor TglrGuiLabel.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
+begin
+  TextLabel := TglrText.Create('Label');
+  TextLabel.Parent := Self;
+  inherited Create(aWidth, aHeight, aPivotPoint);
+  fType := guiLabel;
+  fVisible := False;
+
+  fPlacement := lpLeft;
+  fElement := nil;
+  fTextLabelOffset := Vec2f(0, 0);
+end;
+
+destructor TglrGuiLabel.Destroy;
+begin
+  TextLabel.Free();
+  inherited Destroy;
+end;
+
+procedure TglrGuiLabel.SetFor(Element: TglrGuiElement;
+  Placement: TglrGuiLabelPlacement; Offset: TglrVec2f);
+begin
+  fPlacement := Placement;
+  fElement := Element;
+  fTextLabelOffset := Offset;
+  UpdatePlacement();
 end;
 
 { TglrGuiLayout }
@@ -537,14 +597,16 @@ constructor TglrGuiLayout.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f
 var
   i: Integer;
 begin
-  inherited Create(aWidth, aHeight, aPivotPoint * 3 - vec2f(1, 1));
-  fType := guiLayout;
   for i := 0 to Length(Patches) - 1 do
   begin
     Patches[i] := TglrSprite.Create(Width, Height, aPivotPoint{ * 3 - vec2f(1, 1)});
     Patches[i].Visible := False;
     Patches[i].Parent := Self;
   end;
+
+  inherited Create(aWidth, aHeight, aPivotPoint * 3 - vec2f(1, 1));
+
+  fType := guiLayout;
 
   UpdatePatchesPosition();
 
@@ -653,15 +715,14 @@ end;
 procedure TglrGuiButton.SetVerticesAlpha(aAlpha: Single);
 begin
   inherited SetVerticesAlpha(aAlpha);
-  if (TextLabel <> nil) then
-    TextLabel.Color.w := aAlpha;
+  TextLabel.Color.w := aAlpha;
 end;
 
 constructor TglrGuiButton.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
 begin
+  TextLabel := TglrText.Create();
   inherited Create(aWidth, aHeight, aPivotPoint);
   fType := guiButton;
-  TextLabel := TglrText.Create();
   TextLabel.Parent := Self;
 end;
 
@@ -688,9 +749,6 @@ begin
   Fill.Width := percentage * Width;
   Fill.Position.x := -Width * PivotPoint.x;
   Fill.Position.y := Height * (0.5 - PivotPoint.y);
-
-  ValueLabel.Position.x += ValueLabelOffset.x;
-  ValueLabel.Position.y := - Height * PivotPoint.y + ValueLabelOffset.y;
 
   if ChangeTexCoords then
   begin
@@ -757,7 +815,7 @@ begin
     if Assigned(OnValueChanged) then
       OnValueChanged(Self, NewValue);
     fValue := NewValue;
-    ValueLabel.Text := Convert.ToString(fValue);
+    ValueLabel.TextLabel.Text := Convert.ToString(fValue);
   end;
 
   UpdateChildObjects();
@@ -801,29 +859,24 @@ end;
 
 constructor TglrGuiSlider.Create(aWidth, aHeight: Single; aPivotPoint: TglrVec2f);
 begin
+  Button := TglrGuiElement.Create(1, 1, Vec2f(0.5, 0.5));
+  Fill := TglrSprite.Create(aWidth, aHeight, Vec2f(0.0, 0.5));
+  ValueLabel := TglrGuiLabel.Create();
+
   inherited Create(aWidth, aHeight, aPivotPoint);
 
   fType := guiSlider;
 
-  Button := TglrGuiElement.Create(1, 1, Vec2f(0.5, 0.5));
   Button.Parent := Self;
-
-  Fill := TglrSprite.Create(aWidth, aHeight, Vec2f(0.0, 0.5));
   Fill.Parent := Self;
-
-  fMinValue := 0;
-  fMaxValue := 100;
-  fValue := 50;
-
-  ValueLabel := TglrText.Create(Convert.ToString(fValue));
-  ValueLabel.PivotPoint := Vec2f(0.5, 1.0);
-  ValueLabel.Parent := Self;
-  ValueLabelOffset := Vec2f(0, -15);
-
-  UpdateChildObjects();
+  ValueLabel.SetFor(Self, lpTop, Vec2f(0, -15));
 
   OnValueChanged := nil;
   ChangeTexCoords := True;
+
+  fMinValue := 0;
+  fMaxValue := 100;
+  SetValue(50);
 end;
 
 destructor TglrGuiSlider.Destroy;
@@ -849,12 +902,66 @@ end;
 procedure TglrGuiSlider.SetVerticesAlpha(aAlpha: Single);
 begin
   inherited SetVerticesAlpha(aAlpha);
-  if (Fill <> nil) then
-    Fill.SetVerticesAlpha(aAlpha);
-  if (Button <> nil) then
-    Button.SetVerticesAlpha(aAlpha);
-  if (ValueLabel <> nil) then
-    ValueLabel.Color.w := aAlpha;
+  Fill.SetVerticesAlpha(aAlpha);
+  Button.SetVerticesAlpha(aAlpha);
+  ValueLabel.SetVerticesAlpha(aAlpha);
+end;
+
+{ TglrGuiCheckBox }
+
+procedure TglrGuiCheckBox.SetChecked(const aChecked: Boolean);
+begin
+  Check.Visible := aChecked;
+  if (fChecked <> aChecked) then
+  begin
+    fChecked := aChecked;
+    if Assigned(OnCheck) then
+      OnCheck(Self, fChecked);
+  end;
+end;
+
+procedure TglrGuiCheckBox.SetVisible(const aVisible: Boolean);
+begin
+  inherited SetVisible(aVisible);
+  Check.Visible := aVisible;
+end;
+
+procedure TglrGuiCheckBox.ProcessInput(Event: PglrInputEvent);
+begin
+  inherited ProcessInput(Event);
+  if (Event.InputType = itTouchUp) and Focused then
+    Checked := not Checked;
+end;
+
+constructor TglrGuiCheckBox.Create(aWidth, aHeight: Single;
+  aPivotPoint: TglrVec2f);
+begin
+  Check := TglrSprite.Create(aWidth, aHeight, aPivotPoint);
+  inherited Create(aWidth, aHeight, aPivotPoint);
+
+  fType := guiCheckBox;
+
+  Check.Parent := Self;
+  OnCheck := nil;
+  SetChecked(False);
+end;
+
+destructor TglrGuiCheckBox.Destroy;
+begin
+  Check.Free();
+  inherited Destroy;
+end;
+
+procedure TglrGuiCheckBox.SetVerticesAlpha(aAlpha: Single);
+begin
+  inherited SetVerticesAlpha(aAlpha);
+  Check.SetVerticesAlpha(aAlpha);
+end;
+
+procedure TglrGuiCheckBox.SetVerticesColor(aColor: TglrVec4f);
+begin
+  inherited SetVerticesColor(aColor);
+  Check.SetVerticesColor(aColor);
 end;
 
 { TglrGuiManager }
@@ -913,37 +1020,44 @@ var
   i, j: Integer;
   b: TglrGuiButton;
   s: TglrGuiSlider;
+  c: TglrGuiCheckBox;
 begin
   // Render sprites
   fMaterial.Bind();
   fSpriteBatch.Start();
 
   for i := 0 to FCount - 1 do
-    // If it is GuiLayout it has 9 sprites to draw (9-patch)
-    if (FItems[i].fType = guiLayout) then
-    begin
-      fSpriteBatch.Draw(FItems[i]);
-      for j := 0 to 7 do
-        fSpriteBatch.Draw(TglrGuiLayout(FItems[i]).Patches[j]);
-    end
-    // If it is GuiSlider draw 3 objects: slider back, fill sprite and slider button
-    else if (FItems[i].fType =  guiSlider) then
-    begin
-      s := TglrGuiSlider(FItems[i]);
-      s.Fill.Position.z := s.Position.z - 1;
-      s.Button.Position.z := s.Position.z + 1;
-      fSpriteBatch.Draw(s);
-      fSpriteBatch.Draw(s.Fill);
-      fSpriteBatch.Draw(s.Button);
-    end
-    // If it is GuiLabel
-    else if (FItems[i].fType = GuiLabel) then
-    begin
-      // Render nothing
-    end
-    // In any other cases - just draw element itself
-    else
-      fSpriteBatch.Draw(FItems[i]);
+    case FItems[i].fType of
+      guiLayout:
+      begin
+        fSpriteBatch.Draw(FItems[i]);
+        for j := 0 to 7 do
+          fSpriteBatch.Draw(TglrGuiLayout(FItems[i]).Patches[j]);
+      end;
+
+      guiSlider:
+      begin
+        s := TglrGuiSlider(FItems[i]);
+        s.Fill.Position.z := s.Position.z - 1;
+        s.Button.Position.z := s.Position.z + 1;
+        fSpriteBatch.Draw(s);
+        fSpriteBatch.Draw(s.Fill);
+        fSpriteBatch.Draw(s.Button);
+      end;
+
+      guiLabel: ;
+
+      guiCheckBox:
+      begin
+        c := TglrGuiCheckBox(fItems[i]);
+        c.Check.Position.z := c.Position.z + 1;
+        fSpriteBatch.Draw(c);
+        fSpriteBatch.Draw(c.Check);
+      end
+
+      else
+        fSpriteBatch.Draw(FItems[i]);
+  end;
 
   fSpriteBatch.Finish();
 
@@ -962,7 +1076,7 @@ begin
     begin
       s := TglrGuiSlider(FItems[i]);
       s.ValueLabel.Position.z := s.Button.Position.z + 1;
-      fFontBatch.Draw(s.ValueLabel);
+      fFontBatch.Draw(s.ValueLabel.TextLabel);
     end
     // GuiLabel has Text object
     else if (FItems[i].fType = guiLabel) then
