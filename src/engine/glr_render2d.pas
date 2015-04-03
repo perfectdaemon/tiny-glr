@@ -64,6 +64,9 @@ type
     Color: TglrVec4f;
     Scale: Single;
     PivotPoint: TglrVec2f;
+    ShadowEnabled: Boolean;
+    ShadowOffset: TglrVec2f;
+    ShadowColor: TglrVec4f;
     constructor Create(const aText: WideString = ''); virtual; reintroduce;
     destructor Destroy(); override;
 
@@ -133,6 +136,8 @@ type
     fIB: TglrIndexBuffer;
     fFont: TglrFont;
     function GetTextOrigin(aText: TglrText): TglrVec2f;
+    procedure WordWrapText(aText: TglrText);
+    procedure DrawShadow(aText: TglrText);
   public
     constructor Create(aFont: TglrFont); virtual;
     destructor Destroy(); override;
@@ -326,6 +331,10 @@ begin
   LetterSpacing := 0.0;
   Color := Vec4f(1, 1, 1, 1);
   Scale := 1.0;
+
+  ShadowEnabled := False;
+  ShadowOffset.Reset();
+  ShadowColor := Color4f(0, 0, 0, 0.5);
 
   PivotPoint.Reset();
   fHorAlign := haLeft;
@@ -546,6 +555,57 @@ begin
   Result := (-1 * textSize) * aText.PivotPoint;
 end;
 
+procedure TglrFontBatch.WordWrapText(aText: TglrText);
+var
+  lastSpace: Integer;
+  width: Single;
+  i: Integer;
+begin
+  lastSpace := 0;
+  width := 0;
+  i := 1;
+  while (i <= Length(aText.Text)) do
+  begin
+    if fFont.Table[aText.Text[i]] = nil then
+      continue;
+    if (aText.Text[i] = #10) then
+      aText.Text[i] := ' ';
+
+    if (aText.Text[i] = ' ') then
+      lastSpace := i;
+
+    width += fFont.Table[aText.Text[i]].w * aText.Scale + aText.LetterSpacing;
+    if (width > aText.TextWidth) and (lastSpace > 0) then
+    begin
+      aText.Text[lastSpace] := #10;
+      i := lastSpace + 1;
+      width := 0;
+      lastSpace := 0;
+    end
+    else
+      i += 1;
+  end;
+end;
+
+procedure TglrFontBatch.DrawShadow(aText: TglrText);
+var
+  initialPos: TglrVec3f;
+  initialColor: TglrVec4f;
+begin
+  initialPos   := aText.Position;
+  initialColor := aText.Color;
+
+  aText.Position += Vec3f(aText.ShadowOffset, -1);
+  aText.Color := aText.ShadowColor;
+  aText.ShadowEnabled := False; // We don't need to go deeper :)
+
+  Draw(aText);
+
+  aText.Position := initialPos;
+  aText.Color := initialColor;
+  aText.ShadowEnabled := True;
+end;
+
 constructor TglrFontBatch.Create(aFont: TglrFont);
 begin
   inherited Create;
@@ -573,45 +633,22 @@ var
   origin, start: TglrVec2f;
   quad: TglrQuadP3T2C4;
   j, k: Integer;
-
-  lastSpace: Integer;
-  width: Single;
 begin
   if (not aText.Visible) or (aText.Text = '') then
     Exit();
 
-  origin := GetTextOrigin(aText);
-  start := origin;
-
   // Make a word wrap
   if (aText.TextWidth > 0) and (aText.fTextWidthChanged) then
   begin
-    lastSpace := 0;
-    width := 0;
-    j := 1;
-    while (j <= Length(aText.Text)) do
-    begin
-      if fFont.Table[aText.Text[j]] = nil then
-        continue;
-      if (aText.Text[j] = #10) then
-        aText.Text[j] := ' ';
-
-      if (aText.Text[j] = ' ') then
-        lastSpace := j;
-
-      width += fFont.Table[aText.Text[j]].w * aText.Scale + aText.LetterSpacing;
-      if (width > aText.TextWidth) and (lastSpace > 0) then
-      begin
-        aText.Text[lastSpace] := #10;
-        j := lastSpace + 1;
-        width := 0;
-        lastSpace := 0;
-      end
-      else
-        j += 1;
-    end;
+    WordWrapText(aText);
     aText.fTextWidthChanged := False;
   end;
+
+  if (aText.ShadowEnabled) then
+    DrawShadow(aText);
+
+  origin := GetTextOrigin(aText);
+  start := origin;
 
   for j := 1 to Length(aText.Text) do
   begin
