@@ -49,5 +49,5 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 * Resource packer (folder -> pack file, file -> lzo file)
 * Font generator
 
-###Tutorials###
-[not soon, really]
+###Documentation###
+See Wiki
