@@ -24,6 +24,9 @@ type
     ApplyBtn, BackBtn: TglrGuiButton;
 
     MusicSlider, SoundSlider: TglrGuiSlider;
+    MusicSliderLabel: TglrGuiLabel;
+
+    lp: TglrGuiLabelPlacement;
 
     procedure ButtonInit(var Button: TglrGuiButton);
     procedure ButtonTween(aObject: TglrTweenObject; aValue: Single);
@@ -169,6 +172,9 @@ begin
   SliderInit(MusicSlider);
   MusicSlider.Value := 50;
 
+  MusicSliderLabel := TglrGuiLabel.Create();
+  MusicSliderLabel.SetFor(MusicSlider, lpTopRight);
+
   ApplyBtn.TextLabel.Text := 'Apply';
   BackBtn.TextLabel.Text := 'Back';
 
@@ -178,6 +184,7 @@ begin
   GuiManager.Add(ApplyBtn);
   GuiManager.Add(BackBtn);
   GuiManager.Add(MusicSlider);
+  GuiManager.Add(MusicSliderLabel);
 end;
 
 destructor TglrSettingsMenu.Destroy;
@@ -196,6 +203,15 @@ begin
       case Event.Key of
         kLeft: MusicSlider.Value := MusicSlider.Value - 5;
         kRight: MusicSlider.Value := MusicSlider.Value + 5;
+        kUp:
+        begin
+          if lp = High(TglrGuiLabelPlacement) then
+            lp := Low(TglrGuiLabelPlacement)
+          else
+            Inc(lp);
+          WriteStr(MusicSliderLabel.TextLabel.Text, lp);
+          MusicSliderLabel.SetFor(MusicSlider, lp);
+        end;
       end;
   end;
 end;
