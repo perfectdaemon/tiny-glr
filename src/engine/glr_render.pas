@@ -208,6 +208,7 @@ type
   TglrFuncComparison = (fcNever, fcLess, fcEqual, fcLessOrEqual,
     fcGreater, fcNotEqual, fcGreaterOrEqual, fcAlways);
   TglrClearMask = (cmAll, cmColor, cmDepth);
+  TglrPolygonMode = (pmFill, pmLines, pmPoints);
 
 { TglrMaterial }
 
@@ -226,6 +227,7 @@ type
     DepthTest: Boolean;
     DepthTestFunc: TglrFuncComparison;
   	Cull: TglrCullMode;
+    PolygonMode: TglrPolygonMode;
 
     constructor Create(aShaderProgram: TglrShaderProgram); virtual; overload;
     constructor Create(aStream: TglrStream;
@@ -257,6 +259,7 @@ type
   protected
     class var fBlendingMode: TglrBlendingMode;
     class var fCullMode: TglrCullMode;
+    class var fPolygonMode: TglrPolygonMode;
     class var fDepthWrite, fDepthTest: Boolean;
     class var fDepthFunc: TglrFuncComparison;
     class var fShader: TglrShaderId;
@@ -281,6 +284,7 @@ type
 
     class procedure SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
     class procedure SetCullMode(aCullMode: TglrCullMode);
+    class procedure SetPolygonMode(aPolygonMode: TglrPolygonMode);
     class procedure SetBlendingMode(aBlendingMode: TglrBlendingMode);
     class procedure SetDepthWrite(aEnabled: Boolean);
     class procedure SetDepthTest(aEnabled: Boolean);
@@ -827,6 +831,7 @@ begin
   Blend := bmAlpha;
   Color := Vec4f(1, 1, 1, 1);
   Cull := cmBack;
+  PolygonMode := pmFill;
   DepthTest := True;
   DepthWrite := True;
   DepthTestFunc := fcLess;
@@ -872,6 +877,7 @@ var
 begin
   Render.SetBlendingMode(Blend);
   Render.SetCullMode(Cull);
+  Render.SetPolygonMode(PolygonMode);
   Render.SetDepthWrite(DepthWrite);
   Render.SetDepthTest(DepthTest);
   Render.SetDepthFunc(DepthTestFunc);
@@ -929,6 +935,7 @@ var
   i: Integer;
 begin
   SetCullMode(cmBack);
+  SetPolygonMode(pmFill);
   SetBlendingMode(bmAlpha);
   SetDepthFunc(fcLessOrEqual);
   SetDepthWrite(True);
@@ -988,6 +995,20 @@ begin
   if (fCullMode = cmNone) then
     gl.Enable(GL_CULL_FACE);
   fCullMode := aCullMode;
+end;
+
+class procedure Render.SetPolygonMode(aPolygonMode: TglrPolygonMode);
+begin
+  if (fPolygonMode = aPolygonMode) then
+    Exit();
+
+  case aPolygonMode of
+    pmFill: gl.PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    pmLines: gl.PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    pmPoints: gl.PolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+  end;
+
+  fPolygonMode := aPolygonMode;
 end;
 
 class procedure Render.SetBlendingMode(aBlendingMode: TglrBlendingMode);
