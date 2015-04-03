@@ -180,6 +180,8 @@ begin
   GameName.TextLabel.Text := 'Your game'' name';
   GameName.TextLabel.Scale := 1.2;
   GameName.TextLabel.PivotPoint := Vec2f(0.5, 0.0);
+  GameName.TextLabel.ShadowEnabled := True;
+  GameName.TextLabel.ShadowOffset := Vec2f(4,4);
   GameName.Parent := Container;
 
   AuthorName := TglrGuiLabel.Create();
@@ -187,6 +189,8 @@ begin
   AuthorName.TextLabel.Text := 'Your name, 2015 (c)';
   AuthorName.TextLabel.Scale := 0.7;
   AuthorName.TextLabel.PivotPoint := Vec2f(0.5, 0.5);
+  AuthorName.TextLabel.ShadowEnabled := True;
+  AuthorName.TextLabel.ShadowOffset := Vec2f(3,3);
   AuthorName.Parent := Container;
 
   GuiManager := TglrGuiManager.Create(Assets.GuiMaterial, Assets.FontMain);
