@@ -54,6 +54,7 @@ begin
 
   Material := TglrMaterial.Create(Shader);
   Material.AddTexture(Default.BlankTexture, 'uDiffuse');
+  Material.PolygonMode := pmLines;
 end;
 
 procedure TGame.SaveMeshDataAsGlr;
