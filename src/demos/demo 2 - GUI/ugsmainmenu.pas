@@ -18,6 +18,8 @@ type
   protected
     Container: TglrNode;
 
+    GameName, AuthorName: TglrGuiLabel;
+
     NewGameBtn, SettingsBtn, ExitBtn: TglrGuiButton;
     GuiManager: TglrGuiManager;
     ActionManager: TglrActionManager;
@@ -25,8 +27,6 @@ type
     procedure ButtonInit(var Button: TglrGuiButton);
     procedure ButtonTween(aObject: TglrTweenObject; aValue: Single);
     procedure ButtonClicked(Sender: TglrGuiElement;   Event: PglrInputEvent);
-
-    procedure MenuTween(aObject: TglrTweenObject; aValue: Single);
 
     procedure DoExit();
     procedure ToSettings();
@@ -98,13 +98,6 @@ begin
   end;
 end;
 
-procedure TglrMainMenu.MenuTween(aObject: TglrTweenObject; aValue: Single);
-begin
-  NewGameBtn.SetVerticesAlpha(aValue);
-  SettingsBtn.SetVerticesAlpha(aValue);
-  ExitBtn.SetVerticesAlpha(aValue);
-end;
-
 procedure TglrMainMenu.DoExit;
 begin
   Core.Quit();
@@ -154,15 +147,12 @@ end;
 
 procedure TglrMainMenu.OnLoadStarted;
 begin
-  Render.SetClearColor(0.1, 0.25, 0.25);
-//  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 0.0, 1.0, 1.5, 0.0);
   Game.Tweener.AddTweenPSingle(@Container.Position.y, tsExpoEaseIn, -Render.Height, 0, 1.5);
   inherited OnLoadStarted;
 end;
 
 procedure TglrMainMenu.OnUnloadStarted;
 begin
-//  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 1.0, 0.0, 1.5, 0.0);
   Game.Tweener.AddTweenPSingle(@Container.Position.y, tsExpoEaseIn, 0, -Render.Height, 1.5);
   ActionManager.AddIndependent(UnloadCompleted, 0.5);
 end;
@@ -185,10 +175,26 @@ begin
   SettingsBtn.Position.y += 70;
   ExitBtn.Position.y += 140;
 
+  GameName := TglrGuiLabel.Create();
+  GameName.Position := Vec3f(Render.Width div 2, 70, 5);
+  GameName.TextLabel.Text := 'Your game'' name';
+  GameName.TextLabel.Scale := 1.2;
+  GameName.TextLabel.PivotPoint := Vec2f(0.5, 0.0);
+  GameName.Parent := Container;
+
+  AuthorName := TglrGuiLabel.Create();
+  AuthorName.Position := Vec3f(Render.Width div 2, Render.Height - 50, 5);
+  AuthorName.TextLabel.Text := 'Your name, 2015 (c)';
+  AuthorName.TextLabel.Scale := 0.7;
+  AuthorName.TextLabel.PivotPoint := Vec2f(0.5, 0.5);
+  AuthorName.Parent := Container;
+
   GuiManager := TglrGuiManager.Create(Assets.GuiMaterial, Assets.FontMain);
   GuiManager.Add(NewGameBtn);
   GuiManager.Add(SettingsBtn);
   GuiManager.Add(ExitBtn);
+  GuiManager.Add(GameName);
+  GuiManager.Add(AuthorName);
 end;
 
 destructor TglrMainMenu.Destroy();

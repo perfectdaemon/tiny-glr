@@ -24,19 +24,22 @@ type
     ApplyBtn, BackBtn: TglrGuiButton;
 
     MusicSlider, SoundSlider: TglrGuiSlider;
-    MusicSliderLabel: TglrGuiLabel;
+    MusicSliderLabel, SoundSliderLabel: TglrGuiLabel;
 
-    lp: TglrGuiLabelPlacement;
+    ImportantCheckBox1, ImportantCheckBox2: TglrGuiCheckBox;
+    ICBLabel1, ICBLabel2: TglrGuiLabel;
 
     procedure ButtonInit(var Button: TglrGuiButton);
     procedure ButtonTween(aObject: TglrTweenObject; aValue: Single);
     procedure ButtonClicked(Sender: TglrGuiElement; Event: PglrInputEvent);
 
-    procedure SliderInit(var Slider: TglrGuiSlider);
+    procedure SliderAndLabelInit(var Slider: TglrGuiSlider;
+      var SLabel: TglrGuiLabel);
     procedure SliderOver(Sender: TglrGuiElement; Event: PglrInputEvent);
     procedure SliderValueChanged(Sender: TglrGuiElement; NewValue: Integer);
 
-    procedure MenuTween(aObject: TglrTweenObject; aValue: Single);
+    procedure CheckBoxAndLabelInit(var CheckBox: TglrGuiCheckBox;
+      var CBLabel: TglrGuiLabel);
 
     procedure BackToMainMenu();
     procedure Apply();
@@ -100,7 +103,8 @@ begin
   end;
 end;
 
-procedure TglrSettingsMenu.SliderInit(var Slider: TglrGuiSlider);
+procedure TglrSettingsMenu.SliderAndLabelInit(var Slider: TglrGuiSlider;
+  var SLabel: TglrGuiLabel);
 begin
   Slider := TglrGuiSlider.Create();
   with Slider do
@@ -117,7 +121,12 @@ begin
     OnMouseOver := SliderOver;
     OnMouseOut := SliderOver;
     ChangeTexCoords := True;
+
+    ValueLabel.Visible := False;
   end;
+
+  SLabel := TglrGuiLabel.Create();
+  SLabel.SetFor(Slider, lpLeft, Vec2f(-15, 0));
 end;
 
 procedure TglrSettingsMenu.SliderOver(Sender: TglrGuiElement;
@@ -125,8 +134,8 @@ procedure TglrSettingsMenu.SliderOver(Sender: TglrGuiElement;
 begin
   if (Sender.IsMouseOver) then
   begin
-    TglrGuiSlider(Sender).Button.SetVerticesColor(Vec4f(0.7, 0.5, 0.5, 1.0));
-    TglrGuiSlider(Sender).Fill.SetVerticesColor(Vec4f(0.7, 0.5, 0.5, 1.0));
+    TglrGuiSlider(Sender).Button.SetVerticesColor(Vec4f(0.7, 0.7, 0.5, 1.0));
+    TglrGuiSlider(Sender).Fill.SetVerticesColor(Vec4f(0.7, 0.7, 0.5, 1.0));
   end
   else
   begin
@@ -141,12 +150,24 @@ begin
 
 end;
 
-procedure TglrSettingsMenu.MenuTween(aObject: TglrTweenObject; aValue: Single);
+procedure TglrSettingsMenu.CheckBoxAndLabelInit(var CheckBox: TglrGuiCheckBox;
+  var CBLabel: TglrGuiLabel);
 begin
-  ApplyBtn.SetVerticesAlpha(aValue);
-  BackBtn.SetVerticesAlpha(aValue);
-  MusicSlider.SetVerticesAlpha(aValue);
+  CheckBox := TglrGuiCheckBox.Create();
+  with CheckBox do
+  begin
+    NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_CHECKBOX);
+    Check.SetTextureRegion(Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_CHECKBOX_C));
+    Position := Vec3f(Render.Width div 2, 250, 5);
+    SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
+    Check.SetVerticesColor(Vec4f(0.7, 0.7, 0.5, 1.0));
+    Parent := Container;
+  end;
+
+  CBLabel := TglrGuiLabel.Create();
+  CBLabel.SetFor(CheckBox, lpLeft, Vec2f(-145, 0));
 end;
+
 
 procedure TglrSettingsMenu.BackToMainMenu;
 begin
@@ -169,22 +190,39 @@ begin
   ButtonInit(ApplyBtn);
   ButtonInit(BackBtn);
 
-  SliderInit(MusicSlider);
-  MusicSlider.Value := 50;
+  SliderAndLabelInit(MusicSlider, MusicSliderLabel);
+  SliderAndLabelInit(SoundSlider, SoundSliderLabel);
+  SoundSlider.Position.y += 40;
 
-  MusicSliderLabel := TglrGuiLabel.Create();
-  MusicSliderLabel.SetFor(MusicSlider, lpTopRight);
+  MusicSlider.Value := 50;
+  SoundSlider.Value := 50;
+
+  MusicSliderLabel.TextLabel.Text := 'Music volume';
+  SoundSliderLabel.TextLabel.Text := 'Sounds volume';
 
   ApplyBtn.TextLabel.Text := 'Apply';
   BackBtn.TextLabel.Text := 'Back';
 
   BackBtn.Position.y += 70;
 
+  CheckBoxAndLabelInit(ImportantCheckBox1, ICBLabel1);
+  CheckBoxAndLabelInit(ImportantCheckBox2, ICBLabel2);
+  ICBLabel1.TextLabel.Text := 'Some option';
+  ICBLabel2.TextLabel.Text := 'Other option';
+
+  ImportantCheckBox2.Position.y += 50;
+
   GuiManager := TglrGuiManager.Create(Assets.GuiMaterial, Assets.FontMain);
   GuiManager.Add(ApplyBtn);
   GuiManager.Add(BackBtn);
   GuiManager.Add(MusicSlider);
   GuiManager.Add(MusicSliderLabel);
+  GuiManager.Add(SoundSlider);
+  GuiManager.Add(SoundSliderLabel);
+  GuiManager.Add(ImportantCheckBox1);
+  GuiManager.Add(ImportantCheckBox2);
+  GuiManager.Add(ICBLabel1);
+  GuiManager.Add(ICBLabel2);
 end;
 
 destructor TglrSettingsMenu.Destroy;
@@ -203,15 +241,6 @@ begin
       case Event.Key of
         kLeft: MusicSlider.Value := MusicSlider.Value - 5;
         kRight: MusicSlider.Value := MusicSlider.Value + 5;
-        kUp:
-        begin
-          if lp = High(TglrGuiLabelPlacement) then
-            lp := Low(TglrGuiLabelPlacement)
-          else
-            Inc(lp);
-          WriteStr(MusicSliderLabel.TextLabel.Text, lp);
-          MusicSliderLabel.SetFor(MusicSlider, lp);
-        end;
       end;
   end;
 end;
@@ -230,14 +259,12 @@ end;
 
 procedure TglrSettingsMenu.OnLoadStarted;
 begin
-//  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 0.0, 1.0, 1.5, 0.4);
   Game.Tweener.AddTweenPSingle(@Container.Position.x, tsExpoEaseIn, -Render.Width, 0, 2.5);
   inherited OnLoadStarted;
 end;
 
 procedure TglrSettingsMenu.OnUnloadStarted;
 begin
-//  Game.Tweener.AddTweenSingle(Self, MenuTween, tsExpoEaseIn, 1.0, 0.0, 1.5, 0.4);
   Game.Tweener.AddTweenPSingle(@Container.Position.x, tsExpoEaseIn, 0, -Render.Width, 1.0);
   ActionManager.AddIndependent(UnloadCompleted, 0.5);
 end;

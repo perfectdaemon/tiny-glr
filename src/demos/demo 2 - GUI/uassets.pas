@@ -36,6 +36,8 @@ const
   R_GUI_ATLAS_SLIDER_BACK = 'slider_back.png';
   R_GUI_ATLAS_SLIDER_FILL = 'slider_fill.png';
   R_GUI_ATLAS_SLIDER_BTN  = 'slider_btn.png';
+  R_GUI_ATLAS_CHECKBOX    = 'checkbox.png';
+  R_GUI_ATLAS_CHECKBOX_C  = 'checkbox_check.png';
 
 implementation
 
