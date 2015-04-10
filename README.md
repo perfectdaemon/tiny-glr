@@ -1,16 +1,5 @@
-```pascal
-function Core.GetLatestNews(): UnicodeString;
-begin
-  Exit(
-    'Development has become a little slow at early 2015.'
-    'Use it for your own risk.'
-    'Contact me if you need support'
-    );
-end;
-```
-
 ###Introduction###
-Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game development framework built with (and for) Free Pascal Compiler.
+Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) 2D/3D game development framework built on  Free Pascal Compiler.
 
 *Notice: It's Windows only for now (0.1 version)*
 
@@ -27,19 +16,22 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 **Core**
 * Lightweight, no dependencies on other libraries, all-in-one
 * Pack files
-* LZO support
-* Tweener
+* LZO compression support
+* Tweener — perform animation on curves
 * Action Manager — perform independent or queued actions with/without period and delays on start
+* Utility classes — stream, list<T>, pool<T>, dictionary<T>, stack<T>, etc.
+* Math library - vectors, matrices, quaternions
+* Game Screens — internal framework for easiest menu building
 
 **Graphics**
-* OpenGL Programmable Pipeline — works on ogl 1.5+, but no FFP for future OpenGL ES backend
+* OpenGL renderer — no deprecated functions used, no FFP, works on OpenGL 2.0+
 * Texture formats — bmp (24/32 bit), tga (24/32 bit)
 * Texture atlases — [Cheetah Texture Packer](https://github.com/scriptum/Cheetah-Texture-Packer) support
 * Mesh formats — obj, engine-based file format
 * 2D Sprites — per vertex control, custom pivot point support, batching, scaling
 * 2D Fonts — custom pivot point support, max width support, scaling
 * 3D Meshes (early dev)
-* GUI — Manager, button, nine-patch support (in dev)
+* GUI — Button, Checkbox, Slider, Label, 9-patch support
 * Programmable 2d particles
 
 **Physics**
