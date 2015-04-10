@@ -50,4 +50,4 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) game developmen
 * Font generator
 
 ###Documentation###
-See Wiki
+[Wiki](https://github.com/perfectdaemon/tiny-glr/wiki)
