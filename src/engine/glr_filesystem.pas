@@ -17,27 +17,33 @@ const
 type
   NameString = String[255];
 
-  TglrPackFileResource = packed record
-    fFileName: NameString;
-    fStride, fSize: LongWord;
+  TglrPackFileResource = record
+    FileName: NameString;
+    Stride, CompressedSize, OriginalSize: LongInt;
   end;
 
   FileSystem = class
   protected
     type
-      TglrPackFile = packed record
-        fPackName: AnsiString;
-        fFiles: array of TglrPackFileResource;
-        fLoaded, fLZO: Boolean;
-        fPackData: TglrStream;
-        fPackDataPointer: Pointer;
+      { TglrPackFile }
+      TglrPackFile = record
+        PackName: AnsiString;
+        Files: array of TglrPackFileResource;
+        Loaded, LZO: Boolean;
+        PackData: TglrStream;
+        PackDataPointer: Pointer;
+
+        procedure Load();
+        procedure Unload();
+
+        function GetFileIndex(FileName: AnsiString): Integer;
+        function ReadResource(FileIndex: Integer): TglrStream;
       end;
 
     var
       class var fPackFilesPath: AnsiString;
       class var fPackFiles: array of TglrPackFile;
 
-    class function GetFileIndexInPackFile(packIndex: Integer; aFileName: AnsiString): Integer;
     class function GetPackIndexByPackName(const aPackName: AnsiString): Integer;
   public
     class procedure Init(const aPackFilesPath: AnsiString);
@@ -136,6 +142,108 @@ begin
   lzo_decompress(InData^, InSize, OutData^, OutSize);
 end;
 
+{ FileSystem.TglrPackFile }
+
+procedure FileSystem.TglrPackFile.Load;
+var
+  FileStream: TglrStream;
+begin
+  FileStream := TglrStream.Init(PackName);
+  PackDataPointer := GetMem(FileStream.Size);
+  PackData := TglrStream.Init(PackDataPointer, FileStream.Size, True);
+  PackData.CopyFrom(FileStream);
+
+  Loaded := True;
+
+  FileStream.Free();
+end;
+
+procedure FileSystem.TglrPackFile.Unload;
+begin
+  PackData.Free();
+  PackData := nil;
+  PackDataPointer := nil;
+  Loaded := False;
+end;
+
+function FileSystem.TglrPackFile.GetFileIndex(FileName: AnsiString): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+
+  for i := 0 to High(Files) do
+    if (Files[i].FileName = FileName) then
+      Exit(i);
+end;
+
+function FileSystem.TglrPackFile.ReadResource(FileIndex: Integer): TglrStream;
+var
+  PackFile: TglrStream;
+  compressedBuffer, uncompressedBuffer: Pointer;
+  bytesRead: LongInt;
+begin
+  // Load pack file from PackData (memory), uncompress if necessary
+  if (Loaded) then
+  begin
+    if (LZO) then
+    begin
+      // Read compressed data from pack
+      compressedBuffer := GetMem(Files[FileIndex].CompressedSize);
+      PackData.Pos := Files[FileIndex].Stride;
+      PackData.Read(compressedBuffer^, Files[FileIndex].CompressedSize);
+
+      uncompressedBuffer := GetMem(Files[FileIndex].OriginalSize);
+
+      DecompressData(compressedBuffer, Files[FileIndex].CompressedSize,
+        uncompressedBuffer, bytesRead);
+
+      if (bytesRead <> Files[FileIndex].OriginalSize) then
+        Log.Write(lError, 'FileSystem: error occured while decompressing LZO compressed resource "'
+          + Files[FileIndex].FileName + '" from pack file "' + PackName + '"');
+
+      FreeMem(compressedBuffer);
+      Result := TglrStream.Init(uncompressedBuffer, bytesRead, True);
+    end
+    else
+      Result := TglrStream.Init(PackDataPointer + Files[FileIndex].Stride,
+        Files[FileIndex].CompressedSize, False);
+  end
+
+  // Read pack file, seek to requested file's stride, read it into new Stream,
+  // uncompress if necessary
+  else
+  begin
+    PackFile := TglrStream.Init(PackName);
+    PackFile.Pos := Files[FileIndex].Stride;
+    compressedBuffer := GetMem(Files[FileIndex].CompressedSize);
+    bytesRead := PackFile.Read(compressedBuffer^, Files[FileIndex].CompressedSize);
+    PackFile.Free();
+
+    if (bytesRead <> Files[FileIndex].CompressedSize) then
+      Log.Write(lError, 'FileSystem: error occured while reading resource "'
+          + Files[FileIndex].FileName + '" from pack file "' + PackName + '"');
+
+    if (LZO) then
+    begin
+      uncompressedBuffer := GetMem(Files[FileIndex].OriginalSize);
+
+      DecompressData(compressedBuffer, Files[FileIndex].CompressedSize,
+        uncompressedBuffer, bytesRead);
+
+      if (bytesRead <> Files[FileIndex].OriginalSize) then
+        Log.Write(lError, 'FileSystem: error occured while decompressing LZO compressed resource "'
+          + Files[FileIndex].FileName + '" from pack file "' + PackName + '"');
+
+      FreeMem(compressedBuffer);
+    end
+    else
+      uncompressedBuffer := compressedBuffer;
+
+    Result := TglrStream.Init(uncompressedBuffer, bytesRead, True);
+  end;
+end;
+
 
 class procedure FileSystem.Init(const aPackFilesPath: AnsiString);
 var
@@ -155,43 +263,47 @@ begin
   begin
     stream := FileSystem.ReadResource(packFilesList[i], False);
 
-    //Read magic header
+    // Read magic header
     bytesRead := stream.Read(WordBuf, SizeOf(Word));
     if ((WordBuf <> PACK_FILE_MAGIC) and (WordBuf <> PACK_FILE_MAGIC_LZO)) or (bytesRead < SizeOf(Word)) then
     begin
-      Log.Write(lError, #9 + packFilesList[i] + ': not a correct pack file');
+      Log.Write(lError, #9 + packFilesList[i] + ' is not a correct pack file');
       SetLength(fPackFiles, Length(fPackFiles) - 1);
       stream.Free();
       continue;
     end;
 
-    //Set main params for record
-    fPackFiles[l].fPackName := packFilesList[i];
-    fPackFiles[l].fLoaded := False;
-    fPackFiles[l].fLZO := (WordBuf = PACK_FILE_MAGIC_LZO);
+    // Set main params for record
+    fPackFiles[l].PackName := packFilesList[i];
+    fPackFiles[l].Loaded := False;
+    fPackFiles[l].LZO := (WordBuf = PACK_FILE_MAGIC_LZO);
 
-    //Read files count
+    // Read files count
     bytesRead := stream.Read(WordBuf, SizeOf(Word));
     if (bytesRead <> SizeOf(Word)) then
     begin
-      log.Write(lError, #9 + packFilesList[i] + ': error while read file count');
+      log.Write(lError, #9 + packFilesList[i] + ': error occured while reading files count');
       SetLength(fPackFiles, Length(fPackFiles) - 1);
       stream.Free();
       continue;
     end;
 
-    //Read file headers: name, stride and size
-    SetLength(fPackFiles[l].fFiles, WordBuf);
+    // Read file headers: name, stride and sizes (compressed and original)
+    SetLength(fPackFiles[l].Files, WordBuf);
     for j := 0 to WordBuf - 1 do
     begin
-      fPackFiles[l].fFiles[j].fFileName := stream.ReadAnsi();
-      stream.Read(fPackFiles[l].fFiles[j].fStride, SizeOf(LongWord));
-      stream.Read(fPackFiles[l].fFiles[j].fSize, SizeOf(LongWord));
+      fPackFiles[l].Files[j].FileName := stream.ReadAnsi();
+      stream.Read(fPackFiles[l].Files[j].Stride, SizeOf(LongInt));
+      stream.Read(fPackFiles[l].Files[j].CompressedSize, SizeOf(LongInt));
+      stream.Read(fPackFiles[l].Files[j].OriginalSize, SizeOf(LongInt));
     end;
 
     Log.Write(lInformation, #9 + packFilesList[i] + ': header loaded. Files inside: ' + Convert.ToString(WordBuf));
-    for j := 0 to Length(fPackFiles[l].fFiles) - 1 do
-      Log.Write(lInformation, #9#9 + fPackFiles[l].fFiles[j].fFileName + ' - ' + Convert.ToString(Integer(fPackFiles[l].fFiles[j].fSize)) + ' bytes');
+    for j := 0 to Length(fPackFiles[l].Files) - 1 do
+      Log.Write(lInformation,
+      #9#9 + fPackFiles[l].Files[j].FileName
+        + ' - c ' + Convert.ToString(Integer(fPackFiles[l].Files[j].CompressedSize)) + ' bytes' + #9
+        + ' - o ' + Convert.ToString(Integer(fPackFiles[l].Files[j].OriginalSize)) + ' bytes');
     stream.Free();
     l += 1;
   end;
@@ -203,27 +315,9 @@ var
   i: Integer;
 begin
   for i := 0 to High(fPackFiles) do
-    if (fPackFiles[i].fLoaded) then
-      UnloadPack(fPackFiles[i].fPackName);
+    if (fPackFiles[i].Loaded) then
+      fPackFiles[i].Unload();
   SetLength(fPackFiles, 0);
-end;
-
-class function FileSystem.GetFileIndexInPackFile(packIndex: Integer;
-  aFileName: AnsiString): Integer;
-var
-  i: Integer;
-begin
-  Result := -1;
-  if (packIndex < 0) or (packIndex > High(fPackFiles)) then
-  begin
-    Log.Write(lError, 'Wrong pack index provided: ' + Convert.ToString(packIndex)
-      + '. Bounds: 0..' + Convert.ToString(High(fPackFiles)));
-    Exit();
-  end;
-
-  for i := 0 to High(fPackFiles[packIndex].fFiles) do
-    if (fPackFiles[packIndex].fFiles[i].fFileName = aFileName) then
-      Exit(i);
 end;
 
 class function FileSystem.GetPackIndexByPackName(const aPackName: AnsiString): Integer;
@@ -232,26 +326,20 @@ var
 begin
   Result := -1;
   for i := 0 to Length(fPackFiles) - 1 do
-    if (fPackFiles[i].fPackName = aPackName) then
+    if (fPackFiles[i].PackName = aPackName) then
       Exit(i);
 end;
 
 class procedure FileSystem.LoadPack(const aPackFileName: AnsiString);
 var
   i: Integer;
-  FileStream: TglrStream;
 begin
   i := GetPackIndexByPackName(aPackFileName);
   if (i = -1) then
     Log.Write(lError, 'FileSystem: Unable to load pack "' + aPackFileName + '". No pack was found.')
   else
   begin
-    FileStream := TglrStream.Init(aPackFileName);
-    GetMem(fPackFiles[i].fPackDataPointer, FileStream.Size);
-    fPackFiles[i].fPackData := TglrStream.Init(fPackFiles[i].fPackDataPointer, FileStream.Size);
-    fPackFiles[i].fPackData.CopyFrom(FileStream);
-    fPackFiles[i].fLoaded := True;
-    FileStream.Free();
+    fPackFiles[i].Load();
     Log.Write(lInformation, 'FileSystem: Load pack "' + aPackFileName + '" is completed');
   end;
 end;
@@ -265,65 +353,34 @@ begin
     Log.Write(lError, 'FileSystem: Unable to unload pack "' + aPackFileName + '". No pack was found.')
   else
   begin
-    FreeMem(fPackFiles[i].fPackDataPointer, fPackFiles[i].fPackData.Size);
-    fPackFiles[i].fPackData.Free();
-    fPackFiles[i].fLoaded := False;
-    fPackFiles[i].fPackDataPointer := nil;
-    Log.Write(lInformation, 'FileSystem: Unload pack "' + aPackFileName + '" is completed');
+    fPackFiles[i].Unload();
+    Log.Write(lInformation, 'FileSystem: Pack unload "' + aPackFileName + '" is completed');
   end;
 end;
 
 class function FileSystem.ReadResource(const aFileName: AnsiString;
   aSearchInPackFiles: Boolean): TglrStream;
 var
-  i, f: Integer;
-  PackFile: TglrStream;
-  m: Pointer;
-  bytesRead: LongInt;
+  i, fileIndex: Integer;
 begin
   if (FileExists(aFileName)) then
   begin
-    //todo: load directly into memory?
+    // ToDo: load directly into memory?
     Log.Write(lInformation, 'FileSystem: start reading resource "' + aFileName + '" directly from file');
     Result := TglrStream.Init(aFileName);
     Log.Write(lInformation, 'FileSystem: read successfully');
     Exit();
   end
 
-  //Try read from pack files
+  // Try read from pack files
   else if (aSearchInPackFiles) then
     for i := 0 to Length(fPackFiles) - 1 do
     begin
-      f := GetFileIndexInPackFile(i, aFileName);
-      if (f <> -1) then //we have found requested file at pack with index 'f'
+      fileIndex := fPackFiles[i].GetFileIndex(aFileName);
+      if (fileIndex <> -1) then
       begin
-        Log.Write(lInformation, 'FileSystem: start reading resource "' + aFileName + '" from pack file "' + fPackFiles[i].fPackName + '"');
-        if (not fPackFiles[i].fLoaded) then
-        begin
-          //Read pack file, seek to requested file's stride, read it into new Stream
-          if (fPackFiles[i].fLZO) then
-          begin
-            Log.Write(lCritical, 'LZO is not supported yet');
-          end;
-          PackFile := TglrStream.Init(fPackFiles[i].fPackName);
-          PackFile.Pos := fPackFiles[i].fFiles[f].fStride;
-          GetMem(m, fPackFiles[i].fFiles[f].fSize);
-          Result := TglrStream.Init(m, fPackFiles[i].fFiles[f].fSize, True); //True means that FreeMem will be executed at Stream.Free()
-          bytesRead := PackFile.Read(m^, Result.Size); //write directly, no need of Write (Read);
-          PackFile.Free();
-
-          if (bytesRead <> Result.Size) then
-            Log.Write(lCritical, 'FileSystem: resource "' + aFileName + '" read from packfile "' + fPackFiles[i].fPackName + '" failed');
-        end
-        else
-        begin
-          //load pack file from fPackData (memory)
-          if (fPackFiles[i].fLZO) then
-          begin
-            Log.Write(lCritical, 'LZO is not supported yet');
-          end;
-          Result := TglrStream.Init(fPackFiles[i].fPackDataPointer + fPackFiles[i].fFiles[f].fStride, fPackFiles[i].fFiles[f].fSize);
-        end;
+        Log.Write(lInformation, 'FileSystem: start reading resource "' + aFileName + '" from pack file "' + fPackFiles[i].PackName + '"');
+        Result := fPackFiles[i].ReadResource(fileIndex);
         Log.Write(lInformation, 'FileSystem: read successfully');
         Exit();
       end;
@@ -337,29 +394,57 @@ class function FileSystem.ReadResourceLZO(const aFileName: AnsiString;
 var
   fileStream: TglrStream;
   mIn, mOut: Pointer;
-  outSize: LongInt;
+  originalSize, outSize: LongInt;
+  wordBuf: Word;
+  i, fileIndex: Integer;
 begin
   if (FileExists(aFileName)) then
   begin
     Log.Write(lInformation, 'FileSystem: start reading LZO resource "' + aFileName + '" directly from file');
     fileStream := TglrStream.Init(aFileName);
 
-    mIn := GetMemory(fileStream.Size);
-    mOut := GetMemory(fileStream.Size * 10);
+    // Read magic
+    fileStream.Read(wordBuf, SizeOf(Word));
+    if (wordBuf <> PACK_FILE_MAGIC_LZO) then
+      Log.Write(lCritical, 'FileSystem: resource "' + aFileName + '" is not LZO, no magic found');
 
+    // Read original size
+    fileStream.Read(originalSize, SizeOf(LongInt));
+
+    // Prepare buffers
+    mIn  := GetMem(fileStream.Size - fileStream.Pos);
+    mOut := GetMem(originalSize);
+
+    // Read compressed data
     fileStream.Read(mIn^, fileStream.Size);
 
     DecompressData(mIn, fileStream.Size, mOut, outSize);
 
+    if (outSize <> originalSize) then
+      Log.Write(lError, 'FileSystem: error occured while decompressing LZO compressed resource "'
+          + aFileName);
+
     Result := TglrStream.Init(mOut, outSize, True);
 
     fileStream.Free();
-    FreeMemory(mIn);
+    FreeMem(mIn);
     Log.Write(lInformation, 'FileSystem: read successfully');
     Exit();
   end
+
+  // Try read from pack files
   else if (aSearchInPackFiles) then
-    Log.Write(lCritical, 'FileSystem.ReadResourceLZO from pack files is not implemented');
+    for i := 0 to Length(fPackFiles) - 1 do
+    begin
+      fileIndex := fPackFiles[i].GetFileIndex(aFileName);
+      if (fileIndex <> -1) then
+      begin
+        Log.Write(lInformation, 'FileSystem: start reading resource "' + aFileName + '" from pack file "' + fPackFiles[i].PackName + '"');
+        Result := fPackFiles[i].ReadResource(fileIndex);
+        Log.Write(lInformation, 'FileSystem: read successfully');
+        Exit();
+      end;
+    end;
 
   Log.Write(lError, 'FileSystem: requested resource "' + aFileName + '" was not found');
 end;

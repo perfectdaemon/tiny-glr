@@ -5,18 +5,44 @@ uses
   glr_filesystem,
   glr_os_win;
 
-  procedure PackData(const aOutputFileName, aPackDir: AnsiString);
+  procedure WriteInfo(info: AnsiString);
+  begin
+    WriteLn(info);
+    Log.Write(lInformation, info);
+  end;
+
+  procedure WriteError(error: AnsiString);
+  begin
+    WriteLn(error);
+    Log.Write(lCritical, error);
+    Halt(1);
+  end;
+
+  procedure PackData(const aPackDir, aOutputFileName: AnsiString; useLZO: Boolean);
   var
     files: TglrStringList;
-    i: Integer;
     PackStream, FileStream: TglrStream;
-    buffer: Pointer;
+
+    buffer, compressedBuffer: Pointer;
     headers: array of TglrPackFileResource;
-    bytesRead, stride: LongWord;
+
+    bytesRead, stride: LongInt;
     count: Word;
+    wordBuf: Word;
+    compressedSize: LongInt;
+
+    info: String;
+
+    i: Integer;
   begin
-    Log.Write(lInformation, 'Start packing dir "' + aPackDir + '" into pack file "' + aOutputFileName + '"');
-    files := TglrStringList.Create(1);
+    // Logging start
+    info := 'Start packing dir "' + aPackDir + '" into pack file "' + aOutputFileName + '"';
+    if (useLZO) then
+      info += ' using LZO compression';
+    WriteInfo(info);
+
+    // Get files from input dir excluding .glrpack-files
+    files := TglrStringList.Create();
     FindFiles(aPackDir, '', files);
     i := 0;
     while (i < files.Count) do
@@ -27,48 +53,73 @@ uses
         i += 1;
     end;
     count := files.Count;
-    Log.Write(lInformation, 'Files found: ' + Convert.ToString(count));
-
-    PackStream := TglrStream.Init(aOutputFileName, True);
-    PackStream.Write(PACK_FILE_MAGIC, SizeOf(Word));
-    PackStream.Write(count, SizeOf(Word));
+    WriteInfo('Files found: ' + Convert.ToString(count));
 
     SetLength(headers, count);
-    //Skip header data - we will write it later
+
+    // Create output stream and write magic header and file count
+    PackStream := TglrStream.Init(aOutputFileName, True);
+    if (useLZO) then
+      wordBuf := PACK_FILE_MAGIC_LZO
+    else
+      wordBuf := PACK_FILE_MAGIC;
+    PackStream.Write(wordBuf, SizeOf(Word));
+    PackStream.Write(count, SizeOf(Word));
+
+    // Skip header data - we will write it later
     PackStream.Pos := 2 * SizeOf(Word) + SizeOf(TglrPackFileResource) * count;
     stride := PackStream.Pos;
 
+    // Write file data itself
     for i := 0 to count - 1 do
     begin
-      Log.Write(lInformation, 'Start packing "' + files[i] + '"...');
+      WriteInfo('Start packing "' + files[i] + '"...');
       FileStream := TglrStream.Init(files[i]);
 
-      GetMem(buffer, FileStream.Size);
+      // Read file into buffer
+      buffer := GetMem(FileStream.Size);
       bytesRead := FileStream.Read(buffer^, FileStream.Size);
-      if (bytesRead <> LongWord(FileStream.Size)) then
-        Log.Write(lCritical, 'Error while read file "' + files[i] + '". Number of total bytes read not equal to file size');
-      PackStream.Write(buffer^, FileStream.Size);
-      FreeMem(buffer, FileStream.Size);
+      if (bytesRead <> FileStream.Size) then
+        WriteError('Error occured while reading file "' + files[i] + '". Number of total bytes read is not equal to file size');
 
-      headers[i].fFileName := files[i];
-      headers[i].fSize := LongWord(FileStream.Size);
-      headers[i].fStride := stride;
+      // if lzo compression is not used just copy pointer
+      if (not useLZO) then
+      begin
+        compressedBuffer := buffer;
+        compressedSize := FileStream.Size;
+      end
+      else
+      begin
+        compressedBuffer := GetMem(FileStream.Size);
+        CompressData(buffer, FileStream.Size, compressedBuffer, compressedSize);
+        FreeMem(buffer);
+      end;
 
-      stride += LongWord(FileStream.Size);
+      // Write data (compressed or not) info output stream
+      PackStream.Write(compressedBuffer^, compressedSize);
+      FreeMem(compressedBuffer);
+
+      headers[i].FileName := files[i];
+      headers[i].CompressedSize := compressedSize;
+      headers[i].OriginalSize := FileStream.Size;
+      headers[i].Stride := stride;
+
+      stride += headers[i].CompressedSize;
       FileStream.Free();
-      Log.Write(lInformation, '... success!');
+      WriteInfo('... success!');
     end;
 
-    Log.Write(lInformation, 'Start writing headers...');
+    // Write header data
+    WriteInfo('Start writing headers...');
     PackStream.Pos := 2 * SizeOf(Word);
     for i := 0 to count - 1 do
     begin
-      PackStream.WriteAnsi(headers[i].fFileName);
-      PackStream.Write(headers[i].fStride, SizeOf(LongWord));
-      PackStream.Write(headers[i].fSize, SizeOf(LongWord));
+      PackStream.WriteAnsi(headers[i].FileName);
+      PackStream.Write(headers[i].Stride, SizeOf(LongInt));
+      PackStream.Write(headers[i].CompressedSize, SizeOf(LongInt));
+      PackStream.Write(headers[i].OriginalSize, SizeOf(LongInt));
     end;
-    Log.Write(lInformation, '... success!');
-//    PackStream.Write(headers, SizeOf(TglrPackFileResource) * count);
+    WriteInfo('... success!');
     PackStream.Free();
   end;
 
@@ -78,40 +129,93 @@ uses
     mIn, mOut: Pointer;
     compressedSize: LongInt;
   begin
-    Log.Write(lInformation, 'Start packing file "' + aInputFileName + '" into LZO file "' + aOutputFileName + '"');
+    WriteInfo('Start packing file "' + aInputFileName + '" into LZO file "' + aOutputFileName + '"');
     if (not FileExists(aInputFileName)) then
     begin
-      Log.Write(lCritical, 'File "' + aInputFileName + '" was not found');
+      WriteError('File "' + aInputFileName + '" not found');
       Exit();
     end;
 
     inputStream := TglrStream.Init(aInputFileName);
     outputStream := TglrStream.Init(aOutputFileName, True);
 
-    mIn := GetMemory(inputStream.Size);
-    mOut := GetMemory(inputStream.Size);
+    mIn := GetMem(inputStream.Size);
+    mOut := GetMem(inputStream.Size);
 
     inputStream.Read(mIn^, inputStream.Size);
 
     CompressData(mIn, inputStream.Size, mOut, compressedSize);
 
+    // Structure:
+    // - 2 bytes magic
+    // - 4 bytes original size
+    // - file
+    outputStream.Write(PACK_FILE_MAGIC_LZO, SizeOf(Word));
+    outputStream.Write(inputStream.Size, SizeOf(LongInt));
     outputStream.Write(mOut^, compressedSize);
 
     inputStream.Free();
     outputStream.Free();
     FreeMemory(mIn);
     FreeMemory(mOut);
-    Log.Write(lInformation, '... success!');
+    WriteInfo('... success!');
+  end;
+
+
+type
+  TCommandLineFlag = (kLZO);
+
+const
+  FLAG_NAMES: array[Low(TCommandLineFlag)..High(TCommandLineFlag)] of String =
+    ('-lzo');
+
+var
+  command : String; // First param, command name
+  input   : String; // Second param, usually original file/folder
+  output  : String; // Third param, new pack name / file name
+
+  flags: array[Low(TCommandLineFlag)..High(TCommandLineFlag)] of Boolean =
+    (False);
+
+  // Read and parse param string array
+  procedure ReadParams();
+  var
+    i: Integer;
+    j: TCommandLineFlag;
+  begin
+    if (Paramcount > 1) then
+      command := ParamStr(1)
+    else
+      WriteError('Command line params not found');
+
+    if (Paramcount > 2) then
+      input := ParamStr(2);
+    if (Paramcount > 3) then
+      output := ParamStr(3);
+
+    // looking for flags
+    if (Paramcount > 4) then
+      for i := 4 to Paramcount do
+        for j := Low(TCommandLineFlag) to High(TCommandLineFlag) do
+          if ParamStr(i) = FLAG_NAMES[j] then
+          begin
+            flags[j] := True;
+            break;
+          end;
   end;
 
 begin
   Log.Init('pack.log');
 
-//  PackData('data/p1.glrpack', 'data');
-  if (ParamStr(1) = '-pack') then
-    PackData(ParamStr(2), ParamStr(3))
-  else if (ParamStr(1) = '-file') then
-    PackFileLZO(ParamStr(2), ParamStr(3));
+  ReadParams();
+
+  if (command = '-pack') then
+    PackData(input, output, flags[kLZO])
+
+  else if (command = '-file') then
+    if (flags[kLZO]) then
+      PackFileLZO(input, output);
+
   Log.Deinit();
 end.
 
