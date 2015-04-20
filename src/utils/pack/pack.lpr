@@ -18,7 +18,7 @@ uses
     Halt(1);
   end;
 
-  procedure PackData(const aPackDir, aOutputFileName: AnsiString; useLZO: Boolean);
+  procedure PackData(const inputDir, outputFileName: AnsiString; useLZO: Boolean);
   var
     files: TglrStringList;
     PackStream, FileStream: TglrStream;
@@ -36,14 +36,14 @@ uses
     i: Integer;
   begin
     // Logging start
-    info := 'Start packing dir "' + aPackDir + '" into pack file "' + aOutputFileName + '"';
+    info := 'Start packing dir "' + inputDir + '" into pack file "' + outputFileName + '"';
     if (useLZO) then
       info += ' using LZO compression';
     WriteInfo(info);
 
     // Get files from input dir excluding .glrpack-files
     files := TglrStringList.Create();
-    FindFiles(aPackDir, '', files);
+    FindFiles(inputDir, '', files);
     i := 0;
     while (i < files.Count) do
     begin
@@ -58,7 +58,7 @@ uses
     SetLength(headers, count);
 
     // Create output stream and write magic header and file count
-    PackStream := TglrStream.Init(aOutputFileName, True);
+    PackStream := TglrStream.Init(outputFileName, True);
     if (useLZO) then
       wordBuf := PACK_FILE_MAGIC_LZO
     else
@@ -123,21 +123,21 @@ uses
     PackStream.Free();
   end;
 
-  procedure PackFileLZO(const aInputFileName, aOutputFileName: AnsiString);
+  procedure PackFileLZO(const inputFileName, outputFileName: AnsiString);
   var
     inputStream, outputStream: TglrStream;
     mIn, mOut: Pointer;
     compressedSize: LongInt;
   begin
-    WriteInfo('Start packing file "' + aInputFileName + '" into LZO file "' + aOutputFileName + '"');
-    if (not FileExists(aInputFileName)) then
+    WriteInfo('Start packing file "' + inputFileName + '" into LZO file "' + outputFileName + '"');
+    if (not FileExists(inputFileName)) then
     begin
-      WriteError('File "' + aInputFileName + '" not found');
+      WriteError('File "' + inputFileName + '" not found');
       Exit();
     end;
 
-    inputStream := TglrStream.Init(aInputFileName);
-    outputStream := TglrStream.Init(aOutputFileName, True);
+    inputStream := TglrStream.Init(inputFileName);
+    outputStream := TglrStream.Init(outputFileName, True);
 
     mIn := GetMem(inputStream.Size);
     mOut := GetMem(inputStream.Size);
@@ -149,7 +149,7 @@ uses
     // Structure:
     // - 2 bytes magic
     // - 4 bytes original size
-    // - file
+    // - file itself
     outputStream.Write(PACK_FILE_MAGIC_LZO, SizeOf(Word));
     outputStream.Write(inputStream.Size, SizeOf(LongInt));
     outputStream.Write(mOut^, compressedSize);
@@ -183,18 +183,18 @@ var
     i: Integer;
     j: TCommandLineFlag;
   begin
-    if (Paramcount > 1) then
+    if (Paramcount > 0) then
       command := ParamStr(1)
     else
       WriteError('Command line params not found');
 
-    if (Paramcount > 2) then
+    if (Paramcount > 1) then
       input := ParamStr(2);
-    if (Paramcount > 3) then
+    if (Paramcount > 2) then
       output := ParamStr(3);
 
     // looking for flags
-    if (Paramcount > 4) then
+    if (Paramcount > 3) then
       for i := 4 to Paramcount do
         for j := Low(TCommandLineFlag) to High(TCommandLineFlag) do
           if ParamStr(i) = FLAG_NAMES[j] then
@@ -213,8 +213,7 @@ begin
     PackData(input, output, flags[kLZO])
 
   else if (command = '-file') then
-    if (flags[kLZO]) then
-      PackFileLZO(input, output);
+    PackFileLZO(input, output);
 
   Log.Deinit();
 end.

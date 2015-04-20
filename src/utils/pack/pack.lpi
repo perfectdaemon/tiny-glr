@@ -29,7 +29,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="-pack &quot;default.glrpack&quot; &quot;default assets/&quot;"/>
+        <CommandLineParams Value="-pack &quot;default assets/&quot; &quot;default.glrpack&quot;"/>
       </local>
     </RunParams>
     <Units Count="1">
