@@ -26,7 +26,9 @@ program lander;
 
 uses
   heaptrc,
-  tinyglr, uTweener,
+  glr_core,
+  glr_tween,
+  glr_utils,
   uMain;
 
 var

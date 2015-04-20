@@ -1067,7 +1067,7 @@ begin
   Randomize();
 
   Render.SetClearColor(0.15, 0.15, 0.15);
-  Font := TglrFont.Create(FileSystem.ReadResourceLZO('shooter/font.bmp', False));
+  Font := TglrFont.Create(FileSystem.ReadResourceLZO('shooter/font.fnt', False));
 
   MainMaterial := TglrMaterial.Create(Default.SpriteShader);
   MainMaterial.AddTexture({Default.BlankTexture}GenerateTexture(64, 32, 2), 'uDiffuse');
@@ -1088,7 +1088,7 @@ begin
   PopupManager := TPopupManager.Create(FontBatch);
 
   DebugText := TglrText.Create();
-  DebugText.Position := Vec3f(10, 10, 1);
+  DebugText.Position := Vec3f(10, 10, 10);
 
   PauseText := TglrText.Create();
   PauseText.Position := Vec3f(Render.Width / 2, 100, 30)

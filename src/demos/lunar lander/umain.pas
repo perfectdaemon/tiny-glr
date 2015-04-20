@@ -5,7 +5,13 @@ unit uMain;
 interface
 
 uses
-  tinyglr, glrmath, uBox2DImport, uSpace, uMoon, UPhysics2D;
+  glr_core, glr_math,
+  glr_render,
+  glr_render2d,
+  glr_scene,
+  glr_particles2d,
+  uBox2DImport, uSpace, uMoon,
+  UPhysics2D;
 
 const
   MAX_FUEL = 100.0;
@@ -96,8 +102,7 @@ type
     Scene, SceneHud: TglrScene;
 
     procedure OnFinish; override;
-    procedure OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-      aOtherParam: Integer); override;
+    procedure OnInput(Event: PglrInputEvent); override;
     procedure OnPause; override;
     procedure OnRender; override;
     procedure OnResize(aNewWidth, aNewHeight: Integer); override;
@@ -112,6 +117,8 @@ var
 implementation
 
 uses
+  glr_filesystem,
+  glr_utils,
   UPhysics2DTypes;
 
 { TFuelLevel }
@@ -171,7 +178,7 @@ begin
   Material := TglrMaterial.Create(Default.SpriteShader);
   Material.AddTexture(Atlas, 'uDiffuse');
 
-  Font := TglrFont.Create(FileSystem.ReadResource('lander/Hattori Hanzo17b.bmp'));
+  Font := TglrFont.Create(FileSystem.ReadResource('lander/AmazingGrotesk19.fnt'));
 
   MoonTexture := TglrTexture.Create(FileSystem.ReadResource('lander/moon.tga'), extTga, True);
   MoonTexture.SetWrapS(wRepeat);
@@ -254,22 +261,18 @@ begin
   FontBatchHud := TglrFontBatch.Create(Font);
 
   Scene := TglrScene.Create();
-  Scene.Camera.ProjectionMode := pmOrtho;
-  Scene.Camera.ProjectionModePivot := pCenter;
-  Scene.Camera.SetCamera(
+  Scene.Camera.SetProjParams(0, 0, Render.Width, Render.Height, 90, -1, 200, pmOrtho, pCenter);
+  Scene.Camera.SetViewParams(
     Vec3f(Render.Width / 2, Render.Height / 2, 100),
     Vec3f(Render.Width / 2, Render.Height / 2, 0),
     Vec3f(0, 1, 0));
-  Scene.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
 
   SceneHud := TglrScene.Create();
-  SceneHud.Camera.ProjectionMode := pmOrtho;
-  SceneHud.Camera.ProjectionModePivot := pTopLeft;
-  SceneHud.Camera.SetCamera(
+  SceneHud.Camera.SetProjParams(0, 0, Render.Width, Render.Height, 90, -1, 200, pmOrtho, pTopLeft);
+  SceneHud.Camera.SetViewParams(
     Vec3f(0, 0, 100),
     Vec3f(0, 0, 0),
     Vec3f(0, 1, 0));
-  SceneHud.Camera.Viewport(0, 0, Render.Width, Render.Height, 90, -1, 200);
 
   FuelLevel := TFuelLevel.Create();
 
@@ -496,14 +499,13 @@ begin
   FontBatchHud.Free();
 end;
 
-procedure TGame.OnInput(aType: TglrInputType; aKey: TglrKey; X, Y,
-  aOtherParam: Integer);
+procedure TGame.OnInput(Event: PglrInputEvent);
 var
   i: Integer;
   absMousePos: TglrVec2f;
   vertexAdded: Boolean;
 begin
-  if (aType = itKeyUp) and (aKey = kE) then
+  if (Event.InputType = itKeyUp) and (Event.Key = kE) then
   begin
     Moon.EditMode := not Moon.EditMode;
     if Moon.EditMode then
@@ -519,12 +521,12 @@ begin
   if not Moon.EditMode then
   begin
 
-    if (aType = itKeyDown) and (aKey = kEscape) then
+    if (Event.InputType = itKeyDown) and (Event.Key = kEscape) then
       Core.Quit();
 
     if fGameStatus = sPause then
     begin
-      if (aType = itKeyDown) and (aKey = kReturn) then
+      if (Event.InputType = itKeyDown) and (Event.Key = kReturn) then
       begin
         Game.OnFinish();
         Game.OnStart();
@@ -535,8 +537,8 @@ begin
   //Editor mode
   else
   begin
-    if aType = itKeyUp then
-      case aKey of
+    if Event.InputType = itKeyUp then
+      case Event.Key of
         kT: begin
               if fEditType = etVertices then
               begin
@@ -562,22 +564,22 @@ begin
         k2, k3, k4, k5:
           if (fEditType = etLandingZones) and (fSelectedObjectIndex <> -1) then
           begin
-            Moon.LandingZones[fSelectedObjectIndex].Multiply := Ord(aKey) - Ord(k0);
+            Moon.LandingZones[fSelectedObjectIndex].Multiply := Ord(Event.Key) - Ord(k0);
             Moon.LandingZones[fSelectedObjectIndex].Update();
           end;
 
       end;
 
-    absMousePos := Scene.Camera.WindowPosToCameraPos(Core.Input.MousePos);
+    absMousePos := Scene.Camera.ScreenToWorld(Core.Input.MousePos);
 
-    if (aType = itTouchDown) and (aKey = kLeftButton) then
+    if (Event.InputType = itTouchDown) and (Event.Key = kLeftButton) then
       case fEditType of
         etVertices:     fSelectedObjectIndex := Moon.GetVertexIndexAtPos(absMousePos);
         etLandingZones: fSelectedObjectIndex := Moon.GetLandingZoneAtPos(absMousePos);
       end;
 
 
-    if (aType = itTouchDown) and (aKey = kRightButton) then
+    if (Event.InputType = itTouchDown) and (Event.Key = kRightButton) then
       if fEditType = etVertices then
       begin
         i := Moon.GetVertexIndexAtPos(absMousePos);
@@ -610,7 +612,7 @@ begin
           Moon.DeleteLandingZone(i);
       end;
 
-    if (aType = itTouchMove) and (aKey = kLeftButton) then
+    if (Event.InputType = itTouchMove) and (Event.Key = kLeftButton) then
       if fSelectedObjectIndex <> -1 then
         if fEditType = etVertices then
         begin
@@ -626,11 +628,11 @@ begin
         end;
 
 
-    if (aType = itTouchUp) and (aKey = kLeftButton) then
+    if (Event.InputType = itTouchUp) and (Event.Key = kLeftButton) then
       fSelectedObjectIndex := -1;
 
-    if aType = itWheel then
-      Scene.Camera.Scale := Scene.Camera.Scale + (aOtherParam * 0.1);
+    if Event.InputType = itWheel then
+      Scene.Camera.Scale := Scene.Camera.Scale + (Event.W * 0.1);
   end;
 end;
 

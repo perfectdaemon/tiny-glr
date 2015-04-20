@@ -167,7 +167,7 @@ end;
 
 procedure TGame.CreateFont;
 begin
-  Font := TglrFont.Create(FileSystem.ReadResource('data/Arial14b.bmp'));
+  Font := TglrFont.Create(FileSystem.ReadResource('data/AmazingGrotesk19.fnt'));
   Text := TglrText.Create(UTF8Decode('Hello, world! / Привет, мир! ' + #13#10 +
     'This time it will go over platforms... / На этот раз все будет кроссплатформенно...'));
   Text.LetterSpacing := 1;

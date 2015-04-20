@@ -31,62 +31,42 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="11">
+    <Units Count="7">
       <Unit0>
         <Filename Value="lander.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="lander"/>
       </Unit0>
       <Unit1>
-        <Filename Value="..\..\engine\glrMath.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="glrMath"/>
-      </Unit1>
-      <Unit2>
-        <Filename Value="..\..\engine\ogl.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="ogl"/>
-      </Unit2>
-      <Unit3>
-        <Filename Value="..\..\engine\tinyglr.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="tinyglr"/>
-      </Unit3>
-      <Unit4>
         <Filename Value="uspace.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uSpace"/>
-      </Unit4>
-      <Unit5>
+      </Unit1>
+      <Unit2>
         <Filename Value="..\..\engine\box2d\uBox2DImport.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uBox2DImport"/>
-      </Unit5>
-      <Unit6>
+      </Unit2>
+      <Unit3>
         <Filename Value="..\..\engine\box2d\UPhysics2D.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="UPhysics2D"/>
-      </Unit6>
-      <Unit7>
+      </Unit3>
+      <Unit4>
         <Filename Value="umoon.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uMoon"/>
-      </Unit7>
-      <Unit8>
+      </Unit4>
+      <Unit5>
         <Filename Value="umain.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uMain"/>
-      </Unit8>
-      <Unit9>
+      </Unit5>
+      <Unit6>
         <Filename Value="..\..\engine\box2d\UPhysics2DTypes.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="UPhysics2DTypes"/>
-      </Unit9>
-      <Unit10>
-        <Filename Value="..\..\engine\uTweener.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="uTweener"/>
-      </Unit10>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

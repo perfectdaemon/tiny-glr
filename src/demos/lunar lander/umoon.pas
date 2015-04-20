@@ -5,7 +5,10 @@ unit uMoon;
 interface
 
 uses
-  tinyglr, glrMath, uPhysics2d;
+  glr_render,
+  glr_render2d,
+  glr_utils,
+  glr_math, uPhysics2d;
 
 type
 

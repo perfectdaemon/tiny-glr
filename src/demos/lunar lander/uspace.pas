@@ -5,7 +5,7 @@ unit uSpace;
 interface
 
 uses
-  tinyglr, glrmath;
+  glr_render, glr_render2d, glr_math, glr_scene;
 
 const
   STARS_PER_LAYER = 100;
