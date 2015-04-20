@@ -302,8 +302,8 @@ begin
     for j := 0 to Length(fPackFiles[l].Files) - 1 do
       Log.Write(lInformation,
       #9#9 + fPackFiles[l].Files[j].FileName
-        + ' - c ' + Convert.ToString(Integer(fPackFiles[l].Files[j].CompressedSize)) + ' bytes' + #9
-        + ' - o ' + Convert.ToString(Integer(fPackFiles[l].Files[j].OriginalSize)) + ' bytes');
+        + #9#9' - c ' + Convert.ToString(Integer(fPackFiles[l].Files[j].CompressedSize)) + ' bytes'
+        + #9#9' - o ' + Convert.ToString(Integer(fPackFiles[l].Files[j].OriginalSize)) + ' bytes');
     stream.Free();
     l += 1;
   end;
