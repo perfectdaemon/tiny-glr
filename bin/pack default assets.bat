@@ -1,1 +1,1 @@
-pack -pack "default.glrpack" "default assets/"
+pack -pack "default assets/" "default.glrpack" -lzo

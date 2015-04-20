@@ -1,1 +1,1 @@
-pack -pack "lander.glrpack" "lander/"
+pack -pack "lander/" "lander.glrpack" 
