@@ -3,7 +3,8 @@ unit uBox2DImport;
 interface
 
 uses
-  tinyglr, glrMath,
+  glr_render2d,
+  glr_math,
   UPhysics2D, UPhysics2DTypes;
 
 const
