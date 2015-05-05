@@ -280,7 +280,9 @@ type
     class procedure Resize(aWidth, aHeight: Integer);
     class procedure ResetStates();
     class procedure Clear(aClearMask: TglrClearMask);
-    class procedure SetClearColor(R, G, B: Single);
+    class procedure SetClearColor(R, G, B: Single); overload;
+    class procedure SetClearColor(Color: TglrVec4f); overload;
+    class procedure SetClearColor(Color: TglrVec3f); overload;
 
     class procedure SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
     class procedure SetCullMode(aCullMode: TglrCullMode);
@@ -969,6 +971,16 @@ end;
 class procedure Render.SetClearColor(R, G, B: Single);
 begin
   gl.ClearColor(R, G, B, 1.0);
+end;
+
+class procedure Render.SetClearColor(Color: TglrVec4f);
+begin
+  SetClearColor(Color.x, Color.y, Color.z);
+end;
+
+class procedure Render.SetClearColor(Color: TglrVec3f);
+begin
+  SetClearColor(Color.x, Color.y, Color.z);
 end;
 
 class procedure Render.SetViewPort(aLeft, aTop, aWidth, aHeight: Integer);
