@@ -184,7 +184,7 @@ begin
   SelectObject(MDC, FNT);
   GetTextMetricsW(MDC, @TM);
   MaxWidth  := TM.tmMaxCharWidth;
-  MaxHeight := TM.tmHeight;
+  MaxHeight := TM.tmHeight + 1;
   CharData  := GetMemory(MaxWidth * MaxHeight * 4);
 
   BMP := CreateCompatibleBitmap(DC, MaxWidth, MaxHeight);
