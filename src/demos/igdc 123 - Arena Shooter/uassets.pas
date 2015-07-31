@@ -4,6 +4,7 @@ interface
 
 uses
   glr_scene,
+  glr_math,
   glr_render,
   glr_render2d;
 
@@ -47,6 +48,24 @@ type
     class procedure LoadMenu();
   end;
 
+  { Colors }
+
+  Colors = class
+    class var
+      Red, White, Black,
+
+      MenuButton, MenuButtonText, MenuButtonOver,
+      MenuSlider, MenuSliderOver,
+
+      MenuText,
+
+      MenuBackground
+
+      : TglrVec4f;
+
+    class procedure Load();
+  end;
+
 const
   R_GUI_ATLAS_BUTTON      = 'button.png';
   R_GUI_ATLAS_BUTTON_OVER = 'button_over.png';
@@ -59,7 +78,7 @@ const
 implementation
 
 uses
-  glr_filesystem, glr_core, glr_math;
+  glr_filesystem, glr_core;
 
 const
   R_BASE = 'data/';
@@ -68,6 +87,23 @@ const
   R_GUI_ATLAS_TXT = R_BASE + 'gui.atlas';
 
   R_FONT_MAIN = R_BASE + 'HelveticaLight19b.fnt';
+
+{ Colors }
+
+class procedure Colors.Load;
+begin
+  Red := Color4ub(241, 0, 0);
+  White := Color4ub(255, 255, 255);
+  Black := Color4ub(0, 0, 0);
+
+  MenuButton      := Red;   //Color4ub(80, 160, 255);
+  MenuButtonText  := White; //Color4ub(230, 230, 230);
+  MenuButtonOver  := White; //Color4ub(160, 250, 250);
+  MenuSlider      := Black;
+  MenuSliderOver  := Red;
+  MenuText        := Black;
+  MenuBackground  := White; //:= Color4ub(20, 50, 110);
+end;
 
 { Texts }
 

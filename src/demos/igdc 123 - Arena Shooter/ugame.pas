@@ -43,11 +43,9 @@ uses
 
 procedure TGame.OnStart;
 begin
-  Render.SetClearColor(0.1, 0.25, 0.30);
-
   Assets.LoadBase();
-
   Texts.LoadMenu();
+  Colors.Load();
 
   Tweener := TglrTweener.Create();
 

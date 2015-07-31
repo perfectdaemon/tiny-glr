@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="6">
+    <Units Count="8">
       <Unit0>
         <Filename Value="igdc123.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -62,6 +62,16 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uGSGame"/>
       </Unit5>
+      <Unit6>
+        <Filename Value="uunit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uUnit"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="uobjects.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uObjects"/>
+      </Unit7>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

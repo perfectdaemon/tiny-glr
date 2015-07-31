@@ -56,12 +56,12 @@ begin
   Button := TglrGuiButton.Create();
   with Button do
   begin
-    SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
+    SetVerticesColor(Colors.MenuButton);
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON);
     OverTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON_OVER);
     TextLabel.Text := 'Button';
-    TextLabel.Position := Vec3f(-115, -12, 0);
-    TextLabel.Color := Color4f(1,1,1);
+    TextLabel.Position := Vec3f(-115, -15, 0);
+    TextLabel.Color := Colors.MenuButtonText;
     Position := Vec3f(Render.Width div 2, 240, 1);
     OnClick := ButtonClicked;
     Parent := Container;
@@ -73,7 +73,7 @@ var
   v: TglrVec3f;
 begin
   v := Vec3f(1,1,1);
-  (aObject as TglrGuiButton).SetVerticesColor(Vec4f(v.Lerp(Vec3f(0.5, 0.7, 0.5), aValue), 1.0));
+  (aObject as TglrGuiButton).SetVerticesColor(Vec4f(v.Lerp(Vec3f(Colors.MenuButton), aValue), 1.0));
 end;
 
 procedure TglrMainMenu.ButtonClicked(Sender: TglrGuiElement;
@@ -120,6 +120,7 @@ end;
 
 procedure TglrMainMenu.OnLoadStarted;
 begin
+  Render.SetClearColor(Colors.MenuBackground);
   Game.Tweener.AddTweenPSingle(@Container.Position.y, tsExpoEaseIn, -Render.Height, 0, 1.5);
   inherited OnLoadStarted;
 end;
@@ -155,6 +156,7 @@ begin
   GameName.TextLabel.PivotPoint := Vec2f(0.5, 0.0);
   GameName.TextLabel.ShadowEnabled := True;
   GameName.TextLabel.ShadowOffset := Vec2f(4,4);
+  GameName.TextLabel.Color := Colors.MenuText;
   GameName.Parent := Container;
 
   AuthorName := TglrGuiLabel.Create();
@@ -164,6 +166,7 @@ begin
   AuthorName.TextLabel.PivotPoint := Vec2f(0.5, 0.5);
   AuthorName.TextLabel.ShadowEnabled := True;
   AuthorName.TextLabel.ShadowOffset := Vec2f(3,3);
+  AuthorName.TextLabel.Color := Colors.MenuText;
   AuthorName.Parent := Container;
 
   GuiManager := TglrGuiManager.Create(Assets.GuiMaterial, Assets.FontMain);

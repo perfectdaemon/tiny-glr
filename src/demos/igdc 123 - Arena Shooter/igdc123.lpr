@@ -2,7 +2,7 @@ program igdc123;
 
 uses
   uGame, glr_core, glr_utils, uGSMainMenu, uAssets, 
-uGSSettingsMenu, uGSGame;
+  uGSSettingsMenu, uGSGame, uUnit, uObjects;
 
 var
   InitParams: TglrInitParams;

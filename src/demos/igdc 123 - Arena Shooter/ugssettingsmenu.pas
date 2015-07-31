@@ -68,12 +68,12 @@ begin
   Button := TglrGuiButton.Create();
   with Button do
   begin
-    SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
+    SetVerticesColor(Colors.MenuButton);
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON);
     OverTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_BUTTON_OVER);
     TextLabel.Text := 'Button';
     TextLabel.Position := Vec3f(-115, -12, 0);
-    TextLabel.Color := Color4f(1,1,1);
+    TextLabel.Color := Colors.MenuButtonText;
     Position := Vec3f(Render.Width - Width / 2 - 50, Render.Height - Height - 80, 1);
     OnClick := ButtonClicked;
     Parent := Container;
@@ -85,7 +85,7 @@ var
   v: TglrVec3f;
 begin
   v := Vec3f(1,1,1);
-  (aObject as TglrGuiButton).SetVerticesColor(Vec4f(v.Lerp(Vec3f(0.5, 0.7, 0.5), aValue), 1.0));
+  (aObject as TglrGuiButton).SetVerticesColor(Vec4f(v.Lerp(Vec3f(Colors.MenuButton), aValue), 1.0));
 end;
 
 procedure TglrSettingsMenu.ButtonClicked(Sender: TglrGuiElement;
@@ -109,12 +109,12 @@ begin
   with Slider do
   begin
     Position := Vec3f(Render.Width div 2, 150, 5);
-    SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
+    SetVerticesColor(Colors.MenuSlider);
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_SLIDER_BACK);
     Fill.SetTextureRegion(Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_SLIDER_FILL));
-    Fill.SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
+    Fill.SetVerticesColor(Colors.MenuSlider);
     Button.NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_SLIDER_BTN);
-    Button.SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
+    Button.SetVerticesColor(Colors.MenuSlider);
     Parent := Container;
     OnValueChanged := SliderValueChanged;
     OnMouseOver := SliderOver;
@@ -126,6 +126,7 @@ begin
 
   SLabel := TglrGuiLabel.Create();
   SLabel.SetFor(Slider, lpLeft, Vec2f(-15, 0));
+  SLabel.TextLabel.Color := Colors.MenuText;
 end;
 
 procedure TglrSettingsMenu.SliderOver(Sender: TglrGuiElement;
@@ -133,13 +134,13 @@ procedure TglrSettingsMenu.SliderOver(Sender: TglrGuiElement;
 begin
   if (Sender.IsMouseOver) then
   begin
-    TglrGuiSlider(Sender).Button.SetVerticesColor(Vec4f(0.7, 0.7, 0.5, 1.0));
-    TglrGuiSlider(Sender).Fill.SetVerticesColor(Vec4f(0.7, 0.7, 0.5, 1.0));
+    TglrGuiSlider(Sender).Button.SetVerticesColor(Colors.MenuSliderOver);
+    TglrGuiSlider(Sender).Fill.SetVerticesColor(Colors.MenuSliderOver);
   end
   else
   begin
-    TglrGuiSlider(Sender).Button.SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
-    TglrGuiSlider(Sender).Fill.SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
+    TglrGuiSlider(Sender).Button.SetVerticesColor(Colors.MenuSlider);
+    TglrGuiSlider(Sender).Fill.SetVerticesColor(Colors.MenuSlider);
   end;
 end;
 
@@ -158,13 +159,14 @@ begin
     NormalTextureRegion := Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_CHECKBOX);
     Check.SetTextureRegion(Assets.GuiAtlas.GetRegion(R_GUI_ATLAS_CHECKBOX_C));
     Position := Vec3f(Render.Width div 2, 250, 5);
-    SetVerticesColor(Vec4f(0.5, 0.7, 0.5, 1.0));
-    Check.SetVerticesColor(Vec4f(0.7, 0.7, 0.5, 1.0));
+    SetVerticesColor(Colors.MenuSlider);
+    Check.SetVerticesColor(Colors.MenuSliderOver);
     Parent := Container;
   end;
 
   CBLabel := TglrGuiLabel.Create();
   CBLabel.SetFor(CheckBox, lpLeft, Vec2f(-145, 0));
+  CBLabel.TextLabel.Color := Colors.MenuText;
 end;
 
 
@@ -206,8 +208,8 @@ begin
 
   CheckBoxAndLabelInit(ImportantCheckBox1, ICBLabel1);
   CheckBoxAndLabelInit(ImportantCheckBox2, ICBLabel2);
-  ICBLabel1.TextLabel.Text := 'Some option';
-  ICBLabel2.TextLabel.Text := 'Other option';
+  ICBLabel1.TextLabel.Text := 'Option 1';
+  ICBLabel2.TextLabel.Text := 'Option 2';
 
   ImportantCheckBox2.Position.y += 50;
 

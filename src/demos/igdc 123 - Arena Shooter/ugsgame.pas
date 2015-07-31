@@ -11,14 +11,15 @@ type
   { TglrTheGame }
 
   TglrTheGame = class (TglrGameScreen)
-
   public
+    //Player: TglrPlayer;
     constructor Create(ScreenName: UnicodeString); override;
     destructor Destroy; override;
 
     procedure OnInput(Event: PglrInputEvent); override;
     procedure OnRender; override;
     procedure OnUpdate    (const DeltaTime: Double); override;
+
     procedure OnLoadStarted(); override;
     procedure OnUnloadStarted(); override;
   end;
