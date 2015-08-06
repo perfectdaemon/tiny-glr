@@ -39,6 +39,9 @@ type
     procedure WriteUnicode(const Value: WideString);
     property Size: LongInt read FSize;
     property Pos: LongInt read FPos write SetPos;
+
+    function ReadToEndAnsi(): AnsiString;
+    function ReadToEndUnicode(): WideString;
   end;
 
   TglrListCompareFunc = function (Item1, Item2: Pointer): LongInt;
@@ -431,6 +434,33 @@ begin
   Len := Length(Value);
   Write(Len, SizeOf(Len));
   Write(Value[1], Len * 2);
+end;
+
+function TglrStream.ReadToEndAnsi: AnsiString;
+var
+  bytesRead: Integer;
+  charPointer: PAnsiChar;
+begin
+  GetMem(charPointer, Self.Size + 1);
+  bytesRead := Self.Read(charPointer^, Self.Size);
+  charPointer[Self.Size] := #0;
+  Result := charPointer;
+  if (bytesRead <> Self.Size) then
+    Log.Write(lCritical, 'Stream.ReadToEndAnsi: Count of bytes read not equal to stream size');
+end;
+
+function TglrStream.ReadToEndUnicode: WideString;
+var
+  bytesRead: Integer;
+  charPointer: PWideChar;
+begin
+  GetMem(charPointer, Self.Size + 2);
+  bytesRead := Self.Read(charPointer^, Self.Size);
+  charPointer[Self.Size] := #0;
+  charPointer[Self.Size + 1] := #0;
+  Result := charPointer;
+  if (bytesRead <> Self.Size) then
+    Log.Write(lCritical, 'Stream.ReadToEndUnicode: Count of bytes read not equal to stream size');
 end;
 
 { TglrList<T> }
