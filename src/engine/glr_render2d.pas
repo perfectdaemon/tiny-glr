@@ -35,6 +35,7 @@ type
 
     procedure SetDefaultVertices(); virtual;//Sets vertices due to width, height, pivot point and rotation
     procedure SetDefaultTexCoords(); //Sets default texture coords
+    procedure SetFlippedTexCoords();
     procedure SetVerticesColor(aColor: TglrVec4f); virtual;
     procedure SetVerticesAlpha(aAlpha: Single); virtual;
     procedure SetSize(aWidth, aHeight: Single); overload;
@@ -102,6 +103,10 @@ type
     constructor Create(); virtual; overload;
     constructor Create(aStream: TglrStream;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
+    constructor Create(aStream: TglrStream;
+      aShader: TglrShaderProgram;
+      aFreeStreamOnFinish: Boolean = True); virtual; overload;
+
     destructor Destroy(); override;
   end;
 
@@ -234,6 +239,14 @@ begin
   Vertices[1].tex := Vec2f(1, 0);
   Vertices[2].tex := Vec2f(0, 0);
   Vertices[3].tex := Vec2f(0, 1);
+end;
+
+procedure TglrSprite.SetFlippedTexCoords;
+begin
+  Vertices[0].tex := Vec2f(1, 0);
+  Vertices[1].tex := Vec2f(1, 1);
+  Vertices[2].tex := Vec2f(0, 1);
+  Vertices[3].tex := Vec2f(0, 0);
 end;
 
 procedure TglrSprite.SetVerticesColor(aColor: TglrVec4f);
@@ -382,6 +395,18 @@ begin
 end;
 
 constructor TglrFont.Create(aStream: TglrStream; aFreeStreamOnFinish: Boolean);
+var
+  shader: TglrShaderProgram;
+begin
+  if Default.fInited then
+    shader := Default.SpriteShader
+  else
+    shader := nil;
+  Create(aStream, shader, aFreeStreamOnFinish);
+end;
+
+constructor TglrFont.Create(aStream: TglrStream; aShader: TglrShaderProgram;
+  aFreeStreamOnFinish: Boolean);
 
   function CreateTexture(Stream: TglrStream): TglrTexture;
   var
@@ -413,11 +438,7 @@ var
   charCount, i: LongWord;
 begin
   inherited Create();
-  if Default.fInited then
-    Material := TglrMaterial.Create(Default.SpriteShader)
-  else
-    Material := TglrMaterial.Create(TglrShaderProgram(nil));
-
+  Material := TglrMaterial.Create(aShader);
   Texture := CreateTexture(aStream);
   Material.AddTexture(Texture, 'uDiffuse');
 
