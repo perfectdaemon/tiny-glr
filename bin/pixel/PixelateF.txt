@@ -1,0 +1,14 @@
+varying vec2 texCoord0;
+varying vec4 vColor;
+uniform sampler2D uDiffuse;
+uniform vec4 uColor;
+uniform float uPixelSize, uRTWidth, uRTHeight;
+
+void main(void)
+{
+  float dx = uPixelSize * ( 1. / uRTWidth );
+  float dy = uPixelSize * (1. / uRTHeight );
+  vec2 coord = vec2 (dx * floor( texCoord0.x / dx ),
+                     dy * floor( texCoord0.y / dy ));
+  gl_FragColor = uColor * vColor * texture2D( uDiffuse, coord );
+}
