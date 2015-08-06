@@ -101,11 +101,11 @@ type
     constructor Create(); virtual;
     destructor Destroy(); override;
 
-    //procedure AttachTexture(aTextureId: TglrTextureId);
+    procedure AttachTexture(aTextureId: TglrTextureId);
   end;
 
   TglrShaderType = (stVertex, stFragment);
-  TglrUniformType = (utVec1, utVec2, utVec3, utVec4, utMat4, utSampler);
+  TglrUniformType = (utVec1, utVec2, utVec3, utVec4, utMat4, utSampler, utInt);
 
   TglrUniformInfo = record
   	fType: TglrUniformType;
@@ -145,6 +145,7 @@ type
   end;
 
   TglrTexWrap = (wClamp, wRepeat, wClampToEdge, wClampToBorder, wMirrorRepeat);
+  TglrTexFilter = (fNearest, fLinear);
 
   TglrTextureExt = (extBmp, extTga);
 
@@ -163,12 +164,12 @@ type
     procedure SetWrapT(aWrap: TglrTexWrap);
     procedure SetWrapR(aWrap: TglrTexWrap);
 
-    //constructor Create(aData: Pointer; aCount: Integer; aFormat: TglrTextureFormat); virtual; overload;
+    procedure SetFilter(aFilter: TglrTexFilter);
+
     constructor Create(aData: Pointer; aWidth, aHeight: Integer; aFormat: TglrTextureFormat); virtual; overload;
     constructor Create(aStream: TglrStream; aExt: TglrTextureExt;
       aFreeStreamOnFinish: Boolean = True); virtual; overload;
-    //constructor CreateEmpty2D(aWidth, aHeight, aFormat: TGLConst);
-    //todo 1d, 3d
+
     destructor Destroy(); override;
 
     procedure Bind(const aSampler: Integer = 0);
@@ -257,6 +258,9 @@ type
 
   Render = class
   protected
+    class var fInternalVB: TglrVertexBuffer;
+    class var fInternalIB: TglrIndexBuffer;
+
     class var fBlendingMode: TglrBlendingMode;
     class var fCullMode: TglrCullMode;
     class var fPolygonMode: TglrPolygonMode;
@@ -271,6 +275,8 @@ type
 
     class var fStatTextureBind, fTriCount, fDIPCount: Integer;
     class var fWidth, fHeight: Integer;
+
+    class procedure CreateScreenQuad();
   public
     class var Params: TglrRenderParams;
 
@@ -300,6 +306,7 @@ type
     class procedure DrawTriangles(vBuffer: TglrVertexBuffer; iBuffer: TglrIndexBuffer;
       aStartIndex, aIndicesCount: Integer);
     class procedure DrawPoints(vBuffer: TglrVertexBuffer; aStart, aVertCount: Integer);
+    class procedure DrawScreenQuad(aMaterial: TglrMaterial);
 
     class property TextureBinds: Integer read fStatTextureBind;
     class property TriCount: Integer read fTriCount;
@@ -331,6 +338,9 @@ const
   // Texture wraps converter
   aWraps: array[Low(TglrTexWrap)..High(TglrTexWrap)] of TGLConst =
     (GL_CLAMP, GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT);
+
+  TEXTURE_FILTER: array[Low(TglrTexFilter)..High(TglrTexFilter)] of TGLConst =
+    (GL_NEAREST, GL_LINEAR);
 
   // Texture extensions converter
   TEXTURE_EXT: array[Low(TglrTextureExt)..High(TglrTextureExt)] of AnsiString =
@@ -440,6 +450,13 @@ destructor TglrFrameBuffer.Destroy;
 begin
   gl.DeleteFramebuffers(1, @Self.Id);
   inherited Destroy;
+end;
+
+procedure TglrFrameBuffer.AttachTexture(aTextureId: TglrTextureId);
+begin
+  Bind();
+  gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, aTextureId, 0);
+  Unbind();
 end;
 
 { TglrShaderProgram }
@@ -592,6 +609,7 @@ begin
       utVec4: gl.Uniform4fv(aIndex, aCount, aValue);
       utMat4: gl.UniformMatrix4fv(aIndex, aCount, False, aValue);
       utSampler: gl.Uniform1iv(aIndex, aCount, aValue);
+      utInt:  gl.Uniform1iv(aIndex, aCount, aValue);
     end;
 end;
 
@@ -646,6 +664,14 @@ procedure TglrTexture.SetWrapR(aWrap: TglrTexWrap);
 begin
   gl.BindTexture(Target, Self.Id);
   gl.TexParameteri(Target, GL_TEXTURE_WRAP_R, Ord(aWraps[aWrap]));
+  gl.BindTexture(Target, 0);
+end;
+
+procedure TglrTexture.SetFilter(aFilter: TglrTexFilter);
+begin
+  gl.BindTexture(Target, Self.Id);
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Ord(TEXTURE_FILTER[aFilter]));
+  gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Ord(TEXTURE_FILTER[aFilter]));
   gl.BindTexture(Target, 0);
 end;
 
@@ -905,6 +931,32 @@ end;
 
 { Render }
 
+
+class procedure Render.CreateScreenQuad;
+var
+  vData: array[0..3] of TglrVertexP3T2C4;
+const
+  iData: array[0..5] of Byte = (0, 1, 2, 2, 3, 0);
+begin
+  vData[0].col := Vec4f(1, 1, 1, 1);
+  vData[1].col := Vec4f(1, 1, 1, 1);
+  vData[2].col := Vec4f(1, 1, 1, 1);
+  vData[3].col := Vec4f(1, 1, 1, 1);
+
+  vData[0].tex := Vec2f(1, 0);
+  vData[1].tex := Vec2f(1, 1);
+  vData[2].tex := Vec2f(0, 1);
+  vData[3].tex := Vec2f(0, 0);
+
+  vData[0].vec := Vec3f(1, 1, 1);
+  vData[1].vec := Vec3f(1, 0, 1);
+  vData[2].vec := Vec3f(0, 0, 1);
+  vData[3].vec := Vec3f(0, 1, 1);
+
+  fInternalVB := TglrVertexBuffer.Create(@vData, 4, vfPos3Tex2Col4, uStaticDraw);
+  fInternalIB := TglrIndexBuffer.Create(@iData, 6, ifByte);
+end;
+
 class procedure Render.Init;
 var
   aStr: AnsiString;
@@ -918,18 +970,19 @@ begin
     'GLSL: ' + gl.GetString(TGLConst.GL_SHADING_LANGUAGE_VERSION);
   Log.Write(lInformation, aStr);
   {$endif}
+  CreateScreenQuad();
 end;
 
 class procedure Render.DeInit;
 begin
+  fInternalVB.Free();
+  fInternalIB.Free();
   gl.Free();
 end;
 
 class procedure Render.Resize(aWidth, aHeight: Integer);
 begin
   SetViewPort(0, 0, aWidth, aHeight);
-  fWidth := aWidth;
-  fHeight := aHeight;
 end;
 
 class procedure Render.ResetStates;
@@ -1180,6 +1233,16 @@ class procedure Render.DrawPoints(vBuffer: TglrVertexBuffer; aStart,
   aVertCount: Integer);
 begin
   Log.Write(lCritical, 'Render.DrawPoints not implemented');
+end;
+
+class procedure Render.DrawScreenQuad(aMaterial: TglrMaterial);
+begin
+  Render.Params.ViewProj.Ortho(0, 1, 1, 0, -1, 1);
+  Render.Params.ModelViewProj := Render.Params.ViewProj;
+
+  aMaterial.Bind();
+  Render.Clear(cmAll);
+  DrawTriangles(fInternalVB, fInternalIB, 0, 6);
 end;
 
 end.
