@@ -52,7 +52,7 @@ type
 
   Colors = class
     class var
-      Red, White, Black,
+      Red, White, Black, Gray,
 
       MenuButton, MenuButtonText, MenuButtonOver,
       MenuSlider, MenuSliderOver,
@@ -95,14 +95,15 @@ begin
   Red := Color4ub(241, 0, 0);
   White := Color4ub(255, 255, 255);
   Black := Color4ub(0, 0, 0);
+  Gray := Color4ub(60, 60, 60);
 
   MenuButton      := Red;   //Color4ub(80, 160, 255);
   MenuButtonText  := White; //Color4ub(230, 230, 230);
   MenuButtonOver  := White; //Color4ub(160, 250, 250);
-  MenuSlider      := Black;
-  MenuSliderOver  := Red;
-  MenuText        := Black;
-  MenuBackground  := White; //:= Color4ub(20, 50, 110);
+  MenuSlider      := Red;
+  MenuSliderOver  := White;
+  MenuText        := Red;
+  MenuBackground  := Gray; //:= Color4ub(20, 50, 110);
 end;
 
 { Texts }

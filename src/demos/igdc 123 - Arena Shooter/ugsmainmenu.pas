@@ -155,7 +155,7 @@ begin
   GameName.TextLabel.Scale := 1.2;
   GameName.TextLabel.PivotPoint := Vec2f(0.5, 0.0);
   GameName.TextLabel.ShadowEnabled := True;
-  GameName.TextLabel.ShadowOffset := Vec2f(4,4);
+  GameName.TextLabel.ShadowOffset := Vec2f(2,2);
   GameName.TextLabel.Color := Colors.MenuText;
   GameName.Parent := Container;
 
