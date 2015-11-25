@@ -243,6 +243,7 @@ function Quat(const v: TglrVec3f; Angle: Single): TglrQuat; overload; inline;
 
 function Color4f(r, g, b: Single; a: Single = 1.0): TglrVec4f; inline;
 function Color4ub(r, g, b: Byte; a: Single = 1.0): TglrVec4f; inline;
+function Color4HSV(h, s, v: Integer; a: Single = 1.0): TglrVec4f; inline;
 
 implementation
 
@@ -549,6 +550,11 @@ begin
   Result.y := g / 255;
   Result.z := b / 255;
   Result.w := a;
+end;
+
+function Color4HSV(h, s, v: Integer; a: Single): TglrVec4f;
+begin
+  Result := Hsva2Rgba(Vec4f(h, s, v, a));
 end;
 
 {$REGION ' Single Vectors '}
