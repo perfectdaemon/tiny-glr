@@ -154,10 +154,10 @@ type
 
   Default = class
   protected
-    class var fInited: Boolean;
     class procedure Init();
     class procedure Deinit();
   public
+    class var fInited: Boolean;
     class var SpriteShader: TglrShaderProgram;
     class var BlankTexture: TglrTexture;
     class var Font: TglrFont;
