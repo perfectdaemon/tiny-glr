@@ -273,11 +273,11 @@ type
     class var fIB: TglrIndexBufferId;
     class var fFB: TglrFrameBufferId;
 
-    class var fStatTextureBind, fTriCount, fDIPCount: Integer;
     class var fWidth, fHeight: Integer;
 
     class procedure CreateScreenQuad();
   public
+    class var fStatTextureBind, fTriCount, fDIPCount: Integer;
     class var Params: TglrRenderParams;
 
     class procedure Init();
