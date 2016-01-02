@@ -133,7 +133,7 @@ begin
   end;
 end;
 
-constructor TglrGameScreen.Create(ScreenName: UnicodeString = '');
+constructor TglrGameScreen.Create(ScreenName: UnicodeString);
 begin
   inherited Create();
   Name := ScreenName;
