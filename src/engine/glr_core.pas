@@ -161,6 +161,7 @@ type
     class var SpriteShader: TglrShaderProgram;
     class var BlankTexture: TglrTexture;
     class var Font: TglrFont;
+    class property Inited: Boolean read fInited;
   end;
 
 implementation
@@ -337,9 +338,7 @@ class procedure Core.RenderAll();
 begin
   Render.Clear(cmAll);
   Render.ResetStates();
-  Render.fStatTextureBind := 0;
-  Render.fTriCount := 0;
-  Render.fDIPCount := 0;
+  Render.ResetStatistics();
   fGame.OnRender();
 end;
 

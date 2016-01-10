@@ -389,7 +389,7 @@ end;
 constructor TglrFont.Create;
 begin
   inherited Create();
-  if not Default.fInited then
+  if not Default.Inited then
     Log.Write(lCritical, 'Font: Can not create default font - default assets are disabled');
   Create(FileSystem.ReadResource('default assets/default.fnt'));
 end;
@@ -398,7 +398,7 @@ constructor TglrFont.Create(aStream: TglrStream; aFreeStreamOnFinish: Boolean);
 var
   shader: TglrShaderProgram;
 begin
-  if Default.fInited then
+  if Default.Inited then
     shader := Default.SpriteShader
   else
     shader := nil;

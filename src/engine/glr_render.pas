@@ -285,6 +285,7 @@ type
 
     class procedure Resize(aWidth, aHeight: Integer);
     class procedure ResetStates();
+    class procedure ResetStatistics();
     class procedure Clear(aClearMask: TglrClearMask);
     class procedure SetClearColor(R, G, B: Single); overload;
     class procedure SetClearColor(Color: TglrVec4f); overload;
@@ -1007,6 +1008,13 @@ begin
   Params.Color := Vec4f(1, 1, 1, 1);
   Params.ViewProj.Identity;
   Params.Model.Identity;
+end;
+
+class procedure Render.ResetStatistics;
+begin
+  fStatTextureBind := 0;
+  fTriCount := 0;
+  fDIPCount := 0;
 end;
 
 class procedure Render.Clear(aClearMask: TglrClearMask);
