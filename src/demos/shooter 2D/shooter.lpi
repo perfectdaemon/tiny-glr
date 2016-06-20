@@ -35,7 +35,6 @@
       <Unit0>
         <Filename Value="shooter.lpr"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="shooter"/>
       </Unit0>
       <Unit1>
         <Filename Value="ugame.pas"/>
@@ -45,7 +44,6 @@
       <Unit2>
         <Filename Value="uFMOD.pp"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="uFMOD"/>
       </Unit2>
       <Unit3>
         <Filename Value="libufmod.o"/>
@@ -54,7 +52,6 @@
       <Unit4>
         <Filename Value="music.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="music"/>
       </Unit4>
     </Units>
   </ProjectOptions>
@@ -97,12 +94,6 @@
         </Win32>
       </Options>
     </Linking>
-    <Other>
-      <CompilerMessages>
-        <MsgFileName Value=""/>
-      </CompilerMessages>
-      <CompilerPath Value="$(CompPath)"/>
-    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">

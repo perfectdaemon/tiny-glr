@@ -132,7 +132,7 @@ type
   private
     fBatch: TglrFontBatch;
   public
-    constructor Create(aBatch: TglrFontBatch); virtual;
+    constructor Create(aBatch: TglrFontBatch); reintroduce;
 
     procedure Update(const dt: Double);
     procedure RenderSelf();
@@ -192,7 +192,7 @@ type
 
     AltWeaponCount: Integer;
 
-    constructor Create(); virtual;
+    constructor Create(); override;
     destructor Destroy(); override;
 
     procedure Update(const dt: Double; axisX, axisY: Integer); virtual;
@@ -246,7 +246,7 @@ type
     EnemySpawnInterval: Single;
     EnemySpawnCount: Integer;
     WaveCount: Integer;
-    constructor Create(aBatch: TglrSpriteBatch); virtual;
+    constructor Create(aBatch: TglrSpriteBatch); reintroduce;
 
     procedure Update(const dt: Double);
     procedure RenderSelf();
