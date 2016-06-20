@@ -99,7 +99,7 @@ type
 
   TglrPool<T> = class (TglrObjectList<T>)
   public
-    constructor Create(const aPoolSize: Integer); virtual;
+    constructor Create(const aPoolSize: Integer); reintroduce;
     function Get(): T;
     procedure Release(aItem: T);
   end;
