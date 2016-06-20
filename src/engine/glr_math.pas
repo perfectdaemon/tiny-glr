@@ -1,5 +1,5 @@
 {
-  Based on eXgine© Math unit (New BSD License)
+  Based on eXgineВ© Math unit (New BSD License)
 }
 
 unit glr_math;
@@ -7,7 +7,7 @@ unit glr_math;
 interface
 
 const
-  //Допустимая погрешность сравнения с нулем
+  //Г„Г®ГЇГіГ±ГІГЁГ¬Г Гї ГЇГ®ГЈГ°ГҐГёГ­Г®Г±ГІГј Г±Г°Г ГўГ­ГҐГ­ГЁГї Г± Г­ГіГ«ГҐГ¬
   cEPS = 0.0001;
 
   deg2rad: Single = 3.1415 / 180;
@@ -306,12 +306,12 @@ function LineCircleIntersect(aLineStart, aLineVec: TglrVec2f;
   aCircleCenter: TglrVec2f; aRadius: Single): Boolean;
 var
   lineStartToCenter: TglrVec2f;
-  cosine, sine{, lineProjLength}, dist{, angle}: Single;
+  {cosine, }sine{, lineProjLength}, dist{, angle}: Single;
 begin
   lineStartToCenter := (aCircleCenter - aLineStart);
-  cosine := lineStartToCenter.Normal.Dot(aLineVec.Normal);
+  //cosine := lineStartToCenter.Normal.Dot(aLineVec.Normal);
   //angle := arccos(cosine);
-  sine := sqrt(1 - sqr(cosine));
+  sine := sqrt(1 - sqr(lineStartToCenter.Normal.Dot(aLineVec.Normal)));
   //lineProjLength := Abs(cosine * lineStartToCenter.Length);
   dist := Abs(sine * lineStartToCenter.Length);
   Result := (dist < aRadius);// and (sqr(lineProjLength) > aLineVec.LengthQ);
