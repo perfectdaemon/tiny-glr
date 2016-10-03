@@ -31,7 +31,7 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="5">
+    <Units Count="6">
       <Unit0>
         <Filename Value="shooter.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -53,6 +53,11 @@
         <Filename Value="music.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit4>
+      <Unit5>
+        <Filename Value="..\..\engine\synlzo.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="SynLZO"/>
+      </Unit5>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

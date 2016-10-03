@@ -237,9 +237,9 @@ uses
 
 procedure TglrGL.Init;
 type
-  TProcArray = array [-1..(SizeOf(TglrGL) - SizeOf(Lib)) div 4 - 1] of Pointer;
+  TProcArray = array [-1..(SizeOf(TglrGL) - SizeOf(Lib)) div 8 - 1] of Pointer;
 const
-  ProcName : array [0..(SizeOf(TglrGL) - SizeOf(Lib)) div 4 - 1] of PAnsiChar = (
+  ProcName : array [0..(SizeOf(TglrGL) - SizeOf(Lib)) div 8 - 1] of PAnsiChar = (
     {$IFDEF WINDOWS}
     'wglGetProcAddress',
     'wglSwapIntervalEXT',

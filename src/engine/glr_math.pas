@@ -6,6 +6,8 @@ unit glr_math;
 
 interface
 
+uses math;
+
 const
   //Äîïóñòèìàÿ ïîãðåøíîñòü ñðàâíåíèÿ ñ íóëåì
   cEPS = 0.0001;
@@ -331,29 +333,19 @@ begin
     Dec(Result);
 end;
                     
-function Tan(const X: Extended): Extended; assembler;
-asm
-  FLD    X
-  FPTAN
-  FSTP   ST(0)
-  FWAIT
+function Tan(const X: Extended): Extended;
+begin
+  Result := math.tan(x);
 end;
 
-function ArcTan2(Y, X: Extended): Extended; assembler;
-asm
-  FLD     Y
-  FLD     X
-  FPATAN
-  FWAIT
+function ArcTan2(Y, X: Extended): Extended;
+begin
+  Result := math.arctan2(y, x);
 end;
 
-procedure SinCos(const Theta: Extended; out Sin, Cos: Extended); assembler;
-asm
-  FLD     Theta
-  FSINCOS
-  FSTP    tbyte ptr [edx]    // Cos
-  FSTP    tbyte ptr [eax]    // Sin
-  FWAIT
+procedure SinCos(const Theta: Extended; out Sin, Cos: Extended);
+begin
+  math.sincos(Theta, Sin, Cos);
 end;
 
 function ArcCos(const X: Single): Single;

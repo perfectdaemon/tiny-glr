@@ -619,7 +619,7 @@ begin
   if (aInternalIndex < 0) or (aInternalIndex > High(Uniforms)) then
     Log.Write(lError,
       'Internal index of uniform ('+ Convert.ToString(aInternalIndex) +
-      ') is out of range (0-' + Convert.ToString(High(Uniforms)))
+      ') is out of range (0-' + Convert.ToString(Integer(High(Uniforms))))
   else
     with Uniforms[aInternalIndex] do
     begin
