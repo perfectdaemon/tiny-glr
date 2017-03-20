@@ -1,9 +1,11 @@
-###Introduction###
+###Introduction   
+
 Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) 2D/3D game development framework built on  Free Pascal Compiler.
 
 *Notice: It's Windows only for now (0.1 version)*
 
 ###Roadmap###
+
  - [x] Early development
  - [x] Some little game to prove framework' abilities
  - [x] 0.1 version (Core, 2D) 
@@ -12,7 +14,8 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) 2D/3D game deve
  - [ ] 0.4 version (Complex 3D, external tools and editors support)
  - [ ] 0.5 version (Drop repo and make games on Unity 8) )
 
-###Features###
+###Features
+
 **Core**
 * Lightweight, no dependencies on other libraries, all-in-one
 * Pack files
