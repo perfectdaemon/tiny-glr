@@ -1,10 +1,17 @@
-###Introduction###   
+### Disclaimer
+**Sorry, guys, but I left Pascal community and the project will not be supported any longer. At now I'm working on the new engine/framework - TypeScript WebGL Engine which hasn't been named yet. You can check it at https://github.com/perfectdaemon/ts-game**
+
+You can use the code or framework itself by your own risk and so on.
+
+May the Force be with you.
+
+### Introduction
 
 Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) 2D/3D game development framework built on  Free Pascal Compiler.
 
 *Notice: It's Windows only for now (0.1 version)*
 
-###Roadmap###
+### Roadmap
 
  - [x] Early development
  - [x] Some little game to prove framework' abilities
@@ -14,7 +21,7 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) 2D/3D game deve
  - [ ] 0.4 version (Complex 3D, external tools and editors support)
  - [ ] 0.5 version (Drop repo and make games on Unity 8) )
 
-###Features
+### Features
 
 **Core**
 * Lightweight, no dependencies on other libraries, all-in-one
@@ -40,9 +47,9 @@ Tiny *potentially crossplatform* (Win, Mac, Linux, Android, iOS) 2D/3D game deve
 **Physics**
 * Box2D support
 
-###Toolset###
+### Toolset
 * Resource packer (folder -> pack file, file -> lzo file)
 * Font generator
 
-###Documentation###
+### Documentation
 [Wiki](https://github.com/perfectdaemon/tiny-glr/wiki)
